@@ -6,6 +6,10 @@ and light the **GATE**.
 
 > 1-bit ditherpunk · 480×270 · deckbuilder × platformer hybrid
 
+![Z0 FLATS](screenshots/ws_shots_z0_vista.png)
+![RUINS](screenshots/ws_shots_ruins.png)
+![GATE shaft](screenshots/ws_shots_shaft.png)
+
 ## Versions in this repo
 
 | Path | What | Status |

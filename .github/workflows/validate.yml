@@ -1,0 +1,37 @@
+name: validate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  headless-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Godot 4.6.2
+        run: |
+          curl -sL -o godot.zip https://github.com/godotengine/godot/releases/download/4.6.2-stable/Godot_v4.6.2-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          chmod +x Godot_v4.6.2-stable_linux.x86_64
+          ./Godot_v4.6.2-stable_linux.x86_64 --version
+
+      - name: Import project (headless)
+        run: ./Godot_v4.6.2-stable_linux.x86_64 --headless --path . --import
+
+      - name: Integration suite (outcome assertions)
+        run: |
+          set -o pipefail
+          WS_TEST=1 timeout 150 ./Godot_v4.6.2-stable_linux.x86_64 --headless --path . 2>&1 | tee test_output.log
+          grep -q "PORT-VALIDATION: 0 failure(s)" test_output.log
+
+      - name: Upload test log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-output
+          path: test_output.log
