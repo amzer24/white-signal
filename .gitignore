@@ -1,0 +1,10 @@
+# Godot
+.godot/
+*.tmp
+
+# System
+.DS_Store
+Thumbs.db
+
+# Test artifacts
+*.log

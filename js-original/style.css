@@ -1,0 +1,62 @@
+/* WHITE SIGNAL — canvas + touch only. All HUD/UI lives in-canvas. */
+:root {
+  --bg: #0b0b0b;
+  --white: #f2f2f2;
+  --gray: #8a8a8a;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  background: var(--bg);
+  height: 100%;
+}
+body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  font-family: "Courier New", ui-monospace, monospace;
+  background:
+    repeating-linear-gradient(0deg, rgba(255,255,255,0.025) 0 1px, transparent 1px 3px);
+}
+#wrap {
+  position: relative;
+  width: min(960px, 96vw);
+}
+canvas#game {
+  width: 100%;
+  display: block;
+  aspect-ratio: 16 / 9;
+  background: #000;
+  border: 2px solid var(--white);
+  box-shadow: 0 0 0 2px #000, 0 0 32px rgba(255,255,255,0.08);
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  cursor: pointer;
+}
+#touch {
+  position: absolute;
+  left: 0; right: 0; bottom: 8px;
+  display: none;
+  justify-content: space-between;
+  padding: 0 10px;
+  pointer-events: none;
+}
+#touch button {
+  pointer-events: auto;
+  width: 56px;
+  height: 56px;
+  font-size: 20px;
+  font-family: inherit;
+  background: rgba(242,242,242,0.12);
+  color: var(--white);
+  border: 2px solid var(--white);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.t-left, .t-right { display: flex; gap: 10px; }
+@media (pointer: coarse) {
+  #touch { display: flex; }
+}
