@@ -4,6 +4,7 @@ const Layout = preload("res://scripts/source_district_rooms.gd")
 const FEEDERS = Circuit.FEEDERS
 var world: Node2D
 var circuit: RefCounted
+var aftermath_art = preload("res://scripts/aftermath_art.gd").new()
 var test_time: float:
     get: return circuit.remaining
 func _init(owner_world: Node2D) -> void:
@@ -50,6 +51,7 @@ func tick(delta: float) -> void:
     if result == "verified": Sfx.beep(220,0.10,0.018,"square")
     if not result.is_empty(): _result(result)
 func draw_world() -> void:
+    if world.room_id == "aftermath" and aftermath_art.draw(world): return
     if world.room_id in Layout.IDS:
         draw_source()
         return
