@@ -1,0 +1,27 @@
+{
+  "archive": "WHITE-SIGNAL-development-current.zip",
+  "bytes": 43416243,
+  "sha256": "7837097a6b6cf2e3e6bb2f704c872f0c51d0be358e89db82e0e33298a9f138c3",
+  "files": [
+    {
+      "name": "README.txt",
+      "bytes": 1482,
+      "sha256": "d7c399cc7046f0fe30b789c46617873f317d3b6f71d2448e901e729a54ab681c"
+    },
+    {
+      "name": "WHITE SIGNAL.console.exe",
+      "bytes": 188928,
+      "sha256": "5514c7645ee897a01f540d3cf22ede5badf92394521a08bfab66a54d7369e6e6"
+    },
+    {
+      "name": "WHITE SIGNAL.exe",
+      "bytes": 103176704,
+      "sha256": "51498b72b3a237f882ebd7d1787f06a4bc1eaf0572daab93837adcfd3cfdc107"
+    },
+    {
+      "name": "WHITE SIGNAL.pck",
+      "bytes": 9170148,
+      "sha256": "240d35dc81a2e9e3f1ad98287341a1eda7cef92e9ade9e1cea692b72a7f51f25"
+    }
+  ]
+}
