@@ -659,8 +659,23 @@ func map_note(id: String) -> String:
 		return "REACHABLE" if profile.has_flag("air_jump") else "AIR JUMP NEEDED"
 	if id == "amplifier" and map_state(id) == "visited" and preload("res://scripts/amplifier_room.gd").released(profile.data.flags):
 		return "RETURN OPEN"
+	if map_state(id) == "visited":
+		match id:
+			"pump":
+				if not profile.has_flag("pump_repaired"): return "FIT IMPELLER" if profile.has_flag("impeller") else "PART NEEDED"
+			"wire_carriage":
+				if not profile.has_flag("wire_repaired"): return "FIT BRAKE" if profile.has_flag("brake_spare") else "PART NEEDED"
+			"array":
+				if not profile.has_flag("array_restored"):
+					if profile.has_flag("array_isolated"): return "ROUTE FEED"
+					return "ISOLATE FAULT" if profile.has_flag("diagnostic_seen") else "TEST FEED"
+			"sump":
+				if not profile.has_flag("field_restored"):
+					return "COMMISSION" if profile.has_flag("west_ear") and profile.has_flag("east_ear") and profile.has_flag("south_ear") else "EARS NEEDED"
+		var unread := {"array_shutter":"shutter_archive","array_cable":"cable_archive","array_inspection":"inspection_archive","drowned_cycle":"cycle_archive","stand_trial":"stand_archive","wire_shaft":"wire_shaft_archive"}
+		if unread.has(id) and not profile.has_flag(unread[id]): return "SIGNAL UNREAD"
 	var milestones := {
-		"array_shutter":["shutter_archive","LOCAL COPY"],"array_cable":["cable_archive","RETURN OPEN"],"array_inspection":["inspection_archive","ARCHIVE"],"drowned_gallery":["air_jump","AIR JUMP"],"drowned_cycle":["cycle_archive","ARCHIVE"],"amplifier":["dash","DASH FOUND"],"return":["return_open","SHORTCUT"],
+		"stand_trial":["stand_archive","ARCHIVE"],"array_shutter":["shutter_archive","LOCAL COPY"],"array_cable":["cable_archive","RETURN OPEN"],"array_inspection":["inspection_archive","ARCHIVE"],"drowned_gallery":["air_jump","AIR JUMP"],"drowned_cycle":["cycle_archive","ARCHIVE"],"amplifier":["dash","DASH FOUND"],"return":["return_open","SHORTCUT"],
 		"wire_shaft":["wire_shaft_archive","ARCHIVE"],"lookout":["survey","SURVEYED"],"sump":["field_restored","FEED LIVE"],
 		"pump":["pump_repaired","PUMP LIVE"],"float":["drowned_restored","FEED LIVE"],
 		"conductor":["stand_restored","FEED LIVE"],"array":["array_restored","FEED LIVE"],
@@ -763,7 +778,7 @@ func _draw_region_map() -> void:
 		elif link[0] == "arrival": open = profile.has_flag("first_beacon")
 		elif link[0] == "wire_carriage": open = profile.has_flag("wire_repaired")
 		elif link[0] == "array_cable": open = profile.has_flag("cable_archive")
-		elif link[0] == "array": open = link[1] in ["array_inspection","wire_shelter"] or profile.has_flag("array_restored")
+		elif link[0] == "array": open = link[1] == "array_inspection" or profile.has_flag("array_restored")
 		elif link[0] == "approach": open = gate.ready() if link[1] == "gate" else profile.has_flag("approach_return")
 		elif link[0] == "gate": open = profile.has_flag("signal_restored") if link[1] == "aftermath" else gate.progress().latched
 		elif link[0] == "source_return": open = gate.progress().tested
@@ -771,7 +786,7 @@ func _draw_region_map() -> void:
 		var seen: bool = map_state(link[0]) == "visited" and map_state(link[1]) == "visited"
 		var link_color: Color = DrawUtil.GRAY if open and seen else DrawUtil.DARK
 		if map_region == 4 and link[0] == "array" and link[1] == "wire_shelter":
-			draw_polyline(PackedVector2Array([points["array"],Vector2(345,145),Vector2(65,145),points["wire_shelter"]]),link_color,1)
+			draw_polyline(PackedVector2Array([points["array"],Vector2(345,112),Vector2(65,112),points["wire_shelter"]]),link_color,1)
 		elif map_region == 5 and link[0] == "aftermath" and link[1] == "hub":
 			draw_polyline(PackedVector2Array([points["aftermath"],Vector2(300,232),Vector2(60,232),points["hub"]]),link_color,1)
 		else: draw_line(points[link[0]],points[link[1]],link_color,1)
