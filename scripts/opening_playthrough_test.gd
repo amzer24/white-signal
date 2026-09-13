@@ -513,6 +513,11 @@ func source_route() -> void:
 
 func finish() -> void:
     scene.queue_free()
+    await process_frame
+    # Fixed-FPS tests outrun the audio mixer: allow queued playback cleanup.
+    for i in 20:
+        OS.delay_msec(10)
+        await process_frame
     for suffix in ["", ".tmp", ".bak"]: DirAccess.remove_absolute(fixture_path+suffix)
     print("OPENING INPUT PLAYTHROUGH: %d failures" % failed)
     quit(1 if failed else 0)
