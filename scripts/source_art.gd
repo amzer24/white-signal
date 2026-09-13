@@ -1,4 +1,7 @@
 extends RefCounted
+const RECEIVER = preload("res://assets/exploration/source-receiver.png")
+const FEEDERS = preload("res://scripts/source_circuit.gd").FEEDERS
+const RECEIVER_ORIGIN = Vector2(24,68)
 ## Background machinery only. The room registry owns all walkable geometry.
 static func draw(world: Node2D, state: Dictionary, remaining: float) -> void:
     var verified: bool = state.tested
@@ -7,6 +10,12 @@ static func draw(world: Node2D, state: Dictionary, remaining: float) -> void:
     for x in range(24,480,48):
         world.draw_rect(Rect2(x,62,32,145),Color(0.07,0.075,0.08),false,1)
         world.draw_rect(Rect2(x+4,67,4,4),Color(0.11,0.12,0.13))
+    if world.room_id == "gate":
+        world.draw_texture(RECEIVER,RECEIVER_ORIGIN,Color(0.34,0.36,0.34))
+        world.draw_rect(Rect2(RECEIVER_ORIGIN+Vector2(59,38),Vector2(11,51)),Color("101414"))
+        for i in 4:
+            var lit: bool = world.profile.has_flag(FEEDERS[i])
+            world.draw_rect(Rect2(RECEIVER_ORIGIN+Vector2(62,41+i*12),Vector2(5,5)),Color("7d826d") if lit else Color("171b1b"))
     world.draw_rect(Rect2(0,207,480,9),Color(0.085,0.09,0.095))
     for x in range(0,480,16): world.draw_line(Vector2(x,210),Vector2(x+7,214),Color(0.12,0.125,0.13),1)
     if world.room_id != "source_return": return
@@ -38,3 +47,4 @@ static func draw(world: Node2D, state: Dictionary, remaining: float) -> void:
     else:
         for i in 7:
             world.draw_line(Vector2(252+i*15,164),Vector2(252+i*15,211),dim,1)
+
