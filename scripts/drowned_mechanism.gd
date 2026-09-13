@@ -12,6 +12,7 @@ var cycle_setting := 2
 var setting := 0
 var carrier: AnimatableBody2D
 var pump_texture: Texture2D
+var backdrop = preload("res://scripts/drowned_backdrop.gd").new()
 func _init(owner_world: Node2D) -> void:
     world = owner_world
     if world.profile.has_flag("basin_bled") or world.profile.has_flag("pump_repaired") or world.profile.has_flag("drowned_restored"):
@@ -149,9 +150,10 @@ func tick(delta: float) -> void:
 func draw_world() -> void:
     if not world.room_id in IDS: return
     world.draw_rect(Rect2(0,29,480,215),Color(0.07,0.11,0.10,0.35))
+    var has_skyline: bool = backdrop.draw(world)
     for i in 5:
         var x := 20+i*96
-        var top := 68+(i%3)*17
+        var top := (150 if has_skyline else 68)+(i%3)*17
         world.draw_rect(Rect2(x,top,68,244-top),Color(0.09,0.12,0.11))
         world.draw_line(Vector2(x-3,top),Vector2(x+71,top),Color(0.20,0.23,0.21),2)
         for row in 3:

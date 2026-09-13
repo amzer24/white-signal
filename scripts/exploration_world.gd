@@ -538,7 +538,7 @@ func _draw() -> void:
 		var offset := roundf(player.position.x*0.18)
 		draw_texture_rect(ruins_texture,Rect2(-offset-110,-60,960,320),false,Color(0.85,0.85,0.85,0.8))
 	# Non-repeating receiver silhouettes give the room a destination.
-	for i in 0 if room_id in ["array_cable","wire_shaft","basin","pump","float","shelter","conductor","flats","conduit","arrival","wire_shelter","wire_carriage","array","approach","gate","aftermath"] else 3:
+	for i in 0 if room_id in DrownedScript.IDS or room_id in ["array_cable","wire_shaft","basin","pump","float","shelter","conductor","flats","conduit","arrival","wire_shelter","wire_carriage","array","approach","gate","aftermath"] else 3:
 		var center := Vector2(110+i*134,75+i%2*22)
 		draw_arc(center,43,0.15,2.99,22,Color(0.15,0.15,0.15),3)
 		draw_line(center+Vector2(0,39),center+Vector2(0,152),Color(0.12,0.12,0.12),3)
