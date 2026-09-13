@@ -42,6 +42,7 @@ var foreground_cache: Dictionary = {}
 var far_texture: Texture2D
 var ruins_texture: Texture2D
 var window_texture: Texture2D
+var flats_receiver_texture: Texture2D
 var exiting := false
 var noise_actor: CharacterBody2D
 var noise_cleared: Dictionary = {}
@@ -85,6 +86,8 @@ func _ready() -> void:
 	if ResourceLoader.exists(ruins_path): ruins_texture = load(ruins_path)
 	var window_path := "res://assets/exploration/answering-window.png"
 	if ResourceLoader.exists(window_path): window_texture = load(window_path)
+	if ResourceLoader.exists("res://assets/exploration/flats-receiver.png"):
+		flats_receiver_texture = load("res://assets/exploration/flats-receiver.png")
 	drowned = DrownedScript.new(self)
 	siphon = SiphonScript.new(self)
 	stand = StandScript.new(self)
@@ -778,7 +781,9 @@ func _draw_region_map() -> void:
 
 func _draw_flats() -> void:
 	draw_rect(Rect2(0,29,480,195),Color(0.15,0.13,0.09,0.18))
-	for i in 5:
+	if room_id == "flats" and flats_receiver_texture != null:
+		draw_texture(flats_receiver_texture,Vector2(284,128),Color(0.30,0.29,0.26))
+	for i in 0 if room_id == "flats" and flats_receiver_texture != null else 5:
 		var x := 30+i*105
 		draw_arc(Vector2(x,180+i%2*15),39,0.1,3.04,22,DrawUtil.DARK,2)
 		draw_line(Vector2(x,211),Vector2(x,224),DrawUtil.GRAY,2)
