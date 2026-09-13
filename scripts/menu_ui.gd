@@ -65,7 +65,7 @@ func home_items() -> Array:
     items.append(["NEW CLASSIC RUN","RESTART CLASSIC . EXPLORATION SAVE IS SEPARATE","new"])
     items.append(["SETTINGS","MUSIC . EFFECTS . DISPLAY","settings"])
     items.append(["HOW TO PLAY","MOVEMENT . GLYPHS . CONDUITS","controls"])
-    items.append(["AFTERLIGHT","AN OPTIONAL LIGHTING STUDY","lab"])
+    items.append(["EXTRAS","CREDITS . AFTERLIGHT STUDY","extras"])
     items.append(["QUIT GAME","RETURN TO DESKTOP","quit"])
     return items
 
@@ -75,6 +75,10 @@ func open_settings() -> void:
     selected = 0
 
 func back() -> void:
+    if page == "credits":
+        page = "extras"
+        selected = 0
+        return
     if page == "keyboard":
         GameInput.keyboard.capturing = ""
         page = "settings"
@@ -85,7 +89,15 @@ func back() -> void:
     page = "home"
     selected = return_selected
 
+func row_count() -> int:
+    if page == "home": return home_items().size()
+    if page == "extras": return 3
+    if page in ["recovery","recovery_confirm","recovery_done","new_journey"]: return 2
+    if page in ["settings","keyboard"]: return 7
+    return 1
+
 func row_rect(index: int) -> Rect2:
+    if page == "extras": return Rect2(120,106+index*31,240,24)
     if page == "keyboard": return Rect2(80,65+index*22,320,21)
     if page in ["recovery","recovery_confirm","recovery_done","new_journey"]: return Rect2(80,174+index*28,320,24)
     if page == "home":
@@ -181,6 +193,23 @@ func _draw() -> void:
                 label(Vector2(388,rect.position.y+8),"ON" if AppSettings.camera_shake else "OFF",1,DrawUtil.WHITE,HORIZONTAL_ALIGNMENT_RIGHT)
         label(Vector2(80,237),"D-PAD ADJUST . A TOGGLE . B BACK" if GameInput.controller_active else "LEFT/RIGHT ADJUST . ENTER TOGGLE . ESC BACK",1,DrawUtil.GRAY)
         label(Vector2(80,252),"SAVED AUTOMATICALLY" if AppSettings.save_error.is_empty() else AppSettings.save_error,1,DrawUtil.GRAY if AppSettings.save_error.is_empty() else DrawUtil.WHITE)
+    elif page == "extras":
+        label(Vector2(80,32),"EXTRAS",4)
+        label(Vector2(80,74),"BEHIND THE SIGNAL",1,DrawUtil.GRAY)
+        var items := ["CREDITS","AFTERLIGHT STUDY","BACK"]
+        for i in items.size():
+            var rect := row_rect(i)
+            if selected == i: draw_rect(rect,DrawUtil.WHITE)
+            label(Vector2(240,rect.position.y+8),items[i],2,DrawUtil.BG if selected == i else DrawUtil.GRAY,HORIZONTAL_ALIGNMENT_CENTER)
+        label(Vector2(80,227),"A SELECT . B BACK" if GameInput.controller_active else "ENTER SELECT . ESC BACK",1,DrawUtil.GRAY)
+    elif page == "credits":
+        label(Vector2(80,32),"CREDITS",4)
+        var lines := [["ENGINE","GODOT"],["PIXEL ART TOOLS","PIXELLAB . IMAGEGEN"],["EXPLORATION SCORE","DEAD CARRIER . SUNO"],["EFFECTS","PROCEDURAL SYNTHESIS"],["TUTORIAL AUDIO","PROVIDED BY THE CREATOR"]]
+        for i in lines.size():
+            label(Vector2(80,73+i*27),lines[i][0],1,DrawUtil.GRAY)
+            label(Vector2(80,84+i*27),lines[i][1])
+        draw_rect(row_rect(0),DrawUtil.WHITE)
+        label(Vector2(240,230),"BACK",2,DrawUtil.BG,HORIZONTAL_ALIGNMENT_CENTER)
     else:
         label(Vector2(80,32),"HOW TO PLAY",4)
         var controls := [
@@ -210,6 +239,16 @@ func _draw() -> void:
         label(Vector2(240,230),"BACK",2,DrawUtil.BG,HORIZONTAL_ALIGNMENT_CENTER)
 
 func activate() -> void:
+    if page == "credits":
+        back()
+        return
+    if page == "extras":
+        if selected == 0:
+            page = "credits"
+            selected = 0
+        elif selected == 1: RunState.start_lab()
+        else: back()
+        return
     if page == "new_journey":
         if selected == 0:
             back()
@@ -275,6 +314,10 @@ func activate() -> void:
             "new": RunState.start_run()
             "lab": RunState.start_lab()
             "quit": get_tree().quit()
+            "extras":
+                return_selected = selected
+                page = "extras"
+                selected = 0
             "settings": open_settings()
             "controls":
                 return_selected = selected
@@ -314,7 +357,7 @@ func handle_input(event: InputEvent) -> bool:
         var mouse: Vector2 = event.position
         if dragging >= 0: slide(mouse.x)
         else:
-            var count := home_items().size() if page == "home" else (2 if page in ["recovery","recovery_confirm","recovery_done","new_journey"] else 7 if page in ["settings","keyboard"] else 1)
+            var count := row_count()
             for i in count:
                 if row_rect(i).has_point(mouse): selected = i
         return true
@@ -326,7 +369,7 @@ func handle_input(event: InputEvent) -> bool:
                 dragging = -1
             return true
         var mouse: Vector2 = event.position
-        var count := home_items().size() if page == "home" else (2 if page in ["recovery","recovery_confirm","recovery_done","new_journey"] else 7 if page in ["settings","keyboard"] else 1)
+        var count := row_count()
         for i in count:
             if row_rect(i).has_point(mouse):
                 selected = i
@@ -349,8 +392,8 @@ func handle_input(event: InputEvent) -> bool:
             RunState.resume_run()
         elif page == "home" and key == KEY_O:
             open_settings()
-        elif key in [KEY_UP,KEY_DOWN,KEY_W,KEY_S] and page != "controls":
-            var count := home_items().size() if page == "home" else 2 if page in ["recovery","recovery_confirm","recovery_done","new_journey"] else 7
+        elif key in [KEY_UP,KEY_DOWN,KEY_W,KEY_S]:
+            var count := row_count()
             selected = posmod(selected + (-1 if key in [KEY_UP,KEY_W] else 1),count)
         elif page == "settings" and key in [KEY_LEFT,KEY_RIGHT,KEY_A,KEY_D]:
             adjust(-0.05 if key in [KEY_LEFT,KEY_A] else 0.05)
