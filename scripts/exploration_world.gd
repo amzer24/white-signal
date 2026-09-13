@@ -65,6 +65,9 @@ func _ready() -> void:
 	settings_menu.settings_only = true
 	settings_menu.z_index = 100
 	add_child(settings_menu)
+	var pump_motor = preload("res://scripts/pump_motor.gd").new()
+	pump_motor.name = "PumpMotor"
+	add_child(pump_motor)
 	Music.begin_exploration()
 	player = CharacterBody2D.new()
 	player.set_script(PlayerScript)
