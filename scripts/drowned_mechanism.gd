@@ -203,5 +203,5 @@ func draw_world() -> void:
             world.draw_line(Vector2(368,mark[0]),Vector2(376,mark[0]),DrawUtil.GRAY,1)
             world.text_at(Vector2(381,mark[0]-4),mark[1],DrawUtil.GRAY)
     if is_instance_valid(carrier):
-        world._draw_platform(Rect2(carrier.position-Vector2(29,4),Vector2(58,8)))
+        world._draw_platform(Rect2(carrier.position-Vector2(29,4),Vector2(58,8)),false)
         world.draw_line(Vector2(290,95),Vector2(290,224),DrawUtil.GRAY,1)

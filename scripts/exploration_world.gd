@@ -45,6 +45,7 @@ var window_texture: Texture2D
 var exiting := false
 var noise_actor: CharacterBody2D
 var noise_cleared: Dictionary = {}
+var drowned_material = preload("res://scripts/drowned_material.gd").new()
 var coherence_light = preload("res://scripts/coherence_light.gd").new()
 var beacon_light_power := 0.0
 var window_light_power := 0.0
@@ -847,11 +848,14 @@ func _draw_alignment() -> void:
 		draw_line(Vector2(110,130),Vector2(380,130),DrawUtil.WHITE,1)
 		text_at(Vector2(240,137),"EAST EAR RESTORED",DrawUtil.WHITE,1,HORIZONTAL_ALIGNMENT_CENTER)
 
-func _draw_platform(rect: Rect2) -> void:
+func _draw_platform(rect: Rect2, use_material: bool = true) -> void:
 	draw_rect(rect,DrawUtil.DARK)
+	if use_material and room_id in DrownedScript.IDS and drowned_material.texture != null:
+		drowned_material.draw(self,rect)
+	else:
+		for x in range(int(rect.position.x)+8,int(rect.end.x),16):
+			draw_line(Vector2(x,rect.position.y+4),Vector2(x,minf(rect.end.y,rect.position.y+12)),Color(0.12,0.12,0.12),1)
 	draw_line(rect.position,rect.position+Vector2(rect.size.x,0),DrawUtil.GRAY,2)
-	for x in range(int(rect.position.x)+8,int(rect.end.x),16):
-		draw_line(Vector2(x,rect.position.y+4),Vector2(x,minf(rect.end.y,rect.position.y+12)),Color(0.12,0.12,0.12),1)
 
 func _draw_window() -> void:
 	if not room_id in ["hub","workshop","return"]: return
