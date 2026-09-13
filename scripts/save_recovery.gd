@@ -3,6 +3,14 @@ extends RefCounted
 static func restart_unreadable(profile: RefCounted) -> Dictionary:
     if not profile._read(profile.path).is_empty() or not profile._read(profile.path+".bak").is_empty():
         return {"ok":false,"message":"READABLE SAVE EXISTS . RESUME IT"}
+    return _restart_retained(profile)
+
+static func restart_readable(profile: RefCounted) -> Dictionary:
+    if not profile.load_profile():
+        return {"ok":false,"message":"SAVE UNREADABLE . USE SAVE RECOVERY"}
+    return _restart_retained(profile)
+
+static func _restart_retained(profile: RefCounted) -> Dictionary:
     var originals: Dictionary = {}
     for suffix in ["", ".bak", ".tmp"]:
         var source: String = profile.path+suffix

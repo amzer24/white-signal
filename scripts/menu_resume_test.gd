@@ -17,8 +17,9 @@ func run() -> void:
     menu.refresh_exploration()
     assert(menu.home_items()[0][0] == "RESUME EXPLORATION")
     assert(menu.home_items()[0][1].contains("GALLERY"))
-    assert(menu.home_items()[1][0] == "RESUME CLASSIC")
-    assert(menu.home_items()[2][0] == "NEW CLASSIC RUN")
+    assert(menu.home_items()[1][0] == "NEW EXPLORATION")
+    assert(menu.home_items()[2][0] == "RESUME CLASSIC")
+    assert(menu.home_items()[3][0] == "NEW CLASSIC RUN")
     if not DisplayServer.get_name() == "headless":
         await process_frame
         await RenderingServer.frame_post_draw

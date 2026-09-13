@@ -2,7 +2,7 @@ extends Node2D
 ## THESIS: a short action list; controls and preferences get their own page.
 ## OWN-WORLD: existing four-gray pixel font, square focus plate, single rules.
 ## STORY: continue or start, then adjust sound/display without losing a run.
-## FIRST VIEWPORT: title above five compact, keyboard/mouse-selectable rows.
+## FIRST VIEWPORT: title above up to eight keyboard/mouse-selectable rows.
 ## FORM: local extension of the established Godot menu; no new visual identity.
 
 var page := "home"
@@ -11,6 +11,7 @@ var selected := 0
 var return_selected := 0
 var dragging := -1
 var exploration_unreadable := false
+var exploration_saved := false
 var recovery_message := ""
 var recovery_archive := ""
 var exploration_path := "user://ws_exploration_v1.json"
@@ -24,11 +25,13 @@ func _notification(what: int) -> void:
 
 func refresh_exploration() -> void:
     exploration_unreadable = false
+    exploration_saved = false
     var profile = preload("res://scripts/exploration_save.gd").new()
     profile.path = exploration_path
     exploration_label = "START EXPLORATION"
     exploration_detail = "A LASTING JOURNEY . DISCOVERIES SAVE AUTOMATICALLY"
     if profile.load_profile():
+        exploration_saved = true
         exploration_label = "RESUME EXPLORATION"
         var place: String = preload("res://scripts/exploration_rooms.gd").get_room(profile.data.room).title
         exploration_detail = "RESUME: " + place
@@ -55,6 +58,8 @@ func _process(_delta: float) -> void:
 
 func home_items() -> Array:
     var items: Array = [[exploration_label,exploration_detail,"explore"]]
+    if exploration_saved:
+        items.append(["NEW EXPLORATION","KEEP PREVIOUS SAVE . BEGIN A NEW JOURNEY","restart_explore"])
     if get_parent().can_resume:
         items.append(["RESUME CLASSIC","RESUME CLASSIC AT YOUR LAST RELAY BOUNDARY","continue"])
     items.append(["NEW CLASSIC RUN","RESTART CLASSIC . EXPLORATION SAVE IS SEPARATE","new"])
@@ -82,8 +87,9 @@ func back() -> void:
 
 func row_rect(index: int) -> Rect2:
     if page == "keyboard": return Rect2(80,65+index*22,320,21)
-    if page in ["recovery","recovery_confirm","recovery_done"]: return Rect2(80,174+index*28,320,24)
-    if page == "home": return Rect2(120,105+index*18,240,17)
+    if page in ["recovery","recovery_confirm","recovery_done","new_journey"]: return Rect2(80,174+index*28,320,24)
+    if page == "home":
+        return Rect2(120,99+index*16,240,15) if home_items().size() > 7 else Rect2(120,105+index*18,240,17)
     if page == "settings": return Rect2(80,84+index*21,320,20)
     return Rect2(120,223,240,22)
 
@@ -106,6 +112,16 @@ func _draw() -> void:
             if i == selected: label(rect.position+Vector2(5,7),"> ",1,DrawUtil.BG)
         label(Vector2(240,235),items[selected][1],1,DrawUtil.GRAY,HORIZONTAL_ALIGNMENT_CENTER)
         label(Vector2(240,252),"D-PAD SELECT . A CONFIRM" if GameInput.controller_active else "UP/DOWN SELECT . ENTER CONFIRM . CLICK",1,DrawUtil.GRAY,HORIZONTAL_ALIGNMENT_CENTER)
+    elif page == "new_journey":
+        label(Vector2(60,36),"NEW JOURNEY",3)
+        label(Vector2(60,82),"YOUR PREVIOUS SAVE WILL BE RETAINED",1,DrawUtil.GRAY)
+        label(Vector2(60,103),"THE ACTIVE JOURNEY WILL START AT THE FLATS",1,DrawUtil.GRAY)
+        label(Vector2(60,124),"ABILITIES AND DISCOVERIES START FRESH",1,DrawUtil.WHITE)
+        for i in 2:
+            var rect := row_rect(i)
+            if i == selected: draw_rect(rect,DrawUtil.WHITE)
+            label(rect.position+Vector2(8,8),["BACK","RETAIN SAVE / START NEW"][i],1,DrawUtil.BG if i == selected else DrawUtil.WHITE)
+        label(Vector2(60,239),recovery_message,1,DrawUtil.GRAY)
     elif page == "recovery_done":
         label(Vector2(60,36),"JOURNEY READY",3)
         label(Vector2(60,82),"YOUR ORIGINAL FILES HAVE BEEN RETAINED",1,DrawUtil.GRAY)
@@ -194,6 +210,20 @@ func _draw() -> void:
         label(Vector2(240,230),"BACK",2,DrawUtil.BG,HORIZONTAL_ALIGNMENT_CENTER)
 
 func activate() -> void:
+    if page == "new_journey":
+        if selected == 0:
+            back()
+            return
+        var profile = preload("res://scripts/exploration_save.gd").new()
+        profile.path = exploration_path
+        var result: Dictionary = preload("res://scripts/save_recovery.gd").restart_readable(profile)
+        recovery_message = result.message
+        selected = 0
+        if result.ok:
+            recovery_archive = result.archive
+            refresh_exploration()
+            page = "recovery_done"
+        return
     if page == "keyboard":
         if selected < 5: GameInput.keyboard.begin_capture(GameInput.keyboard.ACTIONS[selected])
         elif selected == 5: GameInput.keyboard.restore_defaults()
@@ -229,6 +259,11 @@ func activate() -> void:
     if page == "home":
         var action: String = home_items()[selected][2]
         match action:
+            "restart_explore":
+                return_selected = selected
+                page = "new_journey"
+                selected = 0
+                recovery_message = ""
             "explore":
                 if exploration_unreadable:
                     page = "recovery"
@@ -279,7 +314,7 @@ func handle_input(event: InputEvent) -> bool:
         var mouse: Vector2 = event.position
         if dragging >= 0: slide(mouse.x)
         else:
-            var count := home_items().size() if page == "home" else (2 if page in ["recovery","recovery_confirm","recovery_done"] else 7 if page in ["settings","keyboard"] else 1)
+            var count := home_items().size() if page == "home" else (2 if page in ["recovery","recovery_confirm","recovery_done","new_journey"] else 7 if page in ["settings","keyboard"] else 1)
             for i in count:
                 if row_rect(i).has_point(mouse): selected = i
         return true
@@ -291,7 +326,7 @@ func handle_input(event: InputEvent) -> bool:
                 dragging = -1
             return true
         var mouse: Vector2 = event.position
-        var count := home_items().size() if page == "home" else (2 if page in ["recovery","recovery_confirm","recovery_done"] else 7 if page in ["settings","keyboard"] else 1)
+        var count := home_items().size() if page == "home" else (2 if page in ["recovery","recovery_confirm","recovery_done","new_journey"] else 7 if page in ["settings","keyboard"] else 1)
         for i in count:
             if row_rect(i).has_point(mouse):
                 selected = i
@@ -315,7 +350,7 @@ func handle_input(event: InputEvent) -> bool:
         elif page == "home" and key == KEY_O:
             open_settings()
         elif key in [KEY_UP,KEY_DOWN,KEY_W,KEY_S] and page != "controls":
-            var count := home_items().size() if page == "home" else 2 if page in ["recovery","recovery_confirm","recovery_done"] else 7
+            var count := home_items().size() if page == "home" else 2 if page in ["recovery","recovery_confirm","recovery_done","new_journey"] else 7
             selected = posmod(selected + (-1 if key in [KEY_UP,KEY_W] else 1),count)
         elif page == "settings" and key in [KEY_LEFT,KEY_RIGHT,KEY_A,KEY_D]:
             adjust(-0.05 if key in [KEY_LEFT,KEY_A] else 0.05)
