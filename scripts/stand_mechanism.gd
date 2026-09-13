@@ -125,6 +125,7 @@ func draw_world() -> void:
     # Remote lightning never shares the marked conductor lane or machine clock.
     if not reduced and fmod(weather_time,9) < 0.45:
         world.draw_polyline(PackedVector2Array([Vector2(389,31),Vector2(366,64),Vector2(384,62),Vector2(361,98)]),DrawUtil.GRAY,1)
+    preload("res://scripts/stand_power_art.gd").draw(world)
     if world.room_id == "stand_rim":
         if rim_texture != null: world.draw_texture(rim_texture,Vector2(208,56),Color(0.8,0.8,0.8,1))
         else: world.draw_arc(Vector2(288,133),90,-2.8,0.6,28,DrawUtil.DARK,4)
