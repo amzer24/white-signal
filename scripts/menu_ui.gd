@@ -61,6 +61,7 @@ func home_items() -> Array:
     items.append(["SETTINGS","MUSIC . EFFECTS . DISPLAY","settings"])
     items.append(["HOW TO PLAY","MOVEMENT . GLYPHS . CONDUITS","controls"])
     items.append(["AFTERLIGHT","AN OPTIONAL LIGHTING STUDY","lab"])
+    items.append(["QUIT GAME","RETURN TO DESKTOP","quit"])
     return items
 
 func open_settings() -> void:
@@ -238,6 +239,7 @@ func activate() -> void:
             "continue": RunState.resume_run()
             "new": RunState.start_run()
             "lab": RunState.start_lab()
+            "quit": get_tree().quit()
             "settings": open_settings()
             "controls":
                 return_selected = selected
