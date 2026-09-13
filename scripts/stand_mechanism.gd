@@ -9,6 +9,7 @@ var timer := 0.0
 var weather_time := 0.0
 var rim_texture: Texture2D
 var reservoir_texture: Texture2D
+var truss_texture: Texture2D
 var bridge: StaticBody2D
 
 func _init(owner_world: Node2D) -> void:
@@ -17,6 +18,8 @@ func _init(owner_world: Node2D) -> void:
     if ResourceLoader.exists(path): reservoir_texture = load(path)
     var rim_path := "res://assets/exploration/broken-rim.png"
     if ResourceLoader.exists(rim_path): rim_texture = load(rim_path)
+    var truss_path := "res://assets/exploration/bridge-truss.png"
+    if ResourceLoader.exists(truss_path): truss_texture = load(truss_path)
 func enter() -> void:
     if not previous_room in IDS or not world.room_id in IDS: reset()
     if phase in ["warning","discharge"] and world.room_id != "conductor":
@@ -144,6 +147,9 @@ func draw_world() -> void:
             world.draw_line(tile.rect.position+Vector2(17,0),tile.rect.position+Vector2(24,8),DrawUtil.BG,2)
             if tile.timer >= 0: world.draw_line(tile.rect.position,tile.rect.position+Vector2(tile.rect.size.x*maxf(0,tile.timer)/0.9,0),DrawUtil.WHITE,2)
     if world.room_id in ["stand_trial","stand_bridge"] and is_instance_valid(bridge):
+        if world.room_id == "stand_bridge" and truss_texture != null:
+            # Native pixels; the two recessed bays extend beneath the bank caps.
+            for x in [144,240]: world.draw_texture(truss_texture,Vector2(x,188),Color(0.8,0.8,0.8))
         world._draw_platform(Rect2(95,224,295,8) if world.room_id == "stand_trial" else Rect2(150,224,180,8))
     if world.room_id not in ["stand_charge","conductor"]: return
     var gauge_x := 225.0 if world.room_id == "stand_charge" else 350.0

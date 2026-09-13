@@ -77,6 +77,9 @@ static func goal(world) -> String:
             if p.has_flag("stand_restored"): return "BRIDGE HOLDS . THE UPPER ROUTE STAYS OPEN"
             if world.stand.charge == 1: return "CHARGE HELD . FOLLOW THE CABLE TO RESERVOIR WALK"
             if world.stand.phase == "charging": return "CURRENT FILLING . IT WILL HOLD WITHOUT A TIMER"
+        "stand_bridge":
+            if not p.has_flag("stand_restored"): return "BRIDGE UNPOWERED . DIVERT CHARGE AT RESERVOIR"
+            return "THE BRIDGE HOLDS . FOLLOW THE WIRE"
         "stand_trial":
             if p.has_flag("stand_archive"): return "ARCHIVE RECOVERED . THE LOWER WALK HOLDS"
         "shelter":
