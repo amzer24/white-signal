@@ -6,10 +6,20 @@ const HALF_W := 6.0
 const HALF_H := 7.0
 
 var world: Node2D
-var particles: Node2D
+var _tex_cache := {}
+var props: Props
+
+func _tile(r: Rect2, type: String) -> ImageTexture:
+	var key := "%s_%d_%d_%d_%d" % [type, int(r.position.x), int(r.position.y), int(r.size.x), int(r.size.y)]
+	if not _tex_cache.has(key):
+		_tex_cache[key] = DrawUtil.platform_texture(r, type)
+	return _tex_cache[key]
 
 func _ready() -> void:
 	z_index = 10
+	props = Props.new()
+	props.bake_all()
+	props.place_all()
 
 func _process(_d: float) -> void:
 	queue_redraw()
@@ -25,29 +35,31 @@ func _draw() -> void:
 	var t := Time.get_ticks_msec() / 1000.0
 
 	_draw_beacons_goal(t)
-	_draw_platforms(t)
+	_draw_platforms(t, cam_tl)
+	props.draw(self, t, cam_tl)
 	_draw_springs(t)
-	_draw_signs(cam_tl)
+	_draw_signs(cam_tl, t)
 	_draw_spikes(t)
-	_draw_gems(t)
+	_draw_gems(t, cam_tl)
 	_draw_enemies(t, cam_tl)
 	_draw_player(t)
 
 func _draw_beacons_goal(t: float) -> void:
-	for c in LevelData.DATA.checkpoints:
+	for c in RunState.level.checkpoints:
 		var pos: Vector2 = c.pos
 		var active: bool = RunState.checkpoint.is_equal_approx(pos)
 		draw_rect(Rect2(pos.x, pos.y - 26, 2, 26), DrawUtil.WHITE if active else DrawUtil.DARK)
 		var wave := sin(t * 2.5 + pos.x) if active else 0.0
 		draw_rect(Rect2(pos.x + 2, pos.y - 26 + wave, 10 if active else 7, 6),
 			DrawUtil.WHITE if active else DrawUtil.GRAY)
-	var g: Rect2 = LevelData.DATA.goal
+	var g: Rect2 = RunState.level.goal
+	var gate_col := DrawUtil.WHITE if RunState.exit_ready() else DrawUtil.GRAY
 	var pulse := int(t * 2.0) % 2 == 0
 	var scroll := int(t * 5.0) % 8
-	draw_rect(Rect2(g.position.x - 4, g.position.y - 4, 4, g.size.y + 8), DrawUtil.WHITE)
-	draw_rect(Rect2(g.end.x, g.position.y - 4, 4, g.size.y + 8), DrawUtil.WHITE)
-	draw_rect(Rect2(g.position.x - 6, g.position.y - 8, g.size.x + 12, 5), DrawUtil.WHITE)
-	draw_rect(Rect2(g.position.x - 4, g.position.y - 10, g.size.x + 8, 2), DrawUtil.WHITE if pulse else DrawUtil.GRAY)
+	draw_rect(Rect2(g.position.x - 4, g.position.y - 4, 4, g.size.y + 8), gate_col)
+	draw_rect(Rect2(g.end.x, g.position.y - 4, 4, g.size.y + 8), gate_col)
+	draw_rect(Rect2(g.position.x - 6, g.position.y - 8, g.size.x + 12, 5), gate_col)
+	draw_rect(Rect2(g.position.x - 4, g.position.y - 10, g.size.x + 8, 2), gate_col if pulse else DrawUtil.GRAY)
 	draw_rect(g, DrawUtil.BG)
 	var yy := 0.0
 	while yy < g.size.y:
@@ -58,14 +70,14 @@ func _draw_beacons_goal(t: float) -> void:
 			xx += 8
 		yy += 8
 	draw_rect(Rect2(g.position.x - 6, g.end.y + 4, g.size.x + 12, 2), DrawUtil.GRAY)
-	var font := ThemeDB.fallback_font
-	draw_string(font, Vector2(g.position.x + 1, g.position.y - 4), "GATE", HORIZONTAL_ALIGNMENT_CENTER, g.size.x, 8, DrawUtil.BG)
-	draw_string(font, Vector2(g.position.x, g.position.y - 5), "GATE", HORIZONTAL_ALIGNMENT_CENTER, g.size.x, 8, DrawUtil.WHITE)
+	DrawUtil.text_shadow(self, Vector2(g.position.x + g.size.x / 2.0, g.position.y - 17), "TRANSMITTER" if RunState.exit_ready() else "WAKE THREE EARS", gate_col, 1, HORIZONTAL_ALIGNMENT_CENTER)
 
-func _draw_platforms(t: float) -> void:
-	for p in LevelData.DATA.platforms:
-		var tufts: bool = p.type != "secret" and p.r.size.y >= 20.0
-		DrawUtil.tile_platform(self, p.r, p.type == "secret", tufts)
+func _draw_platforms(t: float, cam_tl: Vector2) -> void:
+	for p in RunState.level.platforms:
+		var pr: Rect2 = p.r
+		if pr.end.x < cam_tl.x - 8.0 or pr.position.x > cam_tl.x + 488.0:
+			continue
+		draw_texture(_tile(pr, p.type), pr.position - Vector2(0, DrawUtil.TILE_MARGIN))
 		if p.type == "secret":
 			var x: float = p.r.position.x
 			while x < p.r.end.x:
@@ -87,11 +99,13 @@ func _draw_platforms(t: float) -> void:
 		if not is_instance_valid(m):
 			continue
 		var r := Rect2(m.position.x - m.size.x / 2.0, m.position.y - m.size.y / 2.0, m.size.x, m.size.y)
-		DrawUtil.tile_platform(self, r, false, false)
-		var x2: float = r.position.x + 3.0
-		while x2 < r.end.x - 5.0:
-			draw_rect(Rect2(x2, r.position.y + 6, 3, 2), DrawUtil.WHITE)
-			draw_rect(Rect2(x2 + 1, r.position.y + 5, 1, 1), DrawUtil.WHITE)
+		draw_texture(_tile(Rect2(Vector2.ZERO, r.size), "girder"), r.position - Vector2(0, DrawUtil.TILE_MARGIN))
+		# direction chevrons scroll with travel so the ferry reads as moving
+		var ph := int(m.t * 6.0) % 10
+		var x2: float = r.position.x + 4.0 + ph
+		while x2 < r.end.x - 6.0:
+			draw_rect(Rect2(x2, r.position.y + 5, 2, 1), DrawUtil.WHITE)
+			draw_rect(Rect2(x2 + 1, r.position.y + 6, 2, 1), DrawUtil.WHITE)
 			x2 += 10
 
 func _draw_springs(t: float) -> void:
@@ -102,19 +116,19 @@ func _draw_springs(t: float) -> void:
 		var r := Rect2(s.position.x - 12.0, s.position.y - 9.0, 24.0, 18.0)
 		draw_rect(Rect2(r.position.x - 1, r.end.y - 1, r.size.x + 2, 3), DrawUtil.BG)
 		draw_rect(Rect2(r.position.x, r.position.y + comp, r.size.x, r.size.y - comp), DrawUtil.DARK)
-		DrawUtil.tile_platform(self, Rect2(r.position.x, r.position.y + comp, r.size.x, maxf(4.0, r.size.y - comp)), false, false)
+		var pad_tex := _tile(Rect2(Vector2.ZERO, r.size), "pad")
+		draw_texture_rect_region(pad_tex, Rect2(r.position.x, r.position.y + comp, r.size.x, r.size.y - comp),
+			Rect2(0, DrawUtil.TILE_MARGIN, r.size.x, r.size.y - comp))
 		var pad := DrawUtil.WHITE if s.anim_t > 0.3 else DrawUtil.GRAY
 		draw_rect(Rect2(r.position.x - 2, r.position.y + comp, r.size.x + 4, 4), pad)
 		draw_rect(Rect2(r.position.x, r.position.y + comp + 1, r.size.x, 2), DrawUtil.BG)
 		draw_rect(Rect2(r.position.x + 5, r.position.y + 7 + comp, 3, 5), DrawUtil.WHITE)
 		draw_rect(Rect2(r.position.x + r.size.x - 8, r.position.y + 7 + comp, 3, 5), DrawUtil.WHITE)
-		var font := ThemeDB.fallback_font
-		draw_string(font, Vector2(r.position.x + 1, r.position.y - 3 + comp + 1), "^^^", HORIZONTAL_ALIGNMENT_CENTER, r.size.x, 8, DrawUtil.BG)
-		draw_string(font, Vector2(r.position.x, r.position.y - 3 + comp), "^^^", HORIZONTAL_ALIGNMENT_CENTER, r.size.x, 8, DrawUtil.WHITE)
+		var bob := -1.0 if s.anim_t <= 0.0 and int(t * 4.0) % 2 == 0 else 0.0
+		DrawUtil.text_shadow(self, Vector2(r.position.x + r.size.x / 2.0, r.position.y - 8 + comp + bob), "^^^", DrawUtil.WHITE, 1, HORIZONTAL_ALIGNMENT_CENTER)
 
-func _draw_signs(cam_tl: Vector2) -> void:
-	var font := ThemeDB.fallback_font
-	for sg in LevelData.DATA.signs:
+func _draw_signs(cam_tl: Vector2, t: float) -> void:
+	for sg in RunState.level.signs:
 		var pos: Vector2 = sg.pos
 		if pos.x < cam_tl.x - 20.0 or pos.x > cam_tl.x + 500.0:
 			continue
@@ -122,22 +136,23 @@ func _draw_signs(cam_tl: Vector2) -> void:
 		draw_rect(Rect2(pos.x - 3, pos.y - 4, 8, 6), DrawUtil.WHITE)
 		draw_rect(Rect2(pos.x - 1, pos.y - 2, 4, 2), DrawUtil.BG)
 		var p = world.player
-		if p and absf(p.global_position.x - pos.x) < 110.0:
+		if p and RunState.state != "menu" and absf(p.global_position.x - pos.x) < 110.0:
 			var txt: String = sg.text
-			var tw := font.get_string_size(txt, HORIZONTAL_ALIGNMENT_CENTER, -1, 8).x + 12.0
-			var bx: float = clampf(pos.x, tw / 2.0 + 2.0, 480.0 - tw / 2.0 - 2.0)
+			var tw := float(DrawUtil.text_width(txt) + 10)
+			# clamp the bubble to the visible view (we draw in world space)
+			var bx: float = roundf(clampf(pos.x, cam_tl.x + tw / 2.0 + 2.0, cam_tl.x + 480.0 - tw / 2.0 - 2.0))
 			var by := maxf(16.0, pos.y - 26.0)
 			draw_rect(Rect2(bx - tw / 2.0 - 1, by - 9, tw + 2, 13), DrawUtil.BG)
 			draw_rect(Rect2(bx - tw / 2.0, by - 8, tw, 11), DrawUtil.WHITE)
-			draw_string(font, Vector2(bx - tw / 2.0, by), txt, HORIZONTAL_ALIGNMENT_CENTER, tw, 8, DrawUtil.BG)
+			DrawUtil.text(self, Vector2(bx, by - 5), txt, DrawUtil.BG, 1, HORIZONTAL_ALIGNMENT_CENTER)
 			draw_rect(Rect2(pos.x, by + 3, 1, 5), DrawUtil.BG)
 		else:
-			draw_string(font, Vector2(pos.x + 1, pos.y - 6), "?", HORIZONTAL_ALIGNMENT_CENTER, 8, 8, DrawUtil.BG)
-			draw_string(font, Vector2(pos.x, pos.y - 7), "?", HORIZONTAL_ALIGNMENT_CENTER, 8, 8, DrawUtil.GRAY)
+			var bob := -1.0 if int(t * 2.0) % 2 == 0 else 0.0
+			DrawUtil.text_shadow(self, Vector2(pos.x + 1, pos.y - 12 + bob), "?", DrawUtil.GRAY, 1, HORIZONTAL_ALIGNMENT_CENTER)
 
 func _draw_spikes(t: float) -> void:
 	var blink := int(t * 6.25) % 2 == 0
-	for s in LevelData.DATA.spikes:
+	for s in RunState.level.spikes:
 		var r: Rect2 = s.r
 		draw_rect(Rect2(r.position.x - 1, r.end.y - 2, r.size.x + 2, 3), DrawUtil.BG)
 		var n := maxi(1, roundi(r.size.x / 12.0))
@@ -149,17 +164,78 @@ func _draw_spikes(t: float) -> void:
 				Vector2(x0, r.end.y), Vector2(x0 + tw / 2.0, r.position.y), Vector2(x0 + tw, r.end.y)
 			]), col)
 
-func _draw_gems(t: float) -> void:
+func _halo(c: Vector2, r: float, col: Color) -> void:
+	draw_colored_polygon(PackedVector2Array([
+		Vector2(c.x, c.y - r), Vector2(c.x + r, c.y), Vector2(c.x, c.y + r), Vector2(c.x - r, c.y)
+	]), col)
+
+func _draw_gems(t: float, cam_tl: Vector2) -> void:
+	var magnet: bool = float(RunState.mods.magnet_r) > 20.0
+	var p = world.player
 	for g in world.gems:
 		if not is_instance_valid(g) or g.collected:
 			continue
-		var pos: Vector2 = g.global_position + Vector2(0, sin(t * 4.0 + g.get_instance_id() % 7) * 2.0)
-		var squish := absf(sin(t * 3.33 + g.get_instance_id() % 7)) * 3.0
+		var base: Vector2 = g.global_position
+		if base.x < cam_tl.x - 30.0 or base.x > cam_tl.x + 510.0:
+			continue
+		var ph := float(g.get_instance_id() % 7)
+		var pos: Vector2 = base + Vector2(0, sin(t * 4.0 + ph) * 2.0)
+		var squish := absf(sin(t * 3.33 + ph)) * 3.0
+		var pulse := 0.5 + 0.5 * sin(t * 2.6 + ph)  # slow breathe, per-shard phase
+		# --- glow: soft halo (alpha) + a bayer-dithered outer ring for the 1-bit look
+		var r_out := 9.0 + pulse * 2.0
+		_halo(pos, r_out + 3.0, Color(DrawUtil.WHITE, 0.04 + pulse * 0.03))
+		_halo(pos, 8.0, Color(DrawUtil.WHITE, 0.07 + pulse * 0.05))
+		var ring := int(r_out)
+		var yy := -ring
+		while yy <= ring:
+			var xx := -ring
+			while xx <= ring:
+				var d := absi(xx) + absi(yy)  # diamond metric
+				if d == ring or d == ring - 1:
+					if DrawUtil.bayer(int(pos.x) + xx, int(pos.y) + yy) < 4:
+						draw_rect(Rect2(pos.x + xx, pos.y + yy, 1, 1), Color(DrawUtil.GRAY, 0.35 + pulse * 0.25))
+				xx += 1
+			yy += 1
+		# --- magnet pull: when MAGNET is held, a faint tether toward the spark in range
+		if magnet and p and base.distance_to(p.global_position) < float(RunState.mods.magnet_r) * 2.2:
+			var to: Vector2 = p.global_position - pos
+			var n := to.normalized()
+			for k in 4:
+				var q: Vector2 = pos + n * (8.0 + k * 6.0 + fmod(t * 40.0, 6.0))
+				draw_rect(Rect2(q.x, q.y, 1, 1), Color(DrawUtil.GRAY, 0.5 - k * 0.1))
+		# --- orbiting sparks (the pair on the far side of the orbit, drawn behind)
+		for k in 2:
+			var ang := t * 2.2 + ph + k * PI
+			if sin(ang) < 0.0:
+				var sp: Vector2 = pos + Vector2(cos(ang) * 8.0, sin(ang) * 4.0 - 1.0)
+				draw_rect(Rect2(roundf(sp.x), roundf(sp.y), 1, 1), DrawUtil.GRAY)
+		# --- the shard
+		draw_colored_polygon(PackedVector2Array([
+			Vector2(pos.x, pos.y - 6), Vector2(pos.x + 6.0 - squish, pos.y),
+			Vector2(pos.x, pos.y + 6), Vector2(pos.x - 6.0 + squish, pos.y)
+		]), DrawUtil.BG)
 		draw_colored_polygon(PackedVector2Array([
 			Vector2(pos.x, pos.y - 5), Vector2(pos.x + 5.0 - squish, pos.y),
 			Vector2(pos.x, pos.y + 5), Vector2(pos.x - 5.0 + squish, pos.y)
 		]), DrawUtil.WHITE)
 		draw_rect(Rect2(pos.x - 1, pos.y - 1, 2, 2), DrawUtil.BG)
+		# facet highlight on the upper-left edge
+		draw_rect(Rect2(pos.x - 2, pos.y - 2, 1, 1), DrawUtil.GRAY)
+		# --- glint: a brief 4-point star every ~2.5s (staggered per shard)
+		var gt := fmod(t * 0.4 + ph * 0.13, 1.0)
+		if gt < 0.08:
+			var glint_length := 4.0 + (1.0 - gt / 0.08) * 6.0
+			draw_rect(Rect2(pos.x - glint_length, pos.y - 0.5, glint_length * 2.0, 1), Color(DrawUtil.WHITE, 0.8))
+			draw_rect(Rect2(pos.x - 0.5, pos.y - glint_length, 1, glint_length * 2.0), Color(DrawUtil.WHITE, 0.8))
+		# --- orbiting spark in front
+		for k in 2:
+			var ang := t * 2.2 + ph + k * PI
+			if sin(ang) >= 0.0:
+				var sp: Vector2 = pos + Vector2(cos(ang) * 8.0, sin(ang) * 4.0 - 1.0)
+				draw_rect(Rect2(roundf(sp.x), roundf(sp.y), 1, 1), DrawUtil.WHITE)
+		# --- ground light: soft pool if the shard hangs near a floor
+		draw_rect(Rect2(pos.x - 7, pos.y + 9, 14, 1), Color(DrawUtil.WHITE, 0.05 + pulse * 0.04))
 
 func _draw_enemies(t: float, cam_tl: Vector2) -> void:
 	var f := int(t * 6.67) % 2
@@ -183,61 +259,6 @@ func _draw_enemies(t: float, cam_tl: Vector2) -> void:
 		draw_rect(Rect2(pos.x - 7, pos.y + 9, 5 if f == 1 else 3, 2), DrawUtil.GRAY)
 		draw_rect(Rect2(pos.x + 2 if f == 1 else pos.x + 0, pos.y + 9, 3 if f == 1 else 5, 2), DrawUtil.GRAY)
 
-func _draw_player(t: float) -> void:
-	var p = world.player
-	if p == null or not is_instance_valid(p):
-		return
-	var pos: Vector2 = p.global_position
-	var sx: float = p.sx_anim
-	var sy: float = p.sy_anim
-	var w := maxf(4.0, 12.0 * sx)
-	var h := maxf(6.0, 14.0 * sy)
-	var face: int = p.wall_dir if p.sliding_anim else p.face
-	var bx: float = pos.x - w / 2.0
-	var by: float = pos.y + HALF_H - h
-	# ground shadow
-	draw_rect(Rect2(pos.x - 5, pos.y + HALF_H + 1, 10, 2), Color(1, 1, 1, 0.15))
-	# invuln blink ghost
-	if p.invuln > 0.0 and p.dash_t <= 0.0 and int(t * 14.3) % 2 == 0:
-		draw_rect(Rect2(bx, by, w, h), Color(DrawUtil.WHITE, 0.35))
-		return
-	draw_rect(Rect2(bx - 1, by - 1, w + 2, h + 2), DrawUtil.BG)
-	draw_rect(Rect2(bx, by, w, h), DrawUtil.WHITE)
-	draw_rect(Rect2(bx - 1 if face > 0 else bx + w, by + 1, 1, 3), DrawUtil.WHITE)
-	var vx: float = bx + w - 6.0 if face > 0 else bx + 2.0
-	draw_rect(Rect2(vx, by + 3, 4, 3), DrawUtil.BG)
-	draw_rect(Rect2(vx + (0.0 if face > 0 else 3.0), by + 3, 1, 1), DrawUtil.GRAY)
-	# scarf
-	var fl := int(p.anim_t * 2.0) % 2
-	var scx: float = bx - 3.0 if face > 0 else bx + w + 1.0
-	draw_rect(Rect2(scx, by + 4 + fl, 3, 2), DrawUtil.GRAY)
-	draw_rect(Rect2(scx - 2.0 if face > 0 else scx + 2.0, by + 5.0 - fl, 2, 1), DrawUtil.GRAY)
-	# legs
-	if p.sliding_anim:
-		draw_rect(Rect2(bx + 2, by + h - 2, 3, 2), DrawUtil.BG)
-		draw_rect(Rect2(bx + w - 1.0 if face > 0 else bx - 2.0, by + h - 5, 3, 2), DrawUtil.BG)
-	elif not p.is_on_floor():
-		draw_rect(Rect2(bx + 2, by + h - 2, 3, 2), DrawUtil.BG)
-		draw_rect(Rect2(bx + w - 5, by + h - 3, 3, 3), DrawUtil.BG)
-	elif absf(p.velocity.x) > 10.0:
-		var fr := int(p.anim_t) % 2
-		draw_rect(Rect2(bx + 2, by + h - 2, 3, 2 + (0 if fr == 1 else 1)), DrawUtil.BG)
-		draw_rect(Rect2(bx + w - 5, by + h - 3 - (1 if fr == 1 else 0), 3, 2 + (1 if fr == 1 else 0)), DrawUtil.BG)
-	else:
-		draw_rect(Rect2(bx + 2, by + h - 2, 3, 2), DrawUtil.BG)
-		draw_rect(Rect2(bx + w - 5, by + h - 2, 3, 2), DrawUtil.BG)
-	# AEGIS ring
-	if p.shield > 0:
-		var pulse := int(t * 3.33) % 2 == 0
-		var ring := DrawUtil.WHITE if pulse else DrawUtil.GRAY
-		draw_rect(Rect2(bx - 2, by - 2, w + 4, 1), ring)
-		draw_rect(Rect2(bx - 2, by + h + 1, w + 4, 1), ring)
-		draw_rect(Rect2(bx - 2, by, 1, h), ring)
-		draw_rect(Rect2(bx + w + 1, by, 1, h), ring)
-	# DASH pip
-	if bool(RunState.mods.dash):
-		draw_rect(Rect2(bx + w / 2.0 - 1, by - 5, 3, 3), DrawUtil.WHITE if p.dash_ready else DrawUtil.DARK)
-		draw_rect(Rect2(bx + w / 2.0, by - 4, 1, 1), DrawUtil.BG)
-
-func _draw_ghost_text(cx: float) -> void:
-	pass
+func _draw_player(_t: float) -> void:
+	if world.player != null:
+		preload("res://scripts/spark_visual.gd").draw(self,world.player,world.player.visual_time)

@@ -1,0 +1,5 @@
+# Amplifier pedestal
+
+PixelLab create_image_pixflux, job c15e5964-689b-4676-a41e-245d487aea15, one generation under the user-authorized subscription. Original 32x32 transparent PNG saved from the inline result without editing. No reference image supplied.
+
+Prompt requested a side-view industrial relay pedestal, ceramic insulators, tuning-fork antenna and protocol socket, with four grayscale shades and no glow or text. The result is a small dark machine with subtle warm pixels, so it does not exactly meet the requested grayscale palette. In-game native-size rendering inspected: the silhouette fits behind the unchanged pickup marker and does not obscure the launch edge. A dark backing plate separates the machinery from the ruin layer. The original warm socket pixels are retained as a provisional art choice, consistent with the existing muted machinery accents; strict palette review remains outstanding. Runtime drawing is in amplifier_room.gd, with unchanged interaction and collision geometry.

@@ -1,0 +1,1209 @@
+{
+  "broken_targets": [],
+  "room_count": 39,
+  "rooms": [
+    {
+      "actions": [
+        {
+          "id": "gate_isolate",
+          "label": "ISOLATE / VERIFY LOCAL PATH"
+        }
+      ],
+      "exits": [
+        {
+          "label": "GANTRY RETURN",
+          "room": "gate",
+          "x": 27.0,
+          "y": 217.0
+        },
+        {
+          "label": "INDEPENDENT PATH",
+          "room": "source_walk",
+          "x": 445.0,
+          "y": 149.0
+        }
+      ],
+      "goal": "ISOLATE THE SHARED FAULT . WATCH THE LOCAL PATH",
+      "id": "source_return",
+      "platform_count": 4,
+      "title": "SOURCE . COMMON RETURN"
+    },
+    {
+      "actions": [
+        {
+          "id": "gate_commit",
+          "label": "COMMIT RESTORATION"
+        }
+      ],
+      "exits": [
+        {
+          "label": "CIRCUIT RETURN",
+          "room": "source_return",
+          "x": 27.0,
+          "y": 217.0
+        },
+        {
+          "label": "ANSWERING NETWORK",
+          "room": "aftermath",
+          "x": 445.0,
+          "y": 149.0
+        }
+      ],
+      "goal": "FOLLOW FOUR INDEPENDENT FEEDS . COMMIT RESTORATION",
+      "id": "source_walk",
+      "platform_count": 5,
+      "title": "SOURCE . COMMISSIONING WALK"
+    },
+    {
+      "actions": [
+        {
+          "id": "cable_archive",
+          "label": "RECOVER LOG / OPEN SERVICE RETURN"
+        }
+      ],
+      "exits": [
+        {
+          "label": "INSPECTION BAY RETURN",
+          "room": "array_inspection",
+          "x": 27.0,
+          "y": 217.0
+        },
+        {
+          "label": "UNLATCHED SHELTER RETURN",
+          "room": "wire_shelter",
+          "x": 445.0,
+          "y": 217.0
+        }
+      ],
+      "goal": "WATCH THE DROP MARK . UPPER WALK PASSES ABOVE",
+      "id": "array_cable",
+      "platform_count": 5,
+      "title": "ARRAY . CABLE GALLERY"
+    },
+    {
+      "actions": [
+        {
+          "id": "shaft_release",
+          "label": "RELEASE RETURN / READ ARCHIVE"
+        },
+        {
+          "id": "shaft_recall",
+          "label": "RECALL LIFT DOWN"
+        },
+        {
+          "id": "shaft_upper",
+          "label": "RECALL LIFT UP"
+        },
+        {
+          "id": "shaft_ride",
+          "label": "SEND LIFT"
+        }
+      ],
+      "exits": [
+        {
+          "label": "INSPECTION RETURN",
+          "room": "wire_shelter",
+          "x": 27.0,
+          "y": 217.0
+        }
+      ],
+      "goal": "ENTER UNDER LEFT WALL . ALTERNATE WALL KICKS",
+      "id": "wire_shaft",
+      "platform_count": 4,
+      "title": "THE WIRE . MAINTENANCE SHAFT"
+    },
+    {
+      "actions": [
+        {
+          "id": "inspection_archive",
+          "label": "REPLAY INSPECTION ARCHIVE"
+        }
+      ],
+      "exits": [
+        {
+          "label": "ARRAY RETURN",
+          "room": "array",
+          "x": 27.0,
+          "y": 217.0
+        },
+        {
+          "label": "CABLE GALLERY",
+          "room": "array_cable",
+          "x": 355.0,
+          "y": 183.0
+        }
+      ],
+      "goal": "WATCH THE PATROL . DASH . STOMP . OR TAKE THE UPPER WALK",
+      "id": "array_inspection",
+      "platform_count": 4,
+      "title": "ARRAY . INSPECTION BAY"
+    },
+    {
+      "actions": [
+        {
+          "id": "impeller",
+          "label": "RECOVER IMPELLER"
+        }
+      ],
+      "exits": [
+        {
+          "label": "FIXED DRY STAIR",
+          "room": "basin",
+          "x": 30.0,
+          "y": 115.0
+        },
+        {
+          "label": "SURVEY GALLERY",
+          "room": "drowned_gallery",
+          "x": 445.0,
+          "y": 217.0
+        },
+        {
+          "label": "OPTIONAL BASIN",
+          "room": "drowned_cycle",
+          "x": 333.0,
+          "y": 217.0
+        }
+      ],
+      "goal": "RECOVER THE IMPELLER . EXPLORE THE SURVEY GALLERY",
+      "id": "drowned_street",
+      "platform_count": 4,
+      "title": "DROWNED . SERVICE STREET"
+    },
+    {
+      "actions": [
+        {
+          "id": "air_jump",
+          "label": "LEARN AIR JUMP"
+        }
+      ],
+      "exits": [
+        {
+          "label": "STREET RETURN",
+          "room": "drowned_street",
+          "x": 27.0,
+          "y": 217.0
+        },
+        {
+          "label": "FLOAT CONTROL WALK",
+          "room": "float",
+          "x": 435.0,
+          "y": 113.0
+        },
+        {
+          "label": "INNER FREIGHT HATCH",
+          "room": "drowned_dock",
+          "x": 435.0,
+          "y": 217.0
+        }
+      ],
+      "goal": "LEARN AIR JUMP . REACH THE UPPER CONTROL WALK",
+      "id": "drowned_gallery",
+      "platform_count": 3,
+      "title": "DROWNED . SURVEY GALLERY"
+    },
+    {
+      "actions": [],
+      "exits": [
+        {
+          "label": "INNER CONDUIT",
+          "room": "drowned_gallery",
+          "x": 27.0,
+          "y": 217.0
+        },
+        {
+          "label": "ARRAY RETREAT",
+          "room": "array",
+          "x": 445.0,
+          "y": 217.0
+        }
+      ],
+      "goal": "FOLLOW THE FREIGHT CONDUIT TO THE ARRAY",
+      "id": "drowned_dock",
+      "platform_count": 3,
+      "title": "DROWNED . FREIGHT DOCK"
+    },
+    {
+      "actions": [
+        {
+          "id": "cycle_valve",
+          "label": "CYCLE LOCAL TIDE"
+        },
+        {
+          "id": "cycle_archive",
+          "label": "RECOVER ARCHIVE"
+        }
+      ],
+      "exits": [
+        {
+          "label": "DRY RETURN",
+          "room": "drowned_street",
+          "x": 27.0,
+          "y": 115.0
+        }
+      ],
+      "goal": "OPTIONAL . DRAIN THE SEPARATE BASIN . FIND THE ARCHIVE",
+      "id": "drowned_cycle",
+      "platform_count": 4,
+      "title": "DROWNED . OPTIONAL CYCLING BASIN"
+    },
+    {
+      "actions": [],
+      "exits": [
+        {
+          "label": "SHELTER COURT",
+          "room": "shelter",
+          "x": 445.0,
+          "y": 217.0
+        },
+        {
+          "label": "LISTENING FIELD",
+          "room": "return",
+          "x": 27.0,
+          "y": 217.0
+        }
+      ],
+      "goal": "FOLLOW THE BROKEN RIM TO THE SHELTER",
+      "id": "stand_rim",
+      "platform_count": 2,
+      "title": "THE STAND . BROKEN RIM"
+    },
+    {
+      "actions": [
+        {
+          "id": "storm_charge",
+          "label": "STORE CHARGE"
+        }
+      ],
+      "exits": [
+        {
+          "label": "COURT DESCENT",
+          "room": "shelter",
+          "x": 27.0,
+          "y": 217.0
+        },
+        {
+          "label": "RESERVOIR WALK",
+          "room": "conductor",
+          "x": 436.0,
+          "y": 149.0
+        }
+      ],
+      "goal": "STORE THE CURRENT . FOLLOW IT TO THE MOTOR",
+      "id": "stand_charge",
+      "platform_count": 4,
+      "title": "THE STAND . CONDUCTOR BAY"
+    },
+    {
+      "actions": [],
+      "exits": [
+        {
+          "label": "SHELTER RETURN",
+          "room": "shelter",
+          "x": 27.0,
+          "y": 217.0
+        },
+        {
+          "label": "UPPER WALK RETURN",
+          "room": "conductor",
+          "x": 447.0,
+          "y": 217.0
+        },
+        {
+          "label": "WIRE INSPECTION",
+          "room": "wire_shelter",
+          "x": 366.0,
+          "y": 217.0
+        }
+      ],
+      "goal": "THE BRIDGE HOLDS . FOLLOW THE WIRE",
+      "id": "stand_bridge",
+      "platform_count": 2,
+      "title": "THE STAND . LATCHED BRIDGE"
+    },
+    {
+      "actions": [],
+      "exits": [
+        {
+          "label": "COURT ASCENT",
+          "room": "shelter",
+          "x": 32.0,
+          "y": 115.0
+        },
+        {
+          "label": "DROWNED PUMP HOUSE",
+          "room": "pump",
+          "x": 420.0,
+          "y": 217.0
+        }
+      ],
+      "goal": "FOLLOW THE PIPE TO DROWNED",
+      "id": "stand_sluice",
+      "platform_count": 4,
+      "title": "THE STAND . SLUICE SHELTER"
+    },
+    {
+      "actions": [
+        {
+          "id": "stand_archive",
+          "label": "OPERATOR ARCHIVE"
+        }
+      ],
+      "exits": [
+        {
+          "label": "RESERVOIR RETURN",
+          "room": "conductor",
+          "x": 27.0,
+          "y": 217.0
+        }
+      ],
+      "goal": "OPTIONAL ARCHIVE . CRACKED PLATFORMS FALL",
+      "id": "stand_trial",
+      "platform_count": 2,
+      "title": "THE STAND . FRACTURE TRIAL"
+    },
+    {
+      "actions": [
+        {
+          "id": "siphon_valve",
+          "label": "TRANSFER WATER"
+        },
+        {
+          "id": "siphon_archive",
+          "label": "MAINTENANCE ARCHIVE"
+        },
+        {
+          "id": "siphon_catch",
+          "label": "PIN RIGHT FLOAT"
+        },
+        {
+          "id": "siphon_wheel",
+          "label": "SERVICE RETURN WHEEL"
+        }
+      ],
+      "exits": [
+        {
+          "label": "DRY PUMP HOUSE",
+          "room": "pump",
+          "x": 240.0,
+          "y": 215.0
+        },
+        {
+          "label": "LOOKOUT SERVICE RETURN",
+          "room": "lookout",
+          "x": 330.0,
+          "y": 99.0
+        }
+      ],
+      "goal": "RAISE FLOAT . PIN . DRAIN . SERVICE THE LOWER RETURN",
+      "id": "siphon",
+      "platform_count": 6,
+      "title": "DROWNED . SIPHON STACK"
+    },
+    {
+      "actions": [],
+      "exits": [
+        {
+          "label": "WORKSHOP",
+          "room": "workshop",
+          "x": 69.0,
+          "y": 119.0
+        },
+        {
+          "label": "LOWER SERVICE",
+          "room": "lookout",
+          "x": 430.0,
+          "y": 215.0
+        },
+        {
+          "label": "RETURN LIFT",
+          "room": "return",
+          "x": 346.0,
+          "y": 184.0
+        },
+        {
+          "label": "EAST CAUSEWAY",
+          "room": "causeway",
+          "x": 234.0,
+          "y": 215.0
+        },
+        {
+          "label": "SOUTH INTAKE",
+          "room": "cellar",
+          "x": 153.0,
+          "y": 151.0
+        },
+        {
+          "label": "FLATS RETURN",
+          "room": "arrival",
+          "x": 27.0,
+          "y": 215.0
+        },
+        {
+          "label": "ANSWERING NETWORK",
+          "room": "aftermath",
+          "x": 386.0,
+          "y": 215.0
+        }
+      ],
+      "goal": "FOLLOW THE ANSWERING WINDOW",
+      "id": "hub",
+      "platform_count": 5,
+      "title": "TRIANGULATION HUB"
+    },
+    {
+      "actions": [
+        {
+          "id": "memory",
+          "label": "MEMORY BLOCK"
+        }
+      ],
+      "exits": [
+        {
+          "label": "HUB",
+          "room": "hub",
+          "x": 30.0,
+          "y": 215.0
+        },
+        {
+          "label": "BALLAST GALLERY",
+          "room": "gallery",
+          "x": 440.0,
+          "y": 215.0
+        }
+      ],
+      "goal": "STRIKE THE MEMORY . FOLLOW ITS CIRCUIT",
+      "id": "workshop",
+      "platform_count": 4,
+      "title": "WEST WORKSHOP"
+    },
+    {
+      "actions": [
+        {
+          "id": "selector",
+          "label": "POWER SELECTOR"
+        },
+        {
+          "id": "catch",
+          "label": "SAFETY CATCH"
+        }
+      ],
+      "exits": [
+        {
+          "label": "WORKSHOP",
+          "room": "workshop",
+          "x": 28.0,
+          "y": 215.0
+        },
+        {
+          "label": "AMPLIFIER",
+          "room": "amplifier",
+          "x": 421.0,
+          "y": 113.0
+        }
+      ],
+      "goal": "POWER LIFT . LATCH CATCH . REROUTE",
+      "id": "gallery",
+      "platform_count": 2,
+      "title": "BALLAST GALLERY"
+    },
+    {
+      "actions": [
+        {
+          "id": "dash",
+          "label": "DASH PROTOCOL"
+        }
+      ],
+      "exits": [
+        {
+          "label": "GALLERY",
+          "room": "gallery",
+          "x": 27.0,
+          "y": 215.0
+        },
+        {
+          "label": "COUNTERWEIGHT",
+          "room": "return",
+          "x": 442.0,
+          "y": 215.0
+        },
+        {
+          "label": "FOURTH DISH . AIR JUMP",
+          "room": "fourth",
+          "x": 384.0,
+          "y": 98.0
+        }
+      ],
+      "goal": "RECOVER THE DASH PROTOCOL",
+      "id": "amplifier",
+      "platform_count": 5,
+      "title": "UPPER AMPLIFIER"
+    },
+    {
+      "actions": [
+        {
+          "id": "return_latch",
+          "label": "RETURN CATCH"
+        }
+      ],
+      "exits": [
+        {
+          "label": "AMPLIFIER",
+          "room": "amplifier",
+          "x": 27.0,
+          "y": 215.0
+        },
+        {
+          "label": "HUB LIFT",
+          "room": "hub",
+          "x": 432.0,
+          "y": 215.0
+        },
+        {
+          "label": "STAND SHELTER",
+          "room": "stand_rim",
+          "x": 169.0,
+          "y": 184.0
+        },
+        {
+          "label": "EAST CAUSEWAY",
+          "room": "causeway",
+          "x": 95.0,
+          "y": 215.0
+        }
+      ],
+      "goal": "OPEN A ROUTE YOU WILL REMEMBER",
+      "id": "return",
+      "platform_count": 3,
+      "title": "COUNTERWEIGHT RETURN"
+    },
+    {
+      "actions": [
+        {
+          "id": "survey",
+          "label": "SERVICE SURVEY"
+        }
+      ],
+      "exits": [
+        {
+          "label": "HUB",
+          "room": "hub",
+          "x": 26.0,
+          "y": 215.0
+        },
+        {
+          "label": "DROWNED SERVICE",
+          "room": "basin",
+          "x": 415.0,
+          "y": 178.0
+        },
+        {
+          "label": "INTAKE RETURN",
+          "room": "cellar",
+          "x": 126.0,
+          "y": 183.0
+        },
+        {
+          "label": "TRANSMITTER SUMP",
+          "room": "sump",
+          "x": 337.0,
+          "y": 178.0
+        },
+        {
+          "label": "SIPHON RETURN",
+          "room": "siphon",
+          "x": 245.0,
+          "y": 147.0
+        }
+      ],
+      "goal": "READ THE STREET BENEATH THE STATIC",
+      "id": "lookout",
+      "platform_count": 4,
+      "title": "DRAIN LOOKOUT"
+    },
+    {
+      "actions": [
+        {
+          "id": "bleed",
+          "label": "BLEED MAIN BASIN"
+        }
+      ],
+      "exits": [
+        {
+          "label": "DRY UPPER WALK",
+          "room": "pump",
+          "x": 445.0,
+          "y": 115.0
+        },
+        {
+          "label": "EXPOSED STREET",
+          "room": "drowned_street",
+          "x": 260.0,
+          "y": 217.0
+        },
+        {
+          "label": "LOOKOUT RETURN",
+          "room": "lookout",
+          "x": 27.0,
+          "y": 115.0
+        }
+      ],
+      "goal": "LOWER THE WATER . FOLLOW THE EXPOSED STAIR",
+      "id": "basin",
+      "platform_count": 7,
+      "title": "DROWNED . HIGH WATER RIM"
+    },
+    {
+      "actions": [
+        {
+          "id": "pump_socket",
+          "label": "FIT IMPELLER"
+        }
+      ],
+      "exits": [
+        {
+          "label": "DRY RIM",
+          "room": "basin",
+          "x": 27.0,
+          "y": 217.0
+        },
+        {
+          "label": "UPPER RETURN HATCH",
+          "room": "float",
+          "x": 444.0,
+          "y": 217.0
+        },
+        {
+          "label": "STAND SLUICE",
+          "room": "stand_sluice",
+          "x": 345.0,
+          "y": 217.0
+        },
+        {
+          "label": "SIPHON SERVICE BAY",
+          "room": "siphon",
+          "x": 284.0,
+          "y": 149.0
+        }
+      ],
+      "goal": "FIT THE IMPELLER . POWER THE FLOAT CONTROL WALK",
+      "id": "pump",
+      "platform_count": 3,
+      "title": "DROWNED . DRY PUMP HOUSE"
+    },
+    {
+      "actions": [
+        {
+          "id": "float_valve",
+          "label": "CYCLE FLOAT HEIGHT"
+        },
+        {
+          "id": "float_latch",
+          "label": "LATCH UPPER CONDUIT"
+        }
+      ],
+      "exits": [
+        {
+          "label": "DRY GALLERY RETURN",
+          "room": "drowned_gallery",
+          "x": 27.0,
+          "y": 217.0
+        },
+        {
+          "label": "SHORT PUMP RETURN",
+          "room": "pump",
+          "x": 438.0,
+          "y": 61.0
+        }
+      ],
+      "goal": "RAISE THE FLOAT . AIR JUMP TO THE UPPER LATCH",
+      "id": "float",
+      "platform_count": 4,
+      "title": "DROWNED . GUIDED FLOAT"
+    },
+    {
+      "actions": [
+        {
+          "id": "shelter_memory",
+          "label": "REPLAY SHELTER MEMORY"
+        }
+      ],
+      "exits": [
+        {
+          "label": "BROKEN RIM",
+          "room": "stand_rim",
+          "x": 27.0,
+          "y": 217.0
+        },
+        {
+          "label": "UPPER CONDUCTOR",
+          "room": "stand_charge",
+          "x": 365.0,
+          "y": 115.0
+        },
+        {
+          "label": "LOWER BRIDGE RETURN",
+          "room": "stand_bridge",
+          "x": 447.0,
+          "y": 217.0
+        },
+        {
+          "label": "SLUICE DESCENT",
+          "room": "stand_sluice",
+          "x": 240.0,
+          "y": 217.0
+        },
+        {
+          "label": "SOURCE SERVICE RETURN",
+          "room": "approach",
+          "x": 76.0,
+          "y": 217.0
+        }
+      ],
+      "goal": "FIND THE UPPER CABLE . THE COURT IS SAFE",
+      "id": "shelter",
+      "platform_count": 4,
+      "title": "THE STAND . SHELTER COURT"
+    },
+    {
+      "actions": [
+        {
+          "id": "storm_divert",
+          "label": "DIVERT TO MOTOR"
+        }
+      ],
+      "exits": [
+        {
+          "label": "CONDUCTOR RETURN",
+          "room": "stand_charge",
+          "x": 27.0,
+          "y": 217.0
+        },
+        {
+          "label": "LATCHED BRIDGE",
+          "room": "stand_bridge",
+          "x": 439.0,
+          "y": 151.0
+        },
+        {
+          "label": "OPTIONAL FRACTURE TRIAL",
+          "room": "stand_trial",
+          "x": 225.0,
+          "y": 151.0
+        }
+      ],
+      "goal": "DIVERT HELD CHARGE . OPEN THE LOWER RETURN",
+      "id": "conductor",
+      "platform_count": 4,
+      "title": "THE STAND . RESERVOIR WALK"
+    },
+    {
+      "actions": [
+        {
+          "id": "dish_0",
+          "label": "TURN WEST REFLECTOR"
+        },
+        {
+          "id": "dish_1",
+          "label": "TURN SKY REFLECTOR"
+        },
+        {
+          "id": "dish_2",
+          "label": "TURN EAST REFLECTOR"
+        },
+        {
+          "id": "ear_transmit",
+          "label": "TEST AND LATCH EAST EAR"
+        }
+      ],
+      "exits": [
+        {
+          "label": "TRIANGULATION HUB",
+          "room": "hub",
+          "x": 27.0,
+          "y": 215.0
+        },
+        {
+          "label": "COUNTERWEIGHT RETURN",
+          "room": "return",
+          "x": 447.0,
+          "y": 215.0
+        },
+        {
+          "label": "TRANSMITTER RETURN",
+          "room": "sump",
+          "x": 73.0,
+          "y": 215.0
+        }
+      ],
+      "goal": "MATCH THE DISHES TO THEIR ETCHED SIGHT LINES",
+      "id": "causeway",
+      "platform_count": 4,
+      "title": "LISTENING FIELD . EAST CAUSEWAY"
+    },
+    {
+      "actions": [],
+      "exits": [
+        {
+          "label": "HUB SERVICE STAIR",
+          "room": "hub",
+          "x": 27.0,
+          "y": 215.0
+        },
+        {
+          "label": "DRAIN LOOKOUT",
+          "room": "lookout",
+          "x": 444.0,
+          "y": 215.0
+        }
+      ],
+      "goal": "STRIKE THE CRACKED INTAKE FROM BELOW",
+      "id": "cellar",
+      "platform_count": 3,
+      "title": "LISTENING FIELD . SOUTH INTAKE"
+    },
+    {
+      "actions": [
+        {
+          "id": "field_transmit",
+          "label": "VERIFY AND COMMISSION FIELD"
+        }
+      ],
+      "exits": [
+        {
+          "label": "DRAIN LOOKOUT",
+          "room": "lookout",
+          "x": 27.0,
+          "y": 215.0
+        },
+        {
+          "label": "CAUSEWAY SERVICE RETURN",
+          "room": "causeway",
+          "x": 444.0,
+          "y": 215.0
+        }
+      ],
+      "goal": "VERIFY WEST . EAST . SOUTH . COMMISSION THE FIELD",
+      "id": "sump",
+      "platform_count": 1,
+      "title": "LISTENING FIELD . TRANSMITTER SUMP"
+    },
+    {
+      "actions": [
+        {
+          "id": "fourth_memory",
+          "label": "REPLAY ISOLATION ARCHIVE"
+        }
+      ],
+      "exits": [
+        {
+          "label": "UPPER AMPLIFIER",
+          "room": "amplifier",
+          "x": 27.0,
+          "y": 215.0
+        }
+      ],
+      "goal": "AN INTACT DISH . A DELIBERATE CUT",
+      "id": "fourth",
+      "platform_count": 3,
+      "title": "LISTENING FIELD . FOURTH DISH"
+    },
+    {
+      "actions": [
+        {
+          "id": "intro_memory",
+          "label": "MEMORY"
+        }
+      ],
+      "exits": [
+        {
+          "label": "CONDUIT",
+          "room": "conduit",
+          "x": 442.0,
+          "y": 215.0
+        }
+      ],
+      "goal": "A/D MOVE . SPACE JUMP . STRIKE THE MEMORY FROM BELOW",
+      "id": "flats",
+      "platform_count": 4,
+      "title": "FLATS . THE FIRST CARRIER"
+    },
+    {
+      "actions": [
+        {
+          "id": "conduit_switch",
+          "label": "SWITCH"
+        },
+        {
+          "id": "conduit_return",
+          "label": "RETURN THROUGH CONDUIT"
+        }
+      ],
+      "exits": [
+        {
+          "label": "FLATS",
+          "room": "flats",
+          "x": 27.0,
+          "y": 215.0
+        },
+        {
+          "label": "ARRIVAL",
+          "room": "arrival",
+          "x": 445.0,
+          "y": 215.0
+        }
+      ],
+      "goal": "E OR DOWN AT THE MARKED CONDUIT",
+      "id": "conduit",
+      "platform_count": 5,
+      "title": "FLATS . MAINTENANCE CONDUIT"
+    },
+    {
+      "actions": [
+        {
+          "id": "first_beacon",
+          "label": "BEACON"
+        }
+      ],
+      "exits": [
+        {
+          "label": "CONDUIT",
+          "room": "conduit",
+          "x": 27.0,
+          "y": 215.0
+        },
+        {
+          "label": "HUB",
+          "room": "hub",
+          "x": 445.0,
+          "y": 215.0
+        }
+      ],
+      "goal": "RESTORE THE BEACON . FOLLOW THE FIELD RECEIVERS",
+      "id": "arrival",
+      "platform_count": 4,
+      "title": "FLATS . FIRST RECEIVER"
+    },
+    {
+      "actions": [
+        {
+          "id": "brake_spare",
+          "label": "RECOVER BRAKE ASSEMBLY"
+        }
+      ],
+      "exits": [
+        {
+          "label": "STAND RETURN",
+          "room": "stand_bridge",
+          "x": 27.0,
+          "y": 215.0
+        },
+        {
+          "label": "CARRIAGE DOCK",
+          "room": "wire_carriage",
+          "x": 445.0,
+          "y": 215.0
+        },
+        {
+          "label": "OPTIONAL MAINTENANCE SHAFT",
+          "room": "wire_shaft",
+          "x": 120.0,
+          "y": 217.0
+        },
+        {
+          "label": "ARRAY SERVICE STAIR",
+          "room": "array",
+          "x": 335.0,
+          "y": 215.0
+        },
+        {
+          "label": "ARCHIVE SERVICE RETURN",
+          "room": "array_cable",
+          "x": 355.0,
+          "y": 150.0
+        }
+      ],
+      "goal": "RECOVER THE BRAKE . REPAIR THE CARRIAGE",
+      "id": "wire_shelter",
+      "platform_count": 4,
+      "title": "THE WIRE . INSPECTION SHELTER"
+    },
+    {
+      "actions": [
+        {
+          "id": "brake_socket",
+          "label": "FIT BRAKE ASSEMBLY"
+        },
+        {
+          "id": "carriage_recall",
+          "label": "RECALL LEFT"
+        },
+        {
+          "id": "carriage_send",
+          "label": "RIDE TO OTHER SHORE"
+        },
+        {
+          "id": "carriage_summon_right",
+          "label": "RECALL RIGHT"
+        }
+      ],
+      "exits": [
+        {
+          "label": "INSPECTION SHELTER",
+          "room": "wire_shelter",
+          "x": 27.0,
+          "y": 215.0
+        },
+        {
+          "label": "ARRAY CORE",
+          "room": "array",
+          "x": 447.0,
+          "y": 215.0
+        }
+      ],
+      "goal": "FIT BRAKE . BOARD CARRIAGE . BOTH SHORES CAN RECALL",
+      "id": "wire_carriage",
+      "platform_count": 2,
+      "title": "THE WIRE . SUSPENDED CROSSING"
+    },
+    {
+      "actions": [
+        {
+          "id": "array_test",
+          "label": "RUN / REPLAY DIAGNOSTIC"
+        },
+        {
+          "id": "array_isolate",
+          "label": "ISOLATE COMMON RETURN"
+        },
+        {
+          "id": "array_bypass",
+          "label": "BYPASS AND COMMISSION"
+        }
+      ],
+      "exits": [
+        {
+          "label": "DROWNED FREIGHT",
+          "room": "drowned_dock",
+          "x": 27.0,
+          "y": 215.0
+        },
+        {
+          "label": "WIRE RETURN",
+          "room": "wire_carriage",
+          "x": 447.0,
+          "y": 215.0
+        },
+        {
+          "label": "INSPECTION SERVICE STAIR",
+          "room": "wire_shelter",
+          "x": 174.0,
+          "y": 215.0
+        },
+        {
+          "label": "SOURCE APPROACH",
+          "room": "approach",
+          "x": 306.0,
+          "y": 215.0
+        },
+        {
+          "label": "OPTIONAL INSPECTION BAY",
+          "room": "array_inspection",
+          "x": 185.0,
+          "y": 149.0
+        }
+      ],
+      "goal": "TEST THE CIRCUIT . ISOLATE FAULT . ROUTE HEALTHY FEED",
+      "id": "array",
+      "platform_count": 3,
+      "title": "THE ARRAY . COMMON RETURN"
+    },
+    {
+      "actions": [
+        {
+          "id": "approach_latch",
+          "label": "OPEN SERVICE RETURN"
+        }
+      ],
+      "exits": [
+        {
+          "label": "ARRAY RETURN",
+          "room": "array",
+          "x": 27.0,
+          "y": 215.0
+        },
+        {
+          "label": "SOURCE GATE",
+          "room": "gate",
+          "x": 447.0,
+          "y": 215.0
+        },
+        {
+          "label": "STAND SERVICE RETURN",
+          "room": "shelter",
+          "x": 346.0,
+          "y": 215.0
+        }
+      ],
+      "goal": "VERIFY THE FOUR PROJECTS . OPEN THE SERVICE RETURN",
+      "id": "approach",
+      "platform_count": 2,
+      "title": "THE APPROACH . LOCAL FEEDERS"
+    },
+    {
+      "actions": [
+        {
+          "id": "gate_latch",
+          "label": "SECURE LOCAL BUS"
+        }
+      ],
+      "exits": [
+        {
+          "label": "APPROACH RETURN",
+          "room": "approach",
+          "x": 27.0,
+          "y": 217.0
+        },
+        {
+          "label": "COMMON RETURN CHAMBER",
+          "room": "source_return",
+          "x": 445.0,
+          "y": 73.0
+        }
+      ],
+      "goal": "SECURE THE LOCAL BUS . FOUR FEEDS ARRIVED",
+      "id": "gate",
+      "platform_count": 4,
+      "title": "SOURCE . DISTRIBUTION GANTRY"
+    },
+    {
+      "actions": [],
+      "exits": [
+        {
+          "label": "GATE RETURN",
+          "room": "gate",
+          "x": 27.0,
+          "y": 215.0
+        },
+        {
+          "label": "RETURN TO LISTENING FIELD",
+          "room": "hub",
+          "x": 443.0,
+          "y": 215.0
+        },
+        {
+          "label": "COMMISSIONING RETURN",
+          "room": "source_walk",
+          "x": 160.0,
+          "y": 217.0
+        }
+      ],
+      "goal": "THE SIGNAL HOLDS . YOUR WORLD REMAINS",
+      "id": "aftermath",
+      "platform_count": 1,
+      "title": "WHITE SIGNAL . THE NETWORK ANSWERS"
+    }
+  ],
+  "scope": "Structural graph only. Does not establish reachability under gates, physics or ability ordering.",
+  "structurally_unreachable": []
+}

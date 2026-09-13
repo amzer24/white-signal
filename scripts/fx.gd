@@ -2,6 +2,11 @@ extends Node2D
 ## Particle system — port of JS burst()/dust(): white→gray fading squares.
 
 var parts: Array = []
+var shake_amt := 0.0
+
+## screen shake request (JS `shake = max(shake, v)`), decays 20/s in world.gd
+func shake(v: float) -> void:
+	shake_amt = maxf(shake_amt, v)
 
 func _ready() -> void:
 	add_to_group("fx")
@@ -26,6 +31,8 @@ func trail(at: Vector2, vx: float) -> void:
 	parts.append({"p": at, "v": Vector2(-vx * 30.0, 0), "life": 0.25, "t": 0.0, "s": 2})
 
 func _physics_process(delta: float) -> void:
+	if not RunState.sim_active():
+		return
 	var alive: Array = []
 	for p in parts:
 		p.t += delta

@@ -11,6 +11,7 @@ const DASH_TIME := 0.13
 const OVERSPEED_DECAY := 350.0
 const CORNER_SLIDE := 4.0
 
+var conduit_cooldown := 0.0
 var coyote_t := 0.0
 var buffer_t := 0.0
 var wall_grace_t := 0.0
@@ -32,6 +33,7 @@ var sy_anim := 1.0
 var face := 1
 var sliding_anim := false
 var anim_t := 0.0
+var visual_time := 0.0
 
 func m(key: String) -> Variant:
     return RunState.mods[key]
@@ -53,6 +55,11 @@ func reset_at(pos: Vector2) -> void:
     shield = int(m("shield_max"))
 
 func _physics_process(delta: float) -> void:
+    # JS: update() only runs while state == "play" (pause/draft/menu freeze the spark)
+    if not RunState.sim_active():
+        return
+    visual_time += delta
+    conduit_cooldown = maxf(0.0, conduit_cooldown - delta)
     var M := RunState.mods
     invuln = maxf(0.0, invuln - delta)
     spring_t = maxf(0.0, spring_t - delta)
@@ -95,7 +102,9 @@ func _physics_process(delta: float) -> void:
 
     if is_on_floor():
         coyote_t = float(M.coyote)
-    if buffer_t > 0.0 and coyote_t > 0.0:
+    # spring_t guard: is_on_floor() lags one frame after a spring launch, so a
+    # buffered jump would otherwise replace the launch velocity with jump_vel
+    if buffer_t > 0.0 and coyote_t > 0.0 and not (spring_t > 0.0 and velocity.y < 0.0):
         velocity.y = -float(M.jump_vel)
         buffer_t = 0.0
         coyote_t = 0.0
@@ -121,6 +130,7 @@ func _physics_process(delta: float) -> void:
         sx_anim = 0.75
         sy_anim = 1.3
         Sfx.beep(500.0 + randf() * 40.0)
+        _fx_burst(global_position, 5)
 
     # air jumps (2xJUMP / GLASS)
     if buffer_t > 0.0 and not is_on_floor() and coyote_t <= 0.0 \
@@ -131,18 +141,20 @@ func _physics_process(delta: float) -> void:
         sx_anim = 0.75
         sy_anim = 1.3
         Sfx.beep(560.0 + randf() * 40.0)
+        _fx_burst(global_position + Vector2(0, 7), 5)
 
     # dash (DASH glyph)
     if Input.is_action_just_pressed("dash") and bool(M.dash) and dash_ready and dash_t <= 0.0:
         dash_t = DASH_TIME
         dash_ready = false
-        dash_dir = int(signf(dir)) if dir != 0.0 else (1 if velocity.x >= 0.0 else -1)
+        dash_dir = int(signf(dir)) if dir != 0.0 else face  # JS: no input → facing
         face = dash_dir
         velocity.y = 0.0
         invuln = maxf(invuln, 0.2)
         sx_anim = 1.35
         sy_anim = 0.65
         Sfx.beep(700.0, 0.07)
+        _fx_burst(global_position, 6)
     if dash_t > 0.0:
         var fx2 := get_tree().get_first_node_in_group("fx")
         if fx2:
@@ -167,6 +179,13 @@ func _physics_process(delta: float) -> void:
     var fall_v := velocity.y
     move_and_slide()
 
+    if prev_vy < 0.0:
+        for i in get_slide_collision_count():
+            var collision := get_slide_collision(i)
+            if collision.get_normal().y > 0.7 and collision.get_collider().has_method("strike"):
+                collision.get_collider().strike()
+                break
+
     # face + run anim
     if dir != 0.0:
         face = int(signf(dir))
@@ -186,6 +205,7 @@ func _physics_process(delta: float) -> void:
             fx3.dust(global_position + Vector2(0, 7), 7 if hard else 4)
         if hard:
             Sfx.beep(140.0, 0.05, 0.04)
+            _fx_shake(2.0)
 
     # corner correction: ceiling graze <= 4px slides past (restores arc)
     if is_on_ceiling() and prev_vy < 0.0:
@@ -241,6 +261,16 @@ func _wall_top_from_collisions() -> float:
                         return cs.global_position.y - rect.size.y * 0.5
     return wall_top_y
 
+func _fx_burst(at: Vector2, n: int) -> void:
+    var fx := get_tree().get_first_node_in_group("fx")
+    if fx:
+        fx.burst(at, n)
+
+func _fx_shake(v: float) -> void:
+    var fx := get_tree().get_first_node_in_group("fx")
+    if fx:
+        fx.shake(v)
+
 func player_rect() -> Rect2:
     return Rect2(global_position.x - HALF_W, global_position.y - HALF_H, HALF_W * 2.0, HALF_H * 2.0)
 
@@ -255,6 +285,9 @@ func player_hit() -> void:
         shield -= 1
         invuln = 1.2
         velocity.y = -220.0
+        Sfx.beep(220.0, 0.15, 0.08, "sawtooth")  # AEGIS break (saw drop)
+        _fx_burst(global_position, 12)
+        _fx_shake(4.0)
         return
     RunState.register_death()
 

@@ -1,0 +1,56 @@
+extends SceneTree
+var failures := 0
+func check(ok: bool, label: String) -> void:
+    if not ok:
+        failures += 1
+        print("FAIL: "+label)
+func _initialize() -> void: call_deferred("run")
+func run() -> void:
+    if not FileAccess.file_exists("res://scripts/network_mechanism.gd"):
+        print("FAIL: Wire/Array mechanism missing")
+        quit(1)
+        return
+    var scene = load("res://scenes/exploration.tscn").instantiate()
+    scene.save_path = "res://test-user/network_contract.json"
+    for suffix in ["", ".tmp", ".bak"]: DirAccess.remove_absolute(scene.save_path+suffix)
+    root.add_child(scene)
+    scene.enter_room("wire_carriage")
+    scene.activate("brake_socket")
+    check(not scene.profile.has_flag("wire_repaired"),"missing spare blocks repair")
+    scene.enter_room("wire_shelter")
+    scene.activate("brake_spare")
+    scene.respawn()
+    check(scene.profile.has_flag("brake_spare"),"spare survives death")
+    scene.enter_room("wire_carriage")
+    scene.activate("brake_socket")
+    check(scene.profile.has_flag("wire_repaired"),"spare repairs carriage")
+    scene.activate("carriage_send")
+    scene.network.motion.tick(-2)
+    check(scene.network.motion.position == 150,"negative delta cannot move carriage")
+    scene.network.motion.tick(5)
+    check(scene.network.motion.arrived(),"carriage reaches right stop")
+    scene.activate("carriage_recall")
+    scene.network.motion.tick(5)
+    check(scene.network.motion.position == 150,"recall returns carriage")
+    scene.enter_room("array")
+    scene.activate("array_bypass")
+    check(not scene.profile.has_flag("array_restored"),"untested common return cannot commission")
+    scene.activate("array_test")
+    scene.network.tick(2.1)
+    check(scene.profile.has_flag("diagnostic_seen"),"diagnostic reveals fault")
+    scene.activate("array_isolate")
+    scene.activate("array_bypass")
+    check(scene.profile.has_flag("array_restored"),"isolation and bypass commission Array")
+    scene.respawn()
+    scene.profile.load_profile()
+    check(scene.profile.has_flag("array_restored"),"Array completion survives reload")
+    scene.activate("array_test")
+    check(scene.profile.has_flag("array_restored"),"replay cannot erase completion")
+    scene.profile.data.flags.erase("wire_repaired")
+    check(not scene.can_use_exit("wire_carriage"),"Array-first visit cannot enter stranded carriage shore")
+    check(scene.can_use_exit("wire_shelter"),"commissioned Array opens safe spare access from other end")
+    scene.queue_free()
+    await process_frame
+    for suffix in ["", ".tmp", ".bak"]: DirAccess.remove_absolute("res://test-user/network_contract.json"+suffix)
+    print("NETWORK: %d failures" % failures)
+    quit(1 if failures else 0)

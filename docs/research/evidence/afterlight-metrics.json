@@ -1,0 +1,37 @@
+{
+  "device": "NVIDIA GeForce RTX 4070",
+  "samples": [
+    {
+      "draw_calls": 29.0,
+      "frame_median_ms": 8.399,
+      "frame_p95_ms": 8.762,
+      "generated": true,
+      "mode": "ordinary",
+      "resolution": "(960, 540)"
+    },
+    {
+      "draw_calls": 29.0,
+      "frame_median_ms": 8.448,
+      "frame_p95_ms": 8.735,
+      "generated": true,
+      "mode": "dark",
+      "resolution": "(960, 540)"
+    },
+    {
+      "draw_calls": 29.0,
+      "frame_median_ms": 8.4,
+      "frame_p95_ms": 8.698,
+      "generated": true,
+      "mode": "assist",
+      "resolution": "(960, 540)"
+    },
+    {
+      "draw_calls": 31.0,
+      "frame_median_ms": 8.414,
+      "frame_p95_ms": 8.677,
+      "generated": false,
+      "mode": "procedural-control",
+      "resolution": "(960, 540)"
+    }
+  ]
+}

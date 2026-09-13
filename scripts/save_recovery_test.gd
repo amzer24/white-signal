@@ -1,0 +1,23 @@
+extends SceneTree
+func _initialize() -> void:
+    var profile = load("res://scripts/exploration_save.gd").new()
+    profile.path = "res://test-user/recovery-%d.json" % OS.get_process_id()
+    var recovery = load("res://scripts/save_recovery.gd")
+    var file := FileAccess.open(profile.path,FileAccess.WRITE)
+    file.store_string("broken original")
+    file.close()
+    file = FileAccess.open(profile.path+".bak",FileAccess.WRITE)
+    file.store_string("broken backup")
+    file.close()
+    var result: Dictionary = recovery.restart_unreadable(profile)
+    assert(result.ok)
+    assert(FileAccess.get_file_as_string(result.archive+"/"+profile.path.get_file()) == "broken original")
+    assert(FileAccess.get_file_as_string(result.archive+"/"+profile.path.get_file()+".bak") == "broken backup")
+    assert(profile.load_profile() and profile.data.room == "flats")
+    assert(not recovery.restart_unreadable(profile).ok)
+    for suffix in ["", ".bak", ".tmp"]:
+        DirAccess.remove_absolute(profile.path+suffix)
+        DirAccess.remove_absolute(result.archive+"/"+profile.path.get_file()+suffix)
+    DirAccess.remove_absolute(result.archive)
+    print("SAVE RECOVERY: retained originals, valid fresh save, readable-save protection passed")
+    quit()

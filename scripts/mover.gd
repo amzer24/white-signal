@@ -15,6 +15,8 @@ func _ready() -> void:
     sync_to_physics = true
 
 func _physics_process(delta: float) -> void:
+    if not RunState.sim_active():
+        return
     t += delta * osc_speed
     var off := sin(t) * travel_range
     if axis == "x":

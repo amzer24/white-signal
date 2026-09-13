@@ -1,0 +1,60 @@
+extends "res://scripts/exploration_routes_test.gd"
+
+func run() -> void:
+    scene = load("res://scenes/exploration.tscn").instantiate()
+    scene.save_path = "res://test-user/drowned_routes.json"
+    for suffix in ["", ".tmp", ".bak"]: DirAccess.remove_absolute(scene.save_path+suffix)
+    root.add_child(scene)
+    scene.enter_room("basin")
+    await frames(5)
+    await land(79,137,false)
+    scene.activate("bleed")
+    scene.activate("bleed")
+    await frames(230)
+    await land(240,237,false)
+    scene.activate("impeller")
+    # Verify the independent dry escape back to the starting control as well.
+    await land(194,237,false)
+    await land(160,204)
+    await land(125,171)
+    await land(80,137)
+    await land(240,237,false)
+    await land(335,237,false)
+    await land(375,204)
+    await land(409,171)
+    await land(449,137)
+    scene.enter_room("pump","basin")
+    await frames(5)
+    await land(82,217,false)
+    await land(140,181)
+    await land(161,181,false)
+    await land(218,148)
+    await land(244,148,false)
+    scene.activate("pump_socket")
+    scene.enter_room("float","pump")
+    await frames(5)
+    await land(103,202)
+    await land(155,173)
+    await land(209,145)
+    scene.activate("float_valve")
+    scene.activate("float_valve")
+    # Dry controls permit waiting indefinitely; no reaction timer or dash required.
+    await frames(300)
+    await land(228,145,false)
+    await land(282,116)
+    if scene.player.position.y > 128:
+        failed += 1
+        print("FAIL float ride ",scene.player.position)
+    await land(305,116,false)
+    await land(368,106)
+    scene.activate("float_latch")
+    await land(408,106,false)
+    scene.activate("air_jump")
+    if not scene.profile.has_flag("air_jump") or not scene.profile.has_flag("drowned_restored"):
+        failed += 1
+        print("FAIL final Drowned state")
+    scene.queue_free()
+    await process_frame
+    for suffix in ["", ".tmp", ".bak"]: DirAccess.remove_absolute("res://test-user/drowned_routes.json"+suffix)
+    print("DROWNED ROUTES: %d failures" % failed)
+    quit(1 if failed else 0)

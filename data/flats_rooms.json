@@ -1,0 +1,185 @@
+{
+  "rooms": [
+    {
+      "id": "flats",
+      "title": "FLATS",
+      "goal": "REACH THE EXIT",
+      "spawn": [
+        35,
+        215
+      ],
+      "platforms": [
+        [
+          0,
+          224,
+          480,
+          46
+        ],
+        [
+          120,
+          200,
+          48,
+          8
+        ],
+        [
+          300,
+          208,
+          56,
+          8
+        ],
+        [
+          380,
+          200,
+          40,
+          8
+        ]
+      ],
+      "exits": [
+        [
+          "conduit",
+          [
+            442,
+            215
+          ],
+          "CONDUIT"
+        ]
+      ],
+      "actions": [
+        [
+          "intro_memory",
+          [
+            211,
+            176
+          ],
+          "MEMORY"
+        ]
+      ]
+    },
+    {
+      "id": "conduit",
+      "title": "CONDUIT",
+      "goal": "CROSS THE TUNNEL",
+      "spawn": [
+        40,
+        215
+      ],
+      "platforms": [
+        [
+          0,
+          224,
+          480,
+          46
+        ],
+        [
+          140,
+          190,
+          48,
+          8
+        ],
+        [
+          260,
+          200,
+          56,
+          8
+        ],
+        [
+          370,
+          190,
+          48,
+          8
+        ]
+      ],
+      "exits": [
+        [
+          "flats",
+          [
+            27,
+            215
+          ],
+          "FLATS"
+        ],
+        [
+          "arrival",
+          [
+            445,
+            215
+          ],
+          "ARRIVAL"
+        ]
+      ],
+      "actions": [
+        [
+          "conduit_switch",
+          [
+            211,
+            215
+          ],
+          "SWITCH"
+        ]
+      ]
+    },
+    {
+      "id": "arrival",
+      "title": "ARRIVAL",
+      "goal": "LIGHT THE BEACON",
+      "spawn": [
+        40,
+        215
+      ],
+      "platforms": [
+        [
+          0,
+          224,
+          480,
+          46
+        ],
+        [
+          120,
+          190,
+          48,
+          8
+        ],
+        [
+          300,
+          200,
+          56,
+          8
+        ],
+        [
+          400,
+          190,
+          40,
+          8
+        ]
+      ],
+      "exits": [
+        [
+          "conduit",
+          [
+            27,
+            215
+          ],
+          "CONDUIT"
+        ],
+        [
+          "hub",
+          [
+            445,
+            215
+          ],
+          "HUB"
+        ]
+      ],
+      "actions": [
+        [
+          "first_beacon",
+          [
+            240,
+            215
+          ],
+          "BEACON"
+        ]
+      ]
+    }
+  ]
+}

@@ -1,0 +1,78 @@
+{
+  "after_scene_free": {
+    "nodes": 7.0,
+    "objects": 1545.0,
+    "resources": 31.0,
+    "static_bytes": 37313156
+  },
+  "frame_cap": 60,
+  "render_samples": {
+    "array_inspection": {
+      "draw_calls_max": 24.0,
+      "frame_max_ms": 17.167,
+      "frame_p50_ms": 16.669,
+      "frame_p95_ms": 16.956,
+      "process_p95_ms": 20.397
+    },
+    "arrival": {
+      "draw_calls_max": 32.0,
+      "frame_max_ms": 17.412,
+      "frame_p50_ms": 16.658,
+      "frame_p95_ms": 16.968,
+      "process_p95_ms": 0.951
+    },
+    "conductor": {
+      "draw_calls_max": 23.0,
+      "frame_max_ms": 17.075,
+      "frame_p50_ms": 16.685,
+      "frame_p95_ms": 16.985,
+      "process_p95_ms": 0.94
+    },
+    "drowned_gallery": {
+      "draw_calls_max": 34.0,
+      "frame_max_ms": 17.215,
+      "frame_p50_ms": 16.661,
+      "frame_p95_ms": 17.054,
+      "process_p95_ms": 4.208
+    },
+    "wire_carriage": {
+      "draw_calls_max": 22.0,
+      "frame_max_ms": 17.333,
+      "frame_p50_ms": 16.654,
+      "frame_p95_ms": 16.969,
+      "process_p95_ms": 4.261
+    },
+    "wire_shaft": {
+      "draw_calls_max": 58.0,
+      "frame_max_ms": 17.378,
+      "frame_p50_ms": 16.683,
+      "frame_p95_ms": 16.974,
+      "process_p95_ms": 1.024
+    }
+  },
+  "renderer": "NVIDIA GeForce RTX 4070",
+  "scope": "Six current rooms, 120 rendered frames each after 90-frame warmup at explicit 60fps cap; 300 room transitions in one scene. Development geometry, not final content or minimum hardware.",
+  "soak": [
+    {
+      "cycles": 10,
+      "nodes": 24.0,
+      "objects": 1593.0,
+      "resources": 38.0,
+      "static_bytes": 37561086
+    },
+    {
+      "cycles": 30,
+      "nodes": 24.0,
+      "objects": 1593.0,
+      "resources": 38.0,
+      "static_bytes": 37561842
+    },
+    {
+      "cycles": 60,
+      "nodes": 24.0,
+      "objects": 1593.0,
+      "resources": 38.0,
+      "static_bytes": 37562566
+    }
+  ]
+}

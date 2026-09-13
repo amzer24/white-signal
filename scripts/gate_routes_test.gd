@@ -1,0 +1,37 @@
+extends "res://scripts/exploration_routes_test.gd"
+func run() -> void:
+    scene = load("res://scenes/exploration.tscn").instantiate()
+    scene.save_path = "res://test-user/gate_routes.json"
+    for suffix in ["", ".tmp", ".bak"]: DirAccess.remove_absolute(scene.save_path+suffix)
+    root.add_child(scene)
+    for flag in ["field_restored","stand_restored","drowned_restored","array_restored"]: scene.profile.set_flag(flag)
+    scene.enter_room("approach")
+    await frames(5)
+    await land(90,217,false)
+    await land(145,183)
+    scene.activate("approach_latch")
+    scene.enter_room("gate","approach")
+    await frames(5)
+    await land(103,217,false)
+    scene.activate("gate_latch")
+    await land(184,217,false)
+    scene.activate("gate_isolate")
+    await land(269,217,false)
+    scene.activate("gate_test")
+    await frames(130)
+    await land(357,217,false)
+    scene.activate("gate_commit")
+    await land(447,217,false)
+    if not scene.can_use_exit("aftermath"): failed += 1
+    scene.enter_room("aftermath","gate")
+    await frames(5)
+    await land(240,217,false)
+    await land(440,217,false)
+    scene.enter_room("hub","aftermath")
+    await frames(5)
+    if not scene.profile.has_flag("signal_restored") or scene.player.position.y > 225: failed += 1
+    scene.queue_free()
+    await process_frame
+    for suffix in ["", ".tmp", ".bak"]: DirAccess.remove_absolute("res://test-user/gate_routes.json"+suffix)
+    print("GATE ROUTES: %d failures" % failed)
+    quit(1 if failed else 0)

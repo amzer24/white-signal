@@ -1,0 +1,1232 @@
+{
+  "regions": [
+    {
+      "id": "R0",
+      "name": "Flats Line",
+      "x": 100,
+      "y": 230,
+      "goal": "Reach the first receiver",
+      "verb": "Discover",
+      "lore": "Observation came before defence. These dishes were left waiting, not destroyed in battle.",
+      "art": "Low salt plates, buried receiver bowls, empty sky; a trace of ochre ceramic after restoration.",
+      "mechanic": "Hit a memory block, break a marked brick, enter a maintenance conduit and restore a beacon.",
+      "reward": "A map fragment and a visible roof route to remember.",
+      "revisit": "Dash plus Air Jump opens the maintenance roof from the Wire.",
+      "assets": "Salt floor kit; buried dish landmark; shutter and brick states; quiet wind and first-receiver hum.",
+      "rooms": [
+        {
+          "id": "F0",
+          "name": "Wake basin",
+          "x": 0,
+          "y": 1,
+          "purpose": "Safe movement and readable silhouettes."
+        },
+        {
+          "id": "F1",
+          "name": "Survey shelf",
+          "x": 1,
+          "y": 1,
+          "purpose": "Jump, then see the unreachable roof."
+        },
+        {
+          "id": "F2",
+          "name": "Packet shelter",
+          "x": 2,
+          "y": 1,
+          "purpose": "Hit a block; replay an Operator memory."
+        },
+        {
+          "id": "F3",
+          "name": "Service passage",
+          "x": 2,
+          "y": 2,
+          "purpose": "Break marked masonry and enter a conduit."
+        },
+        {
+          "id": "F4",
+          "name": "First receiver",
+          "x": 3,
+          "y": 1,
+          "purpose": "Beacon, map fragment and Field destination."
+        },
+        {
+          "id": "F5",
+          "name": "Maintenance roof",
+          "x": 1,
+          "y": 0,
+          "purpose": "Later return from the Wire; archive, not a required key."
+        }
+      ],
+      "edges": [
+        {
+          "a": "F0",
+          "b": "F1",
+          "need": "",
+          "kind": "route"
+        },
+        {
+          "a": "F1",
+          "b": "F2",
+          "need": "",
+          "kind": "route"
+        },
+        {
+          "a": "F2",
+          "b": "F4",
+          "need": "",
+          "kind": "route"
+        },
+        {
+          "a": "F2",
+          "b": "F3",
+          "need": "",
+          "kind": "route"
+        },
+        {
+          "a": "F3",
+          "b": "F4",
+          "need": "",
+          "kind": "route"
+        },
+        {
+          "a": "F1",
+          "b": "F5",
+          "need": "Dash + Air Jump",
+          "kind": "optional"
+        }
+      ],
+      "story_clue": "A beacon repair receives an answer from one distant workshop window.",
+      "story_change": "Something can still answer. Reach the place behind that window."
+    },
+    {
+      "id": "R1",
+      "name": "Listening Field",
+      "x": 300,
+      "y": 230,
+      "goal": "Reconnect three different ears",
+      "verb": "Reconnect",
+      "lore": "One intact dish was isolated deliberately. The fourth ear is a question, not a fourth compulsory switch.",
+      "art": "Dish bowls and survey posts; amber filaments; three distinct window patterns around a shared shaft.",
+      "mechanic": "Manual selector and catch; dish alignment; cleared intake. Find permanent Dash in the Upper Amplifier.",
+      "reward": "Dash, a hub lift, restored workshop windows and the Stand route.",
+      "revisit": "Air Jump reaches the Fourth Dish archive. The lower service path leads to Drowned before the Field is complete.",
+      "assets": "Three-ear landmark at two distances; workshop kit; selector/catch/lift states; registered memory layer; cable pulses.",
+      "rooms": [
+        {
+          "id": "L0",
+          "name": "Arrival bowl",
+          "x": 0,
+          "y": 1,
+          "purpose": "First view of three ears; safe approach."
+        },
+        {
+          "id": "L1",
+          "name": "Triangulation hub",
+          "x": 1,
+          "y": 1,
+          "purpose": "Beacon, workshop stair and pump descent; two actionable leads."
+        },
+        {
+          "id": "L2",
+          "name": "West workshop",
+          "x": 1,
+          "y": 0,
+          "purpose": "See selector power move a safe demonstration platform."
+        },
+        {
+          "id": "L3",
+          "name": "Ballast gallery",
+          "x": 2,
+          "y": 0,
+          "purpose": "Borrowed Current: catch the lift, then redirect power."
+        },
+        {
+          "id": "L4",
+          "name": "Upper amplifier",
+          "x": 3,
+          "y": 0,
+          "purpose": "Discover permanent Dash; safe immediate use."
+        },
+        {
+          "id": "L5",
+          "name": "Counterweight return",
+          "x": 3,
+          "y": 1,
+          "purpose": "Open the direct hub lift from this side."
+        },
+        {
+          "id": "L6",
+          "name": "East causeway",
+          "x": 2,
+          "y": 1,
+          "purpose": "Align the second ear through a visible opening."
+        },
+        {
+          "id": "L7",
+          "name": "Pump cellar",
+          "x": 1,
+          "y": 2,
+          "purpose": "Clear the south intake with the established brick interaction."
+        },
+        {
+          "id": "L8",
+          "name": "Drain lookout",
+          "x": 2,
+          "y": 2,
+          "purpose": "Early Drowned exit; show the old service street below."
+        },
+        {
+          "id": "L9",
+          "name": "Fourth dish",
+          "x": 4,
+          "y": 0,
+          "purpose": "Later Air Jump archive; replayable memory and isolation evidence."
+        },
+        {
+          "id": "L10",
+          "name": "Transmitter sump",
+          "x": 3,
+          "y": 2,
+          "purpose": "Three feeder indicators; Stand exit once Field is restored."
+        }
+      ],
+      "edges": [
+        {
+          "a": "L0",
+          "b": "L1",
+          "need": "",
+          "kind": "route"
+        },
+        {
+          "a": "L1",
+          "b": "L2",
+          "need": "",
+          "kind": "route"
+        },
+        {
+          "a": "L2",
+          "b": "L3",
+          "need": "",
+          "kind": "route"
+        },
+        {
+          "a": "L3",
+          "b": "L4",
+          "need": "West ear restored",
+          "kind": "route"
+        },
+        {
+          "a": "L4",
+          "b": "L5",
+          "need": "",
+          "kind": "route"
+        },
+        {
+          "a": "L5",
+          "b": "L6",
+          "need": "Return opened from L5",
+          "kind": "shortcut"
+        },
+        {
+          "a": "L6",
+          "b": "L1",
+          "need": "",
+          "kind": "route"
+        },
+        {
+          "a": "L1",
+          "b": "L7",
+          "need": "",
+          "kind": "route"
+        },
+        {
+          "a": "L7",
+          "b": "L8",
+          "need": "",
+          "kind": "route"
+        },
+        {
+          "a": "L8",
+          "b": "L10",
+          "need": "",
+          "kind": "route"
+        },
+        {
+          "a": "L10",
+          "b": "L6",
+          "need": "",
+          "kind": "route"
+        },
+        {
+          "a": "L5",
+          "b": "L1",
+          "need": "Opened from L5",
+          "kind": "shortcut"
+        },
+        {
+          "a": "L4",
+          "b": "L9",
+          "need": "Air Jump",
+          "kind": "optional"
+        }
+      ],
+      "story_clue": "Two Operators cooperate in a replay; an intact isolation handle was closed deliberately.",
+      "story_change": "Some silence was chosen. Finish their repair and remember the disconnected branch."
+    },
+    {
+      "id": "R2",
+      "name": "The Stand",
+      "x": 515,
+      "y": 140,
+      "goal": "Isolate the unstable storm feed",
+      "verb": "Shelter",
+      "lore": "Civilian receiver frames became braces and barricades. The surviving wiring records an emergency choice.",
+      "art": "Braced diagonals, broken rim landmark, sheltered dark pockets and slate storm light.",
+      "mechanic": "Store conductor charge, then redirect it into a bridge motor. Charge is held; ambient thunder is not the timer.",
+      "reward": "A latched sheltered bridge and restored feeder.",
+      "revisit": "Drowned sluice and Approach service return shorten travel. Optional collapse trial has a completed bypass.",
+      "assets": "Brace and shelter kit; conductor/gauge/reservoir/bridge states; distant rim; sheltered and exposed weather stems.",
+      "rooms": [
+        {
+          "id": "S0",
+          "name": "Broken rim",
+          "x": 0,
+          "y": 1,
+          "purpose": "See bridge destination and marked discharge channel."
+        },
+        {
+          "id": "S1",
+          "name": "Shelter court",
+          "x": 1,
+          "y": 1,
+          "purpose": "Beacon and branch choice; storm cannot hurry reading."
+        },
+        {
+          "id": "S2",
+          "name": "Conductor bay",
+          "x": 1,
+          "y": 0,
+          "purpose": "Safe charge demonstration."
+        },
+        {
+          "id": "S3",
+          "name": "Reservoir walk",
+          "x": 2,
+          "y": 0,
+          "purpose": "Store and redirect charge into bridge motor."
+        },
+        {
+          "id": "S4",
+          "name": "Latched bridge",
+          "x": 2,
+          "y": 1,
+          "purpose": "Restored feeder and Wire exit; bridge remains open."
+        },
+        {
+          "id": "S5",
+          "name": "Sluice shelter",
+          "x": 1,
+          "y": 2,
+          "purpose": "Drowned shortcut with visible pipe continuity."
+        },
+        {
+          "id": "S6",
+          "name": "Fracture trial",
+          "x": 3,
+          "y": 0,
+          "purpose": "Optional bounded crumble trial; archive reward and reset."
+        }
+      ],
+      "edges": [
+        {
+          "a": "S0",
+          "b": "S1",
+          "need": "",
+          "kind": "route"
+        },
+        {
+          "a": "S1",
+          "b": "S2",
+          "need": "",
+          "kind": "route"
+        },
+        {
+          "a": "S2",
+          "b": "S3",
+          "need": "",
+          "kind": "route"
+        },
+        {
+          "a": "S3",
+          "b": "S4",
+          "need": "Bridge latched",
+          "kind": "route"
+        },
+        {
+          "a": "S4",
+          "b": "S1",
+          "need": "Bridge latched",
+          "kind": "shortcut"
+        },
+        {
+          "a": "S1",
+          "b": "S5",
+          "need": "",
+          "kind": "route"
+        },
+        {
+          "a": "S3",
+          "b": "S6",
+          "need": "",
+          "kind": "optional"
+        }
+      ],
+      "story_clue": "Dish ribs brace a shelter while a conductor bypass protects an intact room.",
+      "story_change": "Isolation protected daily life as well as machinery."
+    },
+    {
+      "id": "R3",
+      "name": "Drowned Array",
+      "x": 500,
+      "y": 350,
+      "goal": "Recover the old service street",
+      "verb": "Reveal",
+      "lore": "The reservoirs were diverted to keep distant hardware alive; abandoned survey marks remain below the line.",
+      "art": "Horizontal water marks, drowned masts, depth gauges and green-gray substrate; fixed dry edges stay legible.",
+      "mechanic": "High/middle/low water states and guided floats. Find permanent Air Jump in the exposed survey gallery.",
+      "reward": "Dry main street, Air Jump, freight lift to Array and Stand sluice.",
+      "revisit": "Cycling side basin remains optional; the main return never requires replaying a full tide cycle.",
+      "assets": "Rim and service-street kit; water surface with stable collision boundary; three pump positions; float rails; submerged mast landmark.",
+      "rooms": [
+        {
+          "id": "D0",
+          "name": "High-water rim",
+          "x": 0,
+          "y": 0,
+          "purpose": "Dry observation and marked limits."
+        },
+        {
+          "id": "D1",
+          "name": "Pump house",
+          "x": 1,
+          "y": 0,
+          "purpose": "Dry controls at every level; manual bleed works before impeller repair."
+        },
+        {
+          "id": "D2",
+          "name": "Service street",
+          "x": 1,
+          "y": 1,
+          "purpose": "Manual bleed reveals the street and missing pump impeller; recover it for the dry pump house."
+        },
+        {
+          "id": "D3",
+          "name": "Survey gallery",
+          "x": 2,
+          "y": 1,
+          "purpose": "Air Jump discovery and safe immediate return practice."
+        },
+        {
+          "id": "D4",
+          "name": "Float chamber",
+          "x": 2,
+          "y": 0,
+          "purpose": "Raise guided carrier to upper return conduit."
+        },
+        {
+          "id": "D5",
+          "name": "Freight dock",
+          "x": 3,
+          "y": 1,
+          "purpose": "Freight lift is enabled by upper-conduit restoration."
+        },
+        {
+          "id": "D6",
+          "name": "Cycling basin",
+          "x": 2,
+          "y": 2,
+          "purpose": "Optional timing remix, separate from main water state."
+        }
+      ],
+      "edges": [
+        {
+          "a": "D0",
+          "b": "D1",
+          "need": "",
+          "kind": "route"
+        },
+        {
+          "a": "D1",
+          "b": "D2",
+          "need": "Low water",
+          "kind": "route"
+        },
+        {
+          "a": "D2",
+          "b": "D3",
+          "need": "",
+          "kind": "route"
+        },
+        {
+          "a": "D3",
+          "b": "D4",
+          "need": "Impeller fitted + float raised",
+          "kind": "route"
+        },
+        {
+          "a": "D4",
+          "b": "D1",
+          "need": "Upper conduit latched",
+          "kind": "shortcut"
+        },
+        {
+          "a": "D3",
+          "b": "D5",
+          "need": "Upper conduit latched",
+          "kind": "route"
+        },
+        {
+          "a": "D2",
+          "b": "D6",
+          "need": "",
+          "kind": "optional"
+        }
+      ],
+      "story_clue": "A diversion pipe crosses domestic doorways; old flood marks survive below broken masonry.",
+      "story_change": "Emergency priorities preserved one system at the expense of another place."
+    },
+    {
+      "id": "R4",
+      "name": "The Wire",
+      "x": 740,
+      "y": 80,
+      "goal": "Repair the cross-district carriage",
+      "verb": "Connect",
+      "lore": "Hand-numbered clamps and inspection shelters show the labour behind an apparently empty crossing.",
+      "art": "Huge negative space, sagging cables, subdued clouds and pale copper clamps.",
+      "mechanic": "Recallable transport with safe inspection platforms; optional environmental dash-refill chain.",
+      "reward": "A permanent fast carriage between Stand and Array.",
+      "revisit": "A later roof lead returns to the Flats using Dash and Air Jump.",
+      "assets": "Two non-repeating pylon views; cable tiles; carriage docks and recall controls; low cloud planes; cable tension audio.",
+      "rooms": [
+        {
+          "id": "W0",
+          "name": "West dock",
+          "x": 0,
+          "y": 1,
+          "purpose": "Preview far pylon; first footroute uses Dash."
+        },
+        {
+          "id": "W1",
+          "name": "Inspection shelf",
+          "x": 1,
+          "y": 1,
+          "purpose": "See the fault clue and recover a compatible spare brake assembly."
+        },
+        {
+          "id": "W2",
+          "name": "Broken carriage",
+          "x": 2,
+          "y": 1,
+          "purpose": "Fit the recovered brake assembly and test recall; repair approach works from either arrival without Dash."
+        },
+        {
+          "id": "W3",
+          "name": "East dock",
+          "x": 3,
+          "y": 1,
+          "purpose": "Array connection and recall control."
+        },
+        {
+          "id": "W4",
+          "name": "Repeater crown",
+          "x": 2,
+          "y": 0,
+          "purpose": "Optional chained dash test; fall returns to shelf."
+        },
+        {
+          "id": "W5",
+          "name": "Old roof line",
+          "x": 0,
+          "y": 0,
+          "purpose": "Late route to Flats and an Operator archive."
+        }
+      ],
+      "edges": [
+        {
+          "a": "W0",
+          "b": "W1",
+          "need": "Dash",
+          "kind": "route"
+        },
+        {
+          "a": "W1",
+          "b": "W2",
+          "need": "",
+          "kind": "route"
+        },
+        {
+          "a": "W2",
+          "b": "W3",
+          "need": "",
+          "kind": "route"
+        },
+        {
+          "a": "W0",
+          "b": "W3",
+          "need": "Carriage repaired",
+          "kind": "shortcut"
+        },
+        {
+          "a": "W1",
+          "b": "W4",
+          "need": "Dash",
+          "kind": "optional"
+        },
+        {
+          "a": "W0",
+          "b": "W5",
+          "need": "Dash + Air Jump",
+          "kind": "optional"
+        }
+      ],
+      "story_clue": "Mismatched clamps and ordinary tool fittings show repeated shared repairs.",
+      "story_change": "The network endured through local work, not only commands from the source."
+    },
+    {
+      "id": "R5",
+      "name": "The Array",
+      "x": 760,
+      "y": 275,
+      "goal": "Reconnect the distribution core",
+      "verb": "Route",
+      "lore": "The building is a working machine: shafts, weights and cable runs explain its height.",
+      "art": "Repeated ceramic ribs, tall counterweight shafts and warm instruments against cold slit windows.",
+      "mechanic": "Select lift destinations and retain a counterweight using the established mechanical catch rule.",
+      "reward": "A persistent vertical spine and the Approach route.",
+      "revisit": "Freight and Wire entrances meet at a familiar loading floor; recalls work from both.",
+      "assets": "Vertical shaft kit; counterweight pair; selector with shaped destination labels; lift recall poses; instrument hum layers.",
+      "rooms": [
+        {
+          "id": "A0",
+          "name": "Loading floor",
+          "x": 0,
+          "y": 2,
+          "purpose": "Freight entrance from Drowned."
+        },
+        {
+          "id": "A1",
+          "name": "Wire landing",
+          "x": 0,
+          "y": 0,
+          "purpose": "Alternative arrival from the Wire."
+        },
+        {
+          "id": "A2",
+          "name": "Distribution hall",
+          "x": 1,
+          "y": 1,
+          "purpose": "Beacon and visible lift spine."
+        },
+        {
+          "id": "A3",
+          "name": "Counterweight room",
+          "x": 2,
+          "y": 2,
+          "purpose": "Remix the retained-state catch without a new verb."
+        },
+        {
+          "id": "A4",
+          "name": "Selector floor",
+          "x": 2,
+          "y": 0,
+          "purpose": "Route lift to core while preserving return."
+        },
+        {
+          "id": "A5",
+          "name": "Core gallery",
+          "x": 3,
+          "y": 1,
+          "purpose": "Restore Array and open Approach."
+        },
+        {
+          "id": "A6",
+          "name": "Instrument loft",
+          "x": 3,
+          "y": 0,
+          "purpose": "Optional archive about severed feeders."
+        }
+      ],
+      "edges": [
+        {
+          "a": "A0",
+          "b": "A2",
+          "need": "",
+          "kind": "route"
+        },
+        {
+          "a": "A1",
+          "b": "A2",
+          "need": "",
+          "kind": "route"
+        },
+        {
+          "a": "A2",
+          "b": "A3",
+          "need": "",
+          "kind": "route"
+        },
+        {
+          "a": "A3",
+          "b": "A4",
+          "need": "Catch latched",
+          "kind": "route"
+        },
+        {
+          "a": "A4",
+          "b": "A5",
+          "need": "",
+          "kind": "route"
+        },
+        {
+          "a": "A5",
+          "b": "A2",
+          "need": "Core restored",
+          "kind": "shortcut"
+        },
+        {
+          "a": "A4",
+          "b": "A6",
+          "need": "",
+          "kind": "optional"
+        }
+      ],
+      "story_clue": "A replayable diagnostic catches one branch fault while a neighbouring lamp remains stable.",
+      "story_change": "Connection needs boundaries. The regional repairs enable a better arrangement."
+    },
+    {
+      "id": "R6",
+      "name": "The Approach",
+      "x": 965,
+      "y": 230,
+      "goal": "Trace the original service line",
+      "verb": "Understand",
+      "lore": "Many small routes converge beneath the intact source. The service line reveals where the network began.",
+      "art": "Accumulating cables, compressed architecture and restrained light under heavy doors.",
+      "mechanic": "Recombine familiar routing, transport and latches; any pursuit is a clearly entered optional trial.",
+      "reward": "A return to the Stand and an overview of incomplete feeder projects.",
+      "revisit": "The service elevator makes remaining restoration projects convenient to revisit.",
+      "assets": "Dense cable supports; shared Stand elevator shaft; feeder board with four distinct shapes; optional swarm boundary.",
+      "rooms": [
+        {
+          "id": "P0",
+          "name": "Cable throat",
+          "x": 0,
+          "y": 1,
+          "purpose": "Array arrival and view toward the source."
+        },
+        {
+          "id": "P1",
+          "name": "Service junction",
+          "x": 1,
+          "y": 1,
+          "purpose": "Beacon and feeder overview."
+        },
+        {
+          "id": "P2",
+          "name": "Old elevator",
+          "x": 1,
+          "y": 2,
+          "purpose": "Open return to Stand from this side."
+        },
+        {
+          "id": "P3",
+          "name": "Isolation archive",
+          "x": 2,
+          "y": 0,
+          "purpose": "Replay evidence of deliberate disconnection."
+        },
+        {
+          "id": "P4",
+          "name": "Source vestibule",
+          "x": 3,
+          "y": 1,
+          "purpose": "Gate access reflects four completed projects."
+        },
+        {
+          "id": "P5",
+          "name": "Swarm bypass",
+          "x": 2,
+          "y": 2,
+          "purpose": "Optional bounded chase with permanent completion bypass."
+        }
+      ],
+      "edges": [
+        {
+          "a": "P0",
+          "b": "P1",
+          "need": "",
+          "kind": "route"
+        },
+        {
+          "a": "P1",
+          "b": "P2",
+          "need": "",
+          "kind": "route"
+        },
+        {
+          "a": "P1",
+          "b": "P3",
+          "need": "",
+          "kind": "route"
+        },
+        {
+          "a": "P3",
+          "b": "P4",
+          "need": "",
+          "kind": "route"
+        },
+        {
+          "a": "P1",
+          "b": "P4",
+          "need": "",
+          "kind": "route"
+        },
+        {
+          "a": "P2",
+          "b": "P5",
+          "need": "",
+          "kind": "optional"
+        },
+        {
+          "a": "P5",
+          "b": "P4",
+          "need": "",
+          "kind": "optional"
+        }
+      ],
+      "story_clue": "The original service line returns to the already restored Stand.",
+      "story_change": "The Operators left usable tools; the Spark can now apply them with understanding."
+    },
+    {
+      "id": "R7",
+      "name": "The Gate",
+      "x": 1170,
+      "y": 230,
+      "goal": "Configure the restored network",
+      "verb": "Carry",
+      "lore": "The hardware never stopped waiting. Restoration answers what the Spark can carry, not every question about why it was silenced.",
+      "art": "Sparse symmetry and one source aperture; test a pale background with dark figures without changing hazard grammar.",
+      "mechanic": "Final switchboard uses existing source, selector, receiver and latch contracts; no surprise final tool.",
+      "reward": "Persistent restoration and a world still open to exploration.",
+      "revisit": "Inspect changed views and remaining archives; no forced new run that erases discoveries.",
+      "assets": "Unique source aperture; aligned dormant/active silhouettes; four-feed switchboard; restrained completion transition; revisitable ambience.",
+      "rooms": [
+        {
+          "id": "G0",
+          "name": "Outer collar",
+          "x": 0,
+          "y": 1,
+          "purpose": "Safe source reveal and checkpoint."
+        },
+        {
+          "id": "G1",
+          "name": "Feeder ring",
+          "x": 1,
+          "y": 1,
+          "purpose": "Read four restored projects through shapes and positions."
+        },
+        {
+          "id": "G2",
+          "name": "Switchboard",
+          "x": 2,
+          "y": 1,
+          "purpose": "Apply established routing relationships."
+        },
+        {
+          "id": "G3",
+          "name": "Carrier chamber",
+          "x": 3,
+          "y": 1,
+          "purpose": "Final act with stable escape route."
+        },
+        {
+          "id": "G4",
+          "name": "Return gallery",
+          "x": 2,
+          "y": 0,
+          "purpose": "Open post-restoration view and return connection."
+        }
+      ],
+      "edges": [
+        {
+          "a": "G0",
+          "b": "G1",
+          "need": "",
+          "kind": "route"
+        },
+        {
+          "a": "G1",
+          "b": "G2",
+          "need": "",
+          "kind": "route"
+        },
+        {
+          "a": "G2",
+          "b": "G3",
+          "need": "Switchboard complete",
+          "kind": "route"
+        },
+        {
+          "a": "G3",
+          "b": "G4",
+          "need": "Source restored",
+          "kind": "route"
+        },
+        {
+          "a": "G4",
+          "b": "G1",
+          "need": "Source restored",
+          "kind": "shortcut"
+        }
+      ],
+      "story_clue": "Familiar feeder shapes lead to district silhouettes; a common-return isolator contains the test fault.",
+      "story_change": "A network of maintained local references can hold. Return to see the workshop repair endure."
+    }
+  ],
+  "world_edges": [
+    {
+      "a": "R0",
+      "b": "R1",
+      "need": "",
+      "kind": "route"
+    },
+    {
+      "a": "R1",
+      "b": "R2",
+      "need": "field",
+      "kind": "route"
+    },
+    {
+      "a": "R1",
+      "b": "R3",
+      "need": "",
+      "kind": "route"
+    },
+    {
+      "a": "R2",
+      "b": "R3",
+      "need": "drowned",
+      "kind": "shortcut"
+    },
+    {
+      "a": "R2",
+      "b": "R4",
+      "need": "dash",
+      "kind": "route"
+    },
+    {
+      "a": "R3",
+      "b": "R5",
+      "need": "drowned",
+      "kind": "route"
+    },
+    {
+      "a": "R4",
+      "b": "R5",
+      "need": "",
+      "kind": "route"
+    },
+    {
+      "a": "R5",
+      "b": "R6",
+      "need": "array",
+      "kind": "route"
+    },
+    {
+      "a": "R6",
+      "b": "R7",
+      "need": "field,stand,drowned,array",
+      "kind": "route"
+    },
+    {
+      "a": "R6",
+      "b": "R2",
+      "need": "service",
+      "kind": "shortcut"
+    },
+    {
+      "a": "R0",
+      "b": "R4",
+      "need": "dash,air",
+      "kind": "optional"
+    }
+  ],
+  "blocks": [
+    {
+      "id": "B01",
+      "name": "Reveal and loop",
+      "size": "960 × 270",
+      "need": "Base movement",
+      "lesson": "Show a landmark before a branch, then return beneath it.",
+      "escape": "Persistent shortcut; arrival unmistakable.",
+      "assets": "Shared landmark and upper/lower room kit.",
+      "drawing": "loop"
+    },
+    {
+      "id": "B02",
+      "name": "Elevated promise",
+      "size": "480 × 540",
+      "need": "Base now; Air Jump later",
+      "lesson": "Show a reachable-looking roof without blocking the main route.",
+      "escape": "Safe return below; optional archive on revisit.",
+      "assets": "Roof silhouette, visible landing and archive.",
+      "drawing": "shaft"
+    },
+    {
+      "id": "B03",
+      "name": "Visible switch-result",
+      "size": "480 × 270",
+      "need": "Context action",
+      "lesson": "Put control and moving object together; demonstrate before risk.",
+      "escape": "Fixed safe floor; reachable reset.",
+      "assets": "Lever, cable, receiver and platform states.",
+      "drawing": "switch"
+    },
+    {
+      "id": "B04",
+      "name": "Counterweight loop",
+      "size": "960 × 540",
+      "need": "Context action",
+      "lesson": "Hold a weight with a manual catch, then divert supply.",
+      "escape": "Catch unfolds the permanent service stair; completion retains shortcut.",
+      "assets": "Paired weight/platform and catch.",
+      "drawing": "weight"
+    },
+    {
+      "id": "B05",
+      "name": "Memory archive",
+      "size": "480 × 270",
+      "need": "Hit from below",
+      "lesson": "Past gesture points to a persistent seam and service handle.",
+      "escape": "Memory replayable after reward; no hidden lethal route.",
+      "assets": "Registered past/current layer and memory block.",
+      "drawing": "memory"
+    },
+    {
+      "id": "B06",
+      "name": "Power router",
+      "size": "960 × 540",
+      "need": "Context action",
+      "lesson": "Choose between two visible outputs, then retain one with a latch.",
+      "escape": "Never close the only exit; reset on stable ground.",
+      "assets": "Shaped plugs, selector, cable pulses.",
+      "drawing": "router"
+    },
+    {
+      "id": "B07",
+      "name": "Sluice pair",
+      "size": "960 × 540",
+      "need": "Context action",
+      "lesson": "Drain one route; raise a guided float to a second return.",
+      "escape": "Dry control stair in all states; carrier recall.",
+      "assets": "Basin marks, pumps, guided float and conduit.",
+      "drawing": "water"
+    },
+    {
+      "id": "B08",
+      "name": "Storm capacitor",
+      "size": "960 × 270",
+      "need": "Context action",
+      "lesson": "Store charge before using it; no flash-frame reaction.",
+      "escape": "Observation shelter; neutral unfinished reset.",
+      "assets": "Rod, reservoir gauge, bridge and steady cue.",
+      "drawing": "storm"
+    },
+    {
+      "id": "B09",
+      "name": "Dash repeater",
+      "size": "480 × 540",
+      "need": "Permanent Dash",
+      "lesson": "A visible refill permits a second dash inside one local trial.",
+      "escape": "Fall to safe shelf; optional reward only.",
+      "assets": "Distinct refill ring and spent/refilling states.",
+      "drawing": "repeater"
+    },
+    {
+      "id": "B10",
+      "name": "Freight shaft",
+      "size": "480 × 810",
+      "need": "Context action",
+      "lesson": "Recall a platform and see the arrival before riding.",
+      "escape": "Recall on both ends; safe stop and camera preview.",
+      "assets": "Shaft, carriage, destinations and controls.",
+      "drawing": "shaft"
+    },
+    {
+      "id": "B11",
+      "name": "Return mastery",
+      "size": "960 × 270",
+      "need": "Dash + Air Jump",
+      "lesson": "Reinterpret an old roof rather than repeat the original floor.",
+      "escape": "Optional route reconnects; original exit stays open.",
+      "assets": "Earlier landmark at a new elevation.",
+      "drawing": "loop"
+    },
+    {
+      "id": "B12",
+      "name": "Choice and convergence",
+      "size": "960 × 540",
+      "need": "Base; optional Dash",
+      "lesson": "A technical upper path and a clue-bearing lower path have different rewards.",
+      "escape": "Both lead to a known junction; neither is an empty duplicate.",
+      "assets": "Distinct destinations, route landmark and reward props.",
+      "drawing": "choice"
+    },
+    {
+      "id": "B13",
+      "name": "Wall-kick shaft",
+      "size": "480 × 540",
+      "need": "Existing wall slide and kick",
+      "lesson": "Climb a short safe shaft, then add offset rests and an optional upper branch.",
+      "escape": "Broad catch floor and rest shelves; no hazard in the first lesson.",
+      "assets": "Consistent grippable wall surface, rests and upper landmark.",
+      "drawing": "shaft"
+    },
+    {
+      "id": "B14",
+      "name": "Maintenance ladder",
+      "size": "480 × 540",
+      "need": "Proposed context climb",
+      "lesson": "Deliberately enter a ladder to inspect a service route; jumping exits it.",
+      "escape": "Stable top and bottom mounts; never require it until controller tests pass.",
+      "assets": "Ladder/rung states, mount anchors and climb animation.",
+      "drawing": "ladder"
+    },
+    {
+      "id": "B15",
+      "name": "Trip plate and shutter",
+      "size": "480 × 270",
+      "need": "Base movement",
+      "lesson": "First plate opens a harmless shutter. A later plate previews a timed optional door.",
+      "escape": "Timer never seals the only exit; reset and visible retreat floor.",
+      "assets": "Pressed/unpressed plate, connected cable and door travel gauge.",
+      "drawing": "plate"
+    },
+    {
+      "id": "B16",
+      "name": "Actuator crossing",
+      "size": "960 × 270",
+      "need": "Base timing; optional Dash",
+      "lesson": "Watch a piston cycle from a protected recess before crossing its marked sweep.",
+      "escape": "No blind off-screen activation; checkpoint nearby and safe bay between cycles.",
+      "assets": "Retracted/warning/moving/held piston states and stable sweep boundary.",
+      "drawing": "piston"
+    }
+  ],
+  "puzzles": [
+    {
+      "id": "borrowed",
+      "name": "Borrowed Current",
+      "region": "Listening Field",
+      "insight": "Temporary power and a persistent mechanical catch are different states.",
+      "reward": "West ear, access to Dash and a permanent hub lift.",
+      "reset": "Unfinished selector returns to lift supply with a safe floor below. The catch unfolds a permanent service stair; the completed catch, stair and route never reset.",
+      "states": [
+        [
+          "Observe",
+          "Selector and both outputs are visible. The lift is down; the ear is dormant."
+        ],
+        [
+          "Power lift",
+          "Choose the lift output and ride to the upper safety catch."
+        ],
+        [
+          "Latch catch",
+          "Engage the manual catch. It retains the platform and unfolds the permanent service stair, which was unavailable before this step."
+        ],
+        [
+          "Reroute supply",
+          "Return by the newly unfolded stair; select the ear receiver. The catch retains the lift."
+        ],
+        [
+          "Route open",
+          "Ear wakes. Continue to Dash and open the hub return; persist both discoveries."
+        ]
+      ]
+    },
+    {
+      "id": "storm",
+      "name": "Stored Storm",
+      "region": "The Stand",
+      "insight": "Charge can be collected and held, then deliberately routed; distant lightning is atmosphere.",
+      "reward": "Latched bridge and restored Stand feeder.",
+      "reset": "Unfinished charge returns to neutral on death; bridge completion persists. Safe bay is outside the discharge channel.",
+      "states": [
+        [
+          "Observe",
+          "Inspect the rod, shaped reservoir gauge and bridge motor from shelter."
+        ],
+        [
+          "Collect",
+          "Select reservoir input. The deterministic machine cue advances the gauge."
+        ],
+        [
+          "Hold",
+          "Charge stays stored. There is no short reaction window."
+        ],
+        [
+          "Discharge",
+          "Select bridge motor. Rod animation and stable boundary communicate the event."
+        ],
+        [
+          "Bridge latched",
+          "Bridge stays open; decorative lightning can be disabled without changing access."
+        ]
+      ]
+    },
+    {
+      "id": "water",
+      "name": "Street Beneath the Static",
+      "region": "Drowned Array",
+      "insight": "Removing water reveals a street; raising a guided carrier opens a different return.",
+      "reward": "Air Jump, dry service street, freight lift and upper conduit.",
+      "reset": "On death/reload, an unfinished main basin resets LOW and respawns at a fixed dry anchor. Air Jump persists. Dry stairs and controls work in every state. Completion keeps the street drained; the optional basin cycles separately.",
+      "states": [
+        [
+          "High",
+          "Observe submerged service markings from the dry rim."
+        ],
+        [
+          "Middle",
+          "Lower water to the next mark; the fixed control stair remains usable."
+        ],
+        [
+          "Low",
+          "Recover the pump impeller in the service street; visit the Air Jump gallery."
+        ],
+        [
+          "Fit impeller",
+          "Return by the dry stair and fit the impeller. The manual bleed enabled discovery; the repaired pump now powers the float."
+        ],
+        [
+          "Float raised",
+          "Use the separate guided chamber to reach the upper landing; controls are outside its hazard."
+        ],
+        [
+          "Return latched",
+          "Open the conduit, drain the main street permanently and enable the freight connection."
+        ]
+      ]
+    }
+  ],
+  "flags": {
+    "dash": "Dash found",
+    "air": "Air Jump found",
+    "field": "Field restored",
+    "stand": "Stand restored",
+    "drowned": "Drowned restored",
+    "array": "Array restored",
+    "service": "Approach return opened"
+  }
+}

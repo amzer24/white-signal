@@ -22,10 +22,13 @@ func _ready() -> void:
 func _run() -> void:
     await wait_frames(8)
     var world := get_parent()
-    var player: CharacterBody2D = world.get_node("Player")
+    var player: CharacterBody2D
 
+    DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("res://test-user"))
+    RunState.boundary_path = "res://test-user/regression-save.json"
     RunState.start_run()
     await wait_frames(10)
+    player = world.player
     check("run_started", RunState.state == "play", RunState.state)
 
     # smart traversal: walk right, full-hop only when a gap is ahead,
@@ -131,7 +134,7 @@ func _run() -> void:
 
     # --- win + best save ---
     RunState.win()
-    check("win_saves_best", RunState.state == "win" and not RunState.best.is_empty(), str(RunState.best))
+    check("tutorial_relay_clear", RunState.state == "relay_clear", RunState.state)
 
     print("---")
     print("PORT-VALIDATION: %d failure(s)" % failures)
