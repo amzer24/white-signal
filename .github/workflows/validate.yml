@@ -29,9 +29,14 @@ jobs:
           WS_TEST=1 timeout 150 ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . 2>&1 | tee test_output.log
           grep -q "PORT-VALIDATION: 0 failure(s)" test_output.log
 
+      - name: Exploration journeys and regressions
+        run: python3 scripts/validate_exploration.py ./Godot_v4.7.2-stable_linux.x86_64
+
       - name: Upload test log
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: test-output
-          path: test_output.log
+          path: |
+            test_output.log
+            test-user/ci-exploration/*.log
