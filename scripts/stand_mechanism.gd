@@ -131,6 +131,12 @@ func draw_world() -> void:
         else: world.draw_arc(Vector2(288,133),90,-2.8,0.6,28,DrawUtil.DARK,4)
     if world.room_id == "stand_sluice":
         world.draw_polyline(PackedVector2Array([Vector2(30,83),Vector2(110,83),Vector2(110,128),Vector2(222,128),Vector2(222,162),Vector2(348,162),Vector2(348,209),Vector2(475,209)]),Color("61767d"),5)
+    if world.room_id == "stand_trial":
+        # A grounded fallen rib offers a rest; it does not reset the upper crumbles.
+        world.coherence_light.draw(world,Vector2(240,231),0.5,Color(0.7,0.65,0.48,0.22))
+        for x in [210,266]:
+            world.draw_line(Vector2(x,232),Vector2(x,244),DrawUtil.GRAY,2)
+        world.draw_line(Vector2(212,243),Vector2(264,233),DrawUtil.DARK,2)
     if world.room_id == "shelter":
         world.draw_rect(Rect2(24,90,58,128),Color("080e12"))
         world.draw_rect(Rect2(34,105,14,22),Color("a4bac0"))
