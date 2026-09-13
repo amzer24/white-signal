@@ -2,6 +2,11 @@ extends RefCounted
 const ID = "array_shutter"
 const FLAG = "shutter_archive"
 var upper := true
+var projector: Texture2D
+
+func _init() -> void:
+    if ResourceLoader.exists("res://assets/exploration/memory-projector.png"):
+        projector = load("res://assets/exploration/memory-projector.png")
 
 func reset() -> void:
     upper = true
@@ -44,8 +49,22 @@ func draw(world: Node2D) -> void:
         var tone: Color = DrawUtil.GRAY if lit else Color("293139")
         world.draw_polyline(PackedVector2Array([Vector2(210,198),Vector2(235,198),Vector2(235,endpoint.y),endpoint]),tone,2)
         world.coherence_light.draw(world,endpoint,0.85 if lit else 0.0,Color(0.58,0.69,0.75,0.22))
-    world.draw_rect(Rect2(404,190,32,34),DrawUtil.GRAY,false,2)
-    world.draw_rect(Rect2(411,197,18,10),DrawUtil.WHITE if archive_lit(flags) else DrawUtil.DARK)
+    # Steady shutters carry the state without flash, colour or sound dependence.
+    for branch in [0,1]:
+        var lit: bool = return_lit(flags) if branch == 0 else archive_lit(flags)
+        var pivot := Vector2(235,115 if branch == 0 else 189)
+        world.draw_rect(Rect2(pivot-Vector2(6,5),Vector2(12,10)),Color("0c1115"))
+        world.draw_line(pivot-Vector2(5,0),pivot+Vector2(4,-5) if lit else pivot+Vector2(5,0),DrawUtil.GRAY,2)
+    if archive_lit(flags):
+        world.draw_colored_polygon(PackedVector2Array([Vector2(402,201),Vector2(287,175),Vector2(287,219)]),Color(0.67,0.75,0.79,0.055))
+    if projector != null:
+        world.draw_texture(projector,Vector2(396,176),Color(0.65,0.68,0.70) if archive_lit(flags) else Color(0.35,0.38,0.40))
+    else:
+        world.draw_rect(Rect2(404,190,32,34),DrawUtil.GRAY,false,2)
+    world.draw_rect(Rect2(401,199,3,5),DrawUtil.WHITE if archive_lit(flags) else DrawUtil.DARK)
+    for i in 3:
+        var lit: bool = flags.get(FLAG,false) or (i == 0 and archive_lit(flags))
+        world.draw_rect(Rect2(446,199+i*7,3,4),DrawUtil.WHITE if lit else DrawUtil.DARK)
     world.text_at(Vector2(298,177),"LOCAL COPY" if flags.get(FLAG,false) else "PROJECTOR",DrawUtil.GRAY)
     world.text_at(Vector2(295,47),"RETURN LIT" if return_lit(flags) else "RETURN DARK",DrawUtil.GRAY)
     if flags.get(FLAG,false):

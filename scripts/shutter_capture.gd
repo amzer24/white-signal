@@ -10,6 +10,8 @@ func run() -> void:
     await capture(world,"shutter-lower")
     world.activate("shutter_archive")
     await capture(world,"shutter-copy")
+    world.activate("shutter_selector")
+    await capture(world,"shutter-copy-upper")
     world.map_open = true
     await capture(world,"shutter-map")
     world.queue_free()
