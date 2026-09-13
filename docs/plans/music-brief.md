@@ -53,7 +53,7 @@ Use an original recurring short question-and-answer motif across districts. List
 
 Keep music, weather, mechanisms and actionable warnings on separate buses. Do not bake thunder or danger warnings into music. Short one-shot SFX should be reviewed individually for precise onset, useful duration and lack of musical tails. Existing user-created Suno rain, thunder and 8-bit lightning clips were observed but not modified, exported or assessed in this task.
 
-## Dead Carrier A export recovered — 13 September 2026
+## Dead Carrier A export recovered â€” 13 September 2026
 
 The in-app Suno session successfully exported Candidate A through its official download dialog. The dialog showed 17 downloads before unlock and confirmed the song is unlocked for future downloads. MP3 and WAV completed. No purchase or publication occurred.
 
@@ -61,4 +61,9 @@ Original retained, without edits, at `prototypes/audio/dead-carrier-original.wav
 
 Measured with ffprobe/ffmpeg: 90.000 seconds, stereo, 48,000 Hz, 16-bit PCM, 17,293,840 bytes. SHA256: `d70df4330df7a35bbc1801dd81d6012a0e03aa247f9d0005886ff3b70e3a9687`. Mean volume -17.2 dB and sample peak -4.5 dB (volumedetect; not a perceptual loudness or true-peak measurement).
 
-This resolves export access, not musical acceptance. Listening review, measured phrase/tempo analysis, a separate loop edit and in-game cue masking checks remain pending. Exploration music remains unintegrated. Original is available for user preview.
+This resolves export access, not musical acceptance. Listening review, measured phrase/tempo analysis, a separate loop edit and in-game cue masking checks remain pending. Historical export note: this was unintegrated at export time. The separate Dead Carrier loop is now provisionally integrated; see music-loop-audition.md. Original remains available for preview.
+
+
+## Drowned candidates
+
+Below the Carrier A and B were generated and officially exported on 13 September 2026. Both unchanged WAVs and reproducible PCM measurements are retained under prototypes/audio, excluded from game exports. See drowned-music-candidates.md for source IDs, the exact brief and remaining listening/loop work. Neither candidate replaces the runtime score yet.

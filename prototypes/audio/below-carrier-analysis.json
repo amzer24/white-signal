@@ -1,0 +1,75 @@
+{
+  "files": [
+    {
+      "file": "below-carrier-a-original.wav",
+      "sha256": "10e34a04312952f509093ff159656b6c4d7e6df6d33bfd69798f0505702eb1ad",
+      "bytes": 17209360,
+      "seconds": 89.56,
+      "sample_rate": 48000,
+      "channels": 2,
+      "bits_per_sample": 16,
+      "sample_peak": 0.62750244140625,
+      "full_scale_samples": 0,
+      "rms": 0.15928875622516286,
+      "end_one_second_rms": 0.0015430427114298526,
+      "periodicity_candidates": [
+        {
+          "bpm": 98.36065573770492,
+          "correlation": 0.8350697842637061
+        },
+        {
+          "bpm": 65.93406593406593,
+          "correlation": 0.7776427884649956
+        },
+        {
+          "bpm": 78.94736842105263,
+          "correlation": 0.3418233067239561
+        },
+        {
+          "bpm": 130.43478260869566,
+          "correlation": 0.33363240574607234
+        },
+        {
+          "bpm": 88.23529411764706,
+          "correlation": -0.04120510494024319
+        }
+      ]
+    },
+    {
+      "file": "below-carrier-b-original.wav",
+      "sha256": "6e3afa150e13615bafed576f0ae9a5b1911cd3e62245233ada6757504d0f15ea",
+      "bytes": 16710160,
+      "seconds": 86.96,
+      "sample_rate": 48000,
+      "channels": 2,
+      "bits_per_sample": 16,
+      "sample_peak": 0.61407470703125,
+      "full_scale_samples": 0,
+      "rms": 0.1456482373002707,
+      "end_one_second_rms": 0.0062091357121611705,
+      "periodicity_candidates": [
+        {
+          "bpm": 96.7741935483871,
+          "correlation": 0.8564196141481418
+        },
+        {
+          "bpm": 64.51612903225806,
+          "correlation": 0.7709371608180408
+        },
+        {
+          "bpm": 127.6595744680851,
+          "correlation": 0.5951101769824467
+        },
+        {
+          "bpm": 76.92307692307692,
+          "correlation": 0.5831804636924097
+        },
+        {
+          "bpm": 176.47058823529412,
+          "correlation": -0.0232201408917651
+        }
+      ]
+    }
+  ],
+  "limits": "Periodicity peaks are not verified tempo, meter or phrase boundaries. PCM peak and full-scale counts do not establish true-peak safety, absence of distortion or vocal content. No loop edit, listening approval or runtime replacement has been made."
+}
