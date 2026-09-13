@@ -639,6 +639,10 @@ func map_state(id: String) -> String:
 	return "hidden"
 
 func map_note(id: String) -> String:
+	if id == "fourth" and map_state(id) != "hidden":
+		if map_state(id) == "visited":
+			return "ARCHIVE" if profile.has_flag("fourth_archive") else "SIGNAL UNREAD"
+		return "REACHABLE" if profile.has_flag("air_jump") else "AIR JUMP NEEDED"
 	if id == "amplifier" and map_state(id) == "visited" and preload("res://scripts/amplifier_room.gd").released(profile.data.flags):
 		return "RETURN OPEN"
 	var milestones := {

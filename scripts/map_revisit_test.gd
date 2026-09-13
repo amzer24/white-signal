@@ -1,0 +1,27 @@
+extends SceneTree
+func _initialize() -> void: run.call_deferred()
+func run() -> void:
+    var world = load("res://scenes/exploration.tscn").instantiate()
+    world.save_path = "res://test-user/map-revisit-%d.json" % OS.get_process_id()
+    root.add_child(world)
+    assert(world.map_state("fourth") == "hidden")
+    assert(world.map_note("fourth").is_empty())
+    assert(world.profile.enter_room("amplifier"))
+    assert(world.map_state("fourth") == "hint")
+    assert(world.map_note("fourth") == "AIR JUMP NEEDED")
+    assert(world.profile.set_flag("air_jump"))
+    assert(world.map_note("fourth") == "REACHABLE")
+    assert(world.map_state("fourth") == "hint")
+    assert(world.profile.enter_room("fourth"))
+    assert(world.map_note("fourth") == "SIGNAL UNREAD")
+    assert(world.profile.set_flag("fourth_archive"))
+    assert(world.map_note("fourth") == "ARCHIVE")
+    var saved := FileAccess.get_file_as_bytes(world.save_path)
+    for i in 10: world.map_note("fourth")
+    assert(FileAccess.get_file_as_bytes(world.save_path) == saved)
+    var path: String = world.save_path
+    world.queue_free()
+    await process_frame
+    for suffix in ["", ".tmp", ".bak"]: DirAccess.remove_absolute(path+suffix)
+    print("MAP REVISIT: hidden, gated, reachable, unread and archived; read-only passed")
+    quit()
