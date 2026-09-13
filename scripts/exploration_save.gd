@@ -1,6 +1,6 @@
 extends RefCounted
 ## Explicit transactional exploration profile; no legacy save references.
-const ROOMS := ["source_return","source_walk","array_cable","wire_shaft","array_inspection","drowned_street","drowned_gallery","drowned_dock","drowned_cycle","stand_rim","stand_charge","stand_bridge","stand_sluice","stand_trial","siphon","hub","workshop","gallery","amplifier","return","lookout","basin","pump","float","shelter","conductor","causeway","cellar","sump","fourth","flats","conduit","arrival","wire_shelter","wire_carriage","array","approach","gate","aftermath"]
+const ROOMS := ["array_shutter","source_return","source_walk","array_cable","wire_shaft","array_inspection","drowned_street","drowned_gallery","drowned_dock","drowned_cycle","stand_rim","stand_charge","stand_bridge","stand_sluice","stand_trial","siphon","hub","workshop","gallery","amplifier","return","lookout","basin","pump","float","shelter","conductor","causeway","cellar","sump","fourth","flats","conduit","arrival","wire_shelter","wire_carriage","array","approach","gate","aftermath"]
 var path: String = "user://ws_exploration_v1.json"
 var data: Dictionary = {}
 var last_error: String = ""

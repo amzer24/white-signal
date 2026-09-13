@@ -8,6 +8,7 @@ const PlayerScript = preload("res://scripts/player.gd")
 const SaveScript = preload("res://scripts/exploration_save.gd")
 const PacketScript = preload("res://scripts/exploration_packet.gd")
 const DrownedScript = preload("res://scripts/drowned_mechanism.gd")
+var shutter = preload("res://scripts/shutter_room.gd").new()
 var drowned: RefCounted
 const SiphonScript = preload("res://scripts/siphon_mechanism.gd")
 var siphon: RefCounted
@@ -120,6 +121,7 @@ func enter_room(id: String, from := "") -> void:
 	siphon.enter()
 	stand.enter()
 	network.enter()
+	shutter.reset()
 	gate.enter()
 	alignment = AlignmentScript.new()
 	if profile.has_flag("east_ear"):
@@ -130,7 +132,7 @@ func enter_room(id: String, from := "") -> void:
 	if id == "siphon": map_region = 6
 	if id in ["cellar","sump"]: map_region = 2
 	if id in ["flats","conduit","arrival"]: map_region = 3
-	if id in ["array_cable","wire_shaft","wire_shelter","wire_carriage","array","array_inspection"]: map_region = 4
+	if id in ["array_shutter","array_cable","wire_shaft","wire_shelter","wire_carriage","array","array_inspection"]: map_region = 4
 	if id in ["approach","gate","source_return","source_walk","aftermath"]: map_region = 5
 	memory_time = 0.0
 	lift_power = profile.has_flag("catch") and not profile.has_flag("west_ear")
@@ -166,7 +168,7 @@ func _build_geometry() -> void:
 	lift = null
 	for rect in room.platforms:
 		var body := _solid(rect)
-		if room_id == "siphon" or ((room_id in StandScript.IDS or room_id in DrownedScript.IDS or room_id in ["amplifier","gate","source_return","source_walk","array_cable","wire_shaft","array","array_inspection"]) and rect.size.y <= 8): body.get_child(0).one_way_collision = true
+		if room_id == "siphon" or ((room_id in StandScript.IDS or room_id in DrownedScript.IDS or room_id in ["array_shutter","amplifier","gate","source_return","source_walk","array_cable","wire_shaft","array","array_inspection"]) and rect.size.y <= 8): body.get_child(0).one_way_collision = true
 	if room_id == "flats":
 		var memory_block = _solid(Rect2(199,168,24,16),PacketScript)
 		memory_block.world = self
@@ -217,6 +219,8 @@ func _stairs() -> Array:
 	return [Rect2(108,190,48,8),Rect2(168,157,48,8),Rect2(246,125,45,8)]
 
 func can_use_exit(target: String) -> bool:
+	if room_id == "array_shutter" and target == "array": return shutter.return_lit(profile.data.flags)
+	if room_id == "array" and target == "array_shutter": return profile.has_flag("shutter_archive")
 	if (room_id == "array_cable" and target == "wire_shelter") or (room_id == "wire_shelter" and target == "array_cable"): return profile.has_flag("cable_archive")
 	if room_id == "basin" and target == "drowned_street": return drowned.water_y >= 241
 	if (room_id == "pump" and target == "float") or (room_id == "float" and target == "pump"): return profile.has_flag("drowned_restored")
@@ -297,6 +301,7 @@ func _commit(flag: String) -> bool:
 	return false
 
 func activate(id: String) -> void:
+	if shutter.use(self,id): return
 	if id == "cable_archive" and room_id == "array_cable":
 		if _commit("cable_archive"): _notify("THE CABLES KEPT THEIR ROUTINE . SHELTER RETURN OPEN")
 		return
@@ -489,6 +494,7 @@ func leave_to_title() -> void:
 	get_tree().change_scene_to_file("res://scenes/main.tscn")
 
 func respawn() -> void:
+	shutter.reset()
 	noise_cleared.clear()
 	_sync_abilities()
 	if drowned != null: drowned.reset_safe()
@@ -535,14 +541,14 @@ func text_at(at: Vector2,text: String,color := DrawUtil.WHITE,text_scale := 1,al
 func _draw() -> void:
 	if room.is_empty() or not is_instance_valid(player): return
 	draw_rect(Rect2(0,0,480,270),DrawUtil.BG)
-	if far_texture != null and not room_id in ["wire_shaft","array_cable"]:
+	if far_texture != null and not room_id in ["array_shutter","wire_shaft","array_cable"]:
 		var offset := roundf(player.position.x*0.08)
 		draw_texture_rect(far_texture,Rect2(-offset-170,-105,960,320),false,Color(0.8,0.8,0.8,0.7))
 	if ruins_texture != null and room_id in ["hub","workshop","gallery","amplifier","return","lookout","causeway","cellar","sump","arrival","wire_shelter","array"]:
 		var offset := roundf(player.position.x*0.18)
 		draw_texture_rect(ruins_texture,Rect2(-offset-110,-60,960,320),false,Color(0.85,0.85,0.85,0.8))
 	# Non-repeating receiver silhouettes give the room a destination.
-	for i in 0 if room_id in DrownedScript.IDS or room_id in ["array_cable","wire_shaft","basin","pump","float","shelter","conductor","flats","conduit","arrival","wire_shelter","wire_carriage","array","approach","gate","aftermath"] else 3:
+	for i in 0 if room_id in DrownedScript.IDS or room_id in ["array_shutter","array_cable","wire_shaft","basin","pump","float","shelter","conductor","flats","conduit","arrival","wire_shelter","wire_carriage","array","approach","gate","aftermath"] else 3:
 		var center := Vector2(110+i*134,75+i%2*22)
 		draw_arc(center,43,0.15,2.99,22,Color(0.15,0.15,0.15),3)
 		draw_line(center+Vector2(0,39),center+Vector2(0,152),Color(0.12,0.12,0.12),3)
@@ -551,6 +557,7 @@ func _draw() -> void:
 	if siphon != null: siphon.draw_world()
 	if stand != null: stand.draw_world()
 	if network != null: network.draw_world()
+	shutter.draw(self)
 	if gate != null: gate.draw_world()
 	if room_id == "amplifier": preload("res://scripts/amplifier_room.gd").draw(self)
 	if room_id == "causeway": _draw_alignment()
@@ -653,7 +660,7 @@ func map_note(id: String) -> String:
 	if id == "amplifier" and map_state(id) == "visited" and preload("res://scripts/amplifier_room.gd").released(profile.data.flags):
 		return "RETURN OPEN"
 	var milestones := {
-		"array_cable":["cable_archive","RETURN OPEN"],"array_inspection":["inspection_archive","ARCHIVE"],"drowned_gallery":["air_jump","AIR JUMP"],"drowned_cycle":["cycle_archive","ARCHIVE"],"amplifier":["dash","DASH FOUND"],"return":["return_open","SHORTCUT"],
+		"array_shutter":["shutter_archive","LOCAL COPY"],"array_cable":["cable_archive","RETURN OPEN"],"array_inspection":["inspection_archive","ARCHIVE"],"drowned_gallery":["air_jump","AIR JUMP"],"drowned_cycle":["cycle_archive","ARCHIVE"],"amplifier":["dash","DASH FOUND"],"return":["return_open","SHORTCUT"],
 		"wire_shaft":["wire_shaft_archive","ARCHIVE"],"lookout":["survey","SURVEYED"],"sump":["field_restored","FEED LIVE"],
 		"pump":["pump_repaired","PUMP LIVE"],"float":["drowned_restored","FEED LIVE"],
 		"conductor":["stand_restored","FEED LIVE"],"array":["array_restored","FEED LIVE"],
@@ -724,9 +731,9 @@ func _draw_region_map() -> void:
 		names = {"flats":"FLATS","conduit":"CONDUIT","arrival":"RECEIVER","hub":"FIELD HUB"}
 		links = [["flats","conduit"],["conduit","arrival"],["arrival","hub"]]
 	elif map_region == 4:
-		points = {"wire_shaft":Vector2(65,80),"wire_shelter":Vector2(65,145),"wire_carriage":Vector2(200,80),"array":Vector2(345,80),"stand_bridge":Vector2(65,210),"drowned_dock":Vector2(425,145),"array_inspection":Vector2(345,210),"array_cable":Vector2(200,210)}
-		names = {"wire_shaft":"SHAFT","wire_shelter":"INSPECTION","wire_carriage":"CARRIAGE","array":"ARRAY","stand_bridge":"STAND","drowned_dock":"DROWNED","array_inspection":"NOISE BAY","array_cable":"CABLE WALK"}
-		links = [["wire_shelter","wire_shaft"],["stand_bridge","wire_shelter"],["wire_shelter","wire_carriage"],["wire_carriage","array"],["drowned_dock","array"],["array","wire_shelter"],["array","array_inspection"],["array_inspection","array_cable"],["array_cable","wire_shelter"]]
+		points = {"array_shutter":Vector2(200,145),"wire_shaft":Vector2(65,80),"wire_shelter":Vector2(65,145),"wire_carriage":Vector2(200,80),"array":Vector2(345,80),"stand_bridge":Vector2(65,210),"drowned_dock":Vector2(425,145),"array_inspection":Vector2(345,210),"array_cable":Vector2(200,210)}
+		names = {"array_shutter":"SHUTTER","wire_shaft":"SHAFT","wire_shelter":"INSPECTION","wire_carriage":"CARRIAGE","array":"ARRAY","stand_bridge":"STAND","drowned_dock":"DROWNED","array_inspection":"NOISE BAY","array_cable":"CABLE WALK"}
+		links = [["array_inspection","array_shutter"],["array_shutter","array"],["wire_shelter","wire_shaft"],["stand_bridge","wire_shelter"],["wire_shelter","wire_carriage"],["wire_carriage","array"],["drowned_dock","array"],["array","wire_shelter"],["array","array_inspection"],["array_inspection","array_cable"],["array_cable","wire_shelter"]]
 	elif map_region == 5:
 		points = {"array":Vector2(60,80),"approach":Vector2(180,80),"gate":Vector2(300,80),"source_return":Vector2(420,80),"shelter":Vector2(180,205),"hub":Vector2(60,205),"aftermath":Vector2(300,205),"source_walk":Vector2(420,205)}
 		names = {"approach":"APPROACH","gate":"GANTRY","source_return":"RETURN","source_walk":"LOCAL WALK","aftermath":"AFTERMATH","array":"ARRAY","shelter":"STAND","hub":"FIELD HUB"}

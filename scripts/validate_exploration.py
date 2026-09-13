@@ -7,7 +7,7 @@ import subprocess
 import tempfile
 
 TESTS = (
-    "opening_playthrough_test", "wire_first_playthrough_test",
+    "shutter_routes_test", "opening_playthrough_test", "wire_first_playthrough_test",
     "fourth_route_test", "fracture_routes_test", "menu_transition_test", "new_journey_test", "map_revisit_test",
     "exploration_settings_test", "keyboard_movement_test", "save_recovery_test", "pump_motor_test",
 )

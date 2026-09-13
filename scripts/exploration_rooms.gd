@@ -140,6 +140,10 @@ static func get_room(id: String, flags: Dictionary = {}) -> Dictionary:
         "platforms":[floor_rect,Rect2(70,190,60,8),Rect2(110,156,65,8),Rect2(150,122,65,8),Rect2(195,88,160,8)],
         "exits":[["array_inspection",Vector2(27,217),"INSPECTION BAY RETURN"],["wire_shelter",Vector2(445,217),"UNLATCHED SHELTER RETURN"]],
         "actions":[["cable_archive",Vector2(420,217),"RECOVER LOG / OPEN SERVICE RETURN"]]}
+    rooms.array_shutter = preload("res://scripts/shutter_room.gd").room()
+    rooms.array_inspection.exits.append(["array_shutter",Vector2(245,149),"SHUTTER CHAMBER"])
+    rooms.array.platforms.append(Rect2(250,122,70,8))
+    rooms.array.exits.append(["array_shutter",Vector2(285,115),"SHUTTER SERVICE RETURN"])
     rooms.merge(preload("res://scripts/source_district_rooms.gd").rooms(flags),true)
     rooms.aftermath.exits.append(["source_walk",Vector2(160,217),"COMMISSIONING RETURN"])
     rooms.amplifier = preload("res://scripts/amplifier_room.gd").room(flags)
