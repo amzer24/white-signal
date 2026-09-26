@@ -149,3 +149,63 @@ visual fixes were verified with the `WS_SHOT=1` screenshot pass on Godot 4.7.2.
   SWARM / ECHO), glyph synergy pairs + 3 new glyphs + 3 new curses, verb
   chaining, REPEATERS, beacon rest/overclock, hazard grammar per zone, tide
   sketch for Z3, heat/echo-ghost/frequencies meta, accessibility, build order.
+
+## Exploration art pass (15 Sep 2026) — PixelLab biome kits
+- `assets/exploration/biomes/`: six sidescroller Wang tilesets (flats / field /
+  stand / wire / array / source) + six 480×160 skylines, generated on the
+  project's PixelLab subscription (ids and prompts in the folder README).
+- `scripts/biome_material.gd` (new): proper corner-Wang autotiler for any
+  platform rect, per-biome tint; replaces the flat grey bars + tick lines in
+  every exploration room. Drowned's wet concrete now goes through the same path.
+- `scripts/room_dressing.gd` (new): non-solid ceilings, pillars and ledge
+  struts for the interior rooms so they read as rooms. Zero collision changes.
+- `exploration_world.gd`: biome skyline layer (mirrored wrap, 0.08x, faded into
+  the floor); old procedural arcs / afterlight far layer only used where a
+  biome has no sky. `gate_mechanism.gd` Source fill made translucent.
+- `scripts/room_sweep_capture.gd` (new tool): `WS_ROOMS=a,b,c godot
+  --rendering-driver opengl3 --script res://scripts/room_sweep_capture.gd`
+  renders any list of rooms to `test-user/sweep/` for contact-sheet review.
+- Verified: `WS_TEST=1` 8/8 and `validate_exploration.py` 13/13 after the change.
+
+## Interaction art (15 Sep 2026) — no more "+" boxes
+- Every one of the 53 interaction points was a 16px box with a `+`; exits were
+  a box with `>`/`X`. `assets/exploration/props/` now holds 14 PixelLab sprites
+  (lever, breaker cabinet, valve wheel, socket, impeller, brake, archive
+  terminal, protocol crystal, beacon, dish crank, call post, open/sealed hatch,
+  memory block) and `scripts/action_sprites.gd` maps action ids → sprites.
+- Behaviour-aware: pickups vanish when collected, sockets show the fitted part,
+  hatches switch open/sealed with `can_use_exit`, protocols pulse. Anchoring is
+  on the old marker's foot line, so nothing moved; both suites still pass.
+
+## Style unification (15 Sep 2026) — PixelLab output → 1-bit ditherpunk
+- Classic's look is entirely coded (baked tiles, props, dithered backdrop in
+  `draw_util.gd` / `props.gd` / `background.gd`). PixelLab output is smooth
+  greyscale with anti-aliased ramps, so exploration drifted off-style.
+- `tools/quantize_pixellab.py` now snaps every PixelLab PNG (mine and Codex's
+  earlier ones) to the game ramp `0b/23/3a/8a/f2`: sprites and tilesets hard-
+  quantized (play layer capped at GRAY), skylines Bayer-dithered and capped at
+  DARK like the classic sky. Untouched originals live in `raw/` next to each.
+- Sky tint raised to 0.72 to compensate for the darker cap.
+
+## Classic / Afterlight: floating fixtures (15 Sep 2026)
+- All 13 signs Codex authored in R1, R2 and Afterlight hung 31–98px above
+  their platforms (posts are 22px; R0's convention is `y = top - 22`).
+  `LevelData.ground_signs()` now snaps every sign to the platform beneath it at
+  level build; audit reports 0 floating signs across R0/R1/R2/Afterlight.
+- Afterlight's three "coherence lamps" were drawn 95px above each lit beacon,
+  adrift in the sky; they now hang just above the beacon flag.
+
+## Clarity pass: plain-language goals, first-run intro, menu and return-to-title
+- Title menu is now seven plain items: START/CONTINUE JOURNEY, NEW JOURNEY (one confirm, then straight into the Flats), CLASSIC RUN, SETTINGS, HOW TO PLAY, EXTRAS, QUIT. New Journey no longer dead-ends on a recovery page.
+- Classic pause: Q (or BACK on a pad) returns to the title; the run is kept at the last relay (`RunState.leave_run`).
+- `exploration_guidance.gd` rewritten in plain imperatives ("PICK UP THE IMPELLER . IT IS LYING IN THIS STREET") with a `PLAIN` fallback for all 39 rooms; jargon goals never reach the HUD. Autoload fetched by node so the script also compiles from `--script` tests.
+- First run in the Flats shows a one-screen intro (what the game is, the four districts, controls, "any key").
+- Top bar now carries a FIELD / DROWNED / STAND / ARRAY progress strip that lights as each district is fixed.
+- HOW TO PLAY page states the goal before the controls.
+- Tests: `guidance_test` fixed (impeller now lives in `drowned_street`), `new_journey_test`/`extras_menu_test` updated for the new row counts. Classic PORT-VALIDATION 0 failures, exploration validation 0 failures, guidance/tutorial tests pass. `scripts/intro_capture.gd` captures the intro for review.
+- Follow-up: memory ghost is now a PixelLab operator sprite (`props/operator.png`) stood on the floor pointing at the dish; Flats dish planted on the floor line. Lever, breaker, crank, callpost and both doors regenerated as strictly flat side-view sprites (the first batch was isometric); conduit room lost its coded box outlines. `quantize_pixellab.py` reads `raw/` — replace the raw when swapping a sprite.
+- Parallax rebuilt as real layers instead of one sliding picture: far sky 0.04x, mid 0.12x, near 0.28x (new transparent PixelLab strips for Flats/Stand/Wire), whole-pixel snapping, small vertical parallax, atmospheric tinting by depth, and thin foreground cables at 1.3x in front of the player on exteriors. Interior walls (Field halls, Array, Source) now barely move, since they sit right behind the play layer alongside the static pillars.
+- Mission clarity: story-first intro (the dead relay, the calling receiver, you are the Spark, four named districts then the Gate); district title cards on every biome change; `mission_line()` on the map and pause screens listing what is left. Direction review with enemy roster, PixelLab capability audit and ranked plan: `docs/research/direction-2026-09-16.md`.
+- Room sweep (all 40 rooms captured via `room_sweep_capture.gd`, contact sheets in `test-user/sweep/sheet_*.png`): causeway "EAST EAR RESTORED" no longer draws through the middle crank (it replaces the hint line at the top instead); door/lever sprites shrink to fit under the HUD bar on top ledges (Float, Gate, Wire shaft); Wire shelter's coded box around the brake spare removed; near parallax layer softened so fence posts no longer read as play-layer objects.
+- Levers rebuilt: a coded side-view floor pedestal (plate, notched quadrant, pivot bolt) with a PixelLab arm (`props/lever_arm.png`) rotated about its pivot. Arm swings 0.28 s with ease-out when used, holds its position, and nudges when a use is rejected. Saved-flag levers read their state from the profile (`LEVER_FLAG`); the rest keep a session toggle.
+- Prop animation pass (`action_sprites.gd`): breakers have an ON sprite (PixelLab edit of the original, lamp lit) chosen from the saved flag with a short flicker on use; valves spin coded spokes for 0.7 s; crank handles orbit the axle for one turn; call posts blink their lamp; loose parts (impeller, brake) hover; doors slide open (shut door rises out of the frame over 0.5 s) the moment a route becomes usable. Socket sprite regenerated as a flat plate with a round hole. `scripts/anim_capture.gd` captures mid-animation frames for review.

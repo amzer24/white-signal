@@ -1,0 +1,116 @@
+{
+  "_about": "Who lives where, and what they say. 'show' maps a level to a condition; 'talk' is checked top to bottom and the first entry whose 'when' holds is used. Conditions are flag names joined by '&', with '!' for not. Flags: met_<id> (set by talking), w1_clear, w2_clear. 'set' flags are set when the conversation ends. 'shop' opens the shop after the lines.",
+  "mast": {
+    "name": "OLD MAST",
+    "show": {"village": ""},
+    "talk": [
+      {"when": "!met_mast", "set": ["met_mast"], "lines": [
+        "OH. YOU'RE AWAKE. GOOD.",
+        "THIS IS LAST RELAY. THE LAST STATION ON THE LINE THAT STILL HUMS.",
+        "SOMETHING OUT THERE KEEPS CALLING. THREE RINGS, THEN A VOICE WE CAN'T MAKE OUT.",
+        "IT COMES FROM PAST THE GATES. NONE OF US CAN GET THAT FAR.",
+        "YOU'RE A SPARK, THOUGH. YOU CAN. FOLLOW THE LINE AND BRING BACK WHAT YOU HEAR."
+      ]},
+      {"when": "w2_clear", "lines": [
+        "THE RELAY'S QUIET. FIRST TIME IN YEARS.",
+        "LISTEN. THE CALL HAS A SHAPE NOW. WREN WILL WANT TO TELL YOU."
+      ]},
+      {"when": "w1_clear", "lines": [
+        "YOU LIT THE FIRST GATE. THE CALL WAS LOUDER LAST NIGHT.",
+        "IT'S FURTHER DOWN THE LINE NOW. PAST THE SWITCHYARD."
+      ]},
+      {"when": "", "lines": [
+        "THE LINE STARTS AT THE SIGNPOST, EAST OF HERE.",
+        "TALLY WILL TRADE FOR ANY SHARDS YOU BRING BACK."
+      ]}
+    ]
+  },
+  "tally": {
+    "name": "TALLY",
+    "show": {"village-shop": ""},
+    "talk": [
+      {"when": "!met_tally", "set": ["met_tally"], "shop": true, "lines": [
+        "SHARDS! PROPER SIGNAL, THOSE. HARD TO COME BY.",
+        "I'LL TRADE YOU PARTS FOR THEM. HAVE A LOOK."
+      ]},
+      {"when": "", "shop": true, "lines": [
+        "WHAT'LL IT BE?"
+      ]}
+    ]
+  },
+  "wren": {
+    "name": "WREN",
+    "show": {"1-2": "!met_wren", "village-radio": "met_wren"},
+    "talk": [
+      {"when": "!met_wren", "set": ["met_wren"], "lines": [
+        "OH! A SPARK!",
+        "I FOLLOWED THE CALL OUT HERE, AND THE FLOOR KEPT FALLING AWAY UNDER ME.",
+        "I'VE BEEN WRITING DOWN WHAT IT SAYS. IT ISN'T STATIC. IT'S WORDS.",
+        "I'M GOING BACK TO LAST RELAY. FIND ME IN THE RADIO SHACK."
+      ]},
+      {"when": "w2_clear", "lines": [
+        "I HEARD IT CLEARLY THIS TIME.",
+        "IT SAYS: SPARK. COME HOME.",
+        "WHERE IS HOME, FOR SOMETHING LIKE YOU?"
+      ]},
+      {"when": "w1_clear", "lines": [
+        "SINCE YOU LIT THE GATE I CAN HEAR MORE OF IT.",
+        "IT'S A NAME. OR HALF OF ONE. IT KEEPS BREAKING OFF."
+      ]},
+      {"when": "", "lines": [
+        "I'M STILL WORKING ON THE CALL. IT'S HALF A WORD, OVER AND OVER.",
+        "LIGHT THE GATE AND MAYBE I'LL HEAR THE REST."
+      ]}
+    ]
+  },
+  "brace": {
+    "name": "BRACE",
+    "show": {"1-4": "!met_brace", "village-radio": "met_brace"},
+    "talk": [
+      {"when": "!met_brace", "set": ["met_brace"], "lines": [
+        "CAREFUL IN HERE. THE OLD CREWS CUT THESE LINES ON PURPOSE.",
+        "NOT TO HURT ANYONE. TO STOP THE NOISE SPREADING FROM ONE STATION TO THE NEXT.",
+        "SEE THIS HANDLE ON MY BELT? THAT'S HOW YOU ISOLATE A LINE. ONE FAULT DOESN'T TAKE EVERYTHING.",
+        "GET THROUGH THE GATE. I'LL SEE YOU AT LAST RELAY."
+      ]},
+      {"when": "w2_clear", "lines": [
+        "YOU BLEW THE RELAY'S FUSES? GOOD.",
+        "A MACHINE THAT CAN'T STOP PROTECTING ITSELF ISN'T PROTECTING ANYONE."
+      ]},
+      {"when": "", "lines": [
+        "THE SWITCHYARD SPLITS THE LINE IN TWO. ONE CHANNEL LIVE, ONE DEAD.",
+        "THAT'S HOW THEY KEPT THE NOISE OUT. IT WORKED. MOSTLY."
+      ]}
+    ]
+  },
+  "dot": {
+    "name": "DOT",
+    "show": {"2-3": "!met_dot", "village-radio": "met_dot"},
+    "talk": [
+      {"when": "!met_dot", "set": ["met_dot"], "lines": [
+        "BLINK. BLINK. OH, HELLO.",
+        "ONE CHANNEL OR THE OTHER. NEVER BOTH. HIT A SWITCH AND THE WORLD CHANGES SHAPE.",
+        "I RAN THE SWITCHBOARD AT LAST RELAY, ONCE. MAYBE I'LL GO BACK AND RUN IT AGAIN."
+      ]},
+      {"when": "", "lines": [
+        "THE SWITCHBOARD OUTSIDE IS LIVE AGAIN.",
+        "PICK ANY LINE YOU'VE WALKED BEFORE. I'LL PATCH YOU THROUGH."
+      ]}
+    ]
+  },
+  "hum": {
+    "name": "HUM",
+    "show": {"2-4": "!met_hum", "village-radio": "met_hum"},
+    "talk": [
+      {"when": "!met_hum", "set": ["met_hum"], "lines": [
+        "THAT RELAY AHEAD HASN'T STOPPED SWAPPING SINCE THE FAILURE.",
+        "IT'S TRYING TO KEEP THE NOISE OUT, AND IT'S SHAKING ITSELF APART DOING IT.",
+        "BLOW ITS THREE FUSES. IT'LL REST. SO WILL I."
+      ]},
+      {"when": "", "lines": [
+        "FIRST QUIET NIGHT IN YEARS.",
+        "THANK YOU, LITTLE SPARK."
+      ]}
+    ]
+  }
+}

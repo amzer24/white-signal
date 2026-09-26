@@ -227,6 +227,7 @@ func _draw_pause() -> void:
 	DrawUtil.text(self, Vector2(W / 2.0, 160), ("START / B RESUME" if GameInput.controller_active else "P / ESC RESUME . R RESPAWN"), DrawUtil.WHITE, 1, HORIZONTAL_ALIGNMENT_CENTER)
 	draw_rect(Rect2(170,182,140,22),DrawUtil.DARK)
 	DrawUtil.text(self,Vector2(240,190),("X . SETTINGS" if GameInput.controller_active else "O . SETTINGS"),DrawUtil.WHITE,1,HORIZONTAL_ALIGNMENT_CENTER)
+	DrawUtil.text(self,Vector2(240,214),("VIEW . TITLE SCREEN" if GameInput.controller_active else "Q . TITLE SCREEN") + " (RUN SAVED AT LAST RELAY)",DrawUtil.GRAY,1,HORIZONTAL_ALIGNMENT_CENTER)
 
 func _draw_draft(t: float) -> void:
 	_dim(0.72)
@@ -393,6 +394,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			RunState.toggle_pause()
 		elif k.keycode == KEY_R:
 			RunState.manual_respawn()
+		elif RunState.state == "pause" and k.keycode == KEY_Q:
+			RunState.leave_run()
 
 func _draw_relay_clear() -> void:
 	_dim(0.86)

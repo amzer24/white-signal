@@ -1,0 +1,22 @@
+{
+ "finished": true,
+ "route_seconds": 16.8,
+ "nodes": 123034,
+ "shards": {
+  "57,15": true,
+  "112,9": true,
+  "144,22": true
+ },
+ "small_shards": {
+  "total": 23,
+  "reachable": 23,
+  "missing": []
+ },
+ "blocks": {
+  "total": 5,
+  "reachable": 5,
+  "missing": []
+ },
+ "solve_seconds": 259.4,
+ "line": "180 tiles (2880px, 6 screens)  .  FINISHABLE  .  fastest proven route 16.8s  .  big shards reachable 3/3  .  small shards reachable 23/23  .  blocks hittable 5/5  .  27 shards  .  owns: hoppers"
+}

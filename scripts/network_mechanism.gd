@@ -77,9 +77,7 @@ func draw_world() -> void:
         world.draw_line(Vector2(x,48),Vector2(x+97,62),DrawUtil.GRAY,1)
     if world.room_id == "wire_shelter":
         world.text_at(Vector2(155,82),"SHARED SPARES . KEEP THE RETURN OPEN",DrawUtil.GRAY)
-        world.draw_rect(Rect2(212,116,46,28),DrawUtil.GRAY,false,2)
-        if not world.profile.has_flag("brake_spare"):
-            world.draw_line(Vector2(218,125),Vector2(249,135),DrawUtil.WHITE,4)
+        # the brake spare is drawn by action_sprites; no coded box around it
         return
     if world.room_id == "wire_carriage":
         world.draw_line(Vector2(117,79),Vector2(383,79),DrawUtil.GRAY,2)

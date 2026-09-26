@@ -22,4 +22,4 @@ static func build() -> Dictionary:
     LevelData.sign_at(l, 900, 189, "THE MACHINE WAITS")
     LevelData.sign_at(l, 1470, 122, "ONE LAST SHIFT")
     LevelData.sign_at(l, 2100, 189, "CARRY THEM ON")
-    return l
+    return LevelData.ground_signs(l)

@@ -359,6 +359,22 @@ func start_lab() -> void:
     reset_run()
     _enter_relay(0)
 
+## Back to the title from a paused classic run. The boundary save written on
+## entering the current relay is untouched, so RESUME picks up from there.
+func leave_run() -> void:
+    lab_active = false
+    hitstop = 0.0
+    state = "loading"
+    reset_run()
+    relay_index = 0
+    level = LevelData.get_level(0)
+    zones = level.zones
+    objectives.clear()
+    lit_beacons.clear()
+    relay_changed.emit()
+    state = "menu"
+    state_changed.emit(state)
+
 func leave_lab() -> void:
     if not lab_active: return
     lab_active = false

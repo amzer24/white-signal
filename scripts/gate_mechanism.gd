@@ -74,7 +74,7 @@ func draw_world() -> void:
 
 func draw_source() -> void:
     var state := progress()
-    world.draw_rect(Rect2(0,29,480,195),Color(0.045,0.05,0.055))
+    world.draw_rect(Rect2(0,29,480,195),Color(0.045,0.05,0.055,0.55))
     preload("res://scripts/source_art.gd").draw(world,state,test_time)
     for i in 4:
         var y := 39.0 + i * 5.0

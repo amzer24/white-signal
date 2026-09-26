@@ -1,0 +1,2565 @@
+{
+ "ground": {
+  "file": "ground.png",
+  "fw": 16,
+  "fh": 16,
+  "about": "Ground `#`. Pick the column by left/right neighbours, the row by depth below the surface.",
+  "order": [
+   "top",
+   "mid",
+   "deep",
+   "bottom",
+   "alt"
+  ],
+  "anims": {
+   "top": {
+    "row": 0,
+    "frames": 4,
+    "dur": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "loop": true,
+    "note": "top-left, top, top-right, one-wide column top"
+   },
+   "mid": {
+    "row": 1,
+    "frames": 4,
+    "dur": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "loop": true,
+    "note": "second row down: left, fill, right, column"
+   },
+   "deep": {
+    "row": 2,
+    "frames": 4,
+    "dur": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "loop": true,
+    "note": "third row and below"
+   },
+   "bottom": {
+    "row": 3,
+    "frames": 4,
+    "dur": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "loop": true,
+    "note": "underside for ceilings and floating ground. The last one is a single tile"
+   },
+   "alt": {
+    "row": 4,
+    "frames": 4,
+    "dur": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "loop": true,
+    "note": "drop-in swaps for variety, pick by hash of world tile x,y"
+   }
+  }
+ },
+ "block": {
+  "file": "block.png",
+  "fw": 16,
+  "fh": 16,
+  "about": "Block `=`: relay panelling. Use a live pip rarely (one per screen at most).",
+  "order": [
+   "lip",
+   "stacked"
+  ],
+  "anims": {
+   "lip": {
+    "row": 0,
+    "frames": 4,
+    "dur": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "loop": true,
+    "note": "top of a stack: plain, vent, live pip, stencil"
+   },
+   "stacked": {
+    "row": 1,
+    "frames": 4,
+    "dur": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "loop": true,
+    "note": "a block with another block above it"
+   }
+  }
+ },
+ "girder": {
+  "file": "girder.png",
+  "fw": 16,
+  "fh": 16,
+  "about": "Girder `-`: one-way ledge, 6 px deep.",
+  "order": [
+   "static"
+  ],
+  "anims": {
+   "static": {
+    "row": 0,
+    "frames": 4,
+    "dur": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "loop": true,
+    "note": "left end, middle, right end, single. Solid part is the top 6 px"
+   }
+  }
+ },
+ "moving_girder": {
+  "file": "moving_girder.png",
+  "fw": 16,
+  "fh": 16,
+  "about": "Moving girder `m`. Play frames forward while it moves right or down, backward while it moves left or up. Hold the current frame while it pauses at an end. End lamps blink with the scroll.",
+  "order": [
+   "left",
+   "middle",
+   "right"
+  ],
+  "anims": {
+   "left": {
+    "row": 0,
+    "frames": 4,
+    "dur": [
+     0.08,
+     0.08,
+     0.08,
+     0.08
+    ],
+    "loop": true,
+    "note": ""
+   },
+   "middle": {
+    "row": 1,
+    "frames": 4,
+    "dur": [
+     0.08,
+     0.08,
+     0.08,
+     0.08
+    ],
+    "loop": true,
+    "note": ""
+   },
+   "right": {
+    "row": 2,
+    "frames": 4,
+    "dur": [
+     0.08,
+     0.08,
+     0.08,
+     0.08
+    ],
+    "loop": true,
+    "note": ""
+   }
+  }
+ },
+ "bump_block": {
+  "file": "bump_block.png",
+  "fw": 16,
+  "fh": 16,
+  "about": "Bump blocks `?` `C` `U`. The icon tells you what is inside.",
+  "order": [
+   "shard",
+   "charge",
+   "life",
+   "hit",
+   "used"
+  ],
+  "anims": {
+   "shard": {
+    "row": 0,
+    "frames": 4,
+    "dur": [
+     1.1,
+     0.06,
+     0.06,
+     0.06
+    ],
+    "loop": true,
+    "note": "`?` idle: hold, then a glint sweeps the face"
+   },
+   "charge": {
+    "row": 1,
+    "frames": 4,
+    "dur": [
+     0.12,
+     0.12,
+     0.12,
+     0.12
+    ],
+    "loop": true,
+    "note": "`C` idle tell: a spark runs round the corners"
+   },
+   "life": {
+    "row": 2,
+    "frames": 4,
+    "dur": [
+     0.5,
+     0.08,
+     0.12,
+     0.08
+    ],
+    "loop": true,
+    "note": "`U` idle tell: the little Spark icon beats"
+   },
+   "hit": {
+    "row": 3,
+    "frames": 4,
+    "dur": [
+     0.05,
+     0.06,
+     0.1,
+     0.1
+    ],
+    "loop": false,
+    "note": "on bump: white flash, icon jumps, then used. Hop the whole tile 4 px up for 0.1 s in code"
+   },
+   "used": {
+    "row": 4,
+    "frames": 1,
+    "dur": [
+     0
+    ],
+    "loop": true,
+    "note": "empty block"
+   }
+  }
+ },
+ "hidden_block": {
+  "file": "hidden_block.png",
+  "fw": 16,
+  "fh": 16,
+  "about": "Hidden block `h`.",
+  "order": [
+   "hidden",
+   "reveal"
+  ],
+  "anims": {
+   "hidden": {
+    "row": 0,
+    "frames": 1,
+    "dur": [
+     0
+    ],
+    "loop": true,
+    "note": "invisible, solid only from below"
+   },
+   "reveal": {
+    "row": 1,
+    "frames": 4,
+    "dur": [
+     0.05,
+     0.07,
+     0.12,
+     0.1
+    ],
+    "loop": false,
+    "note": "white pop, outline forms, 1UP face, then used"
+   }
+  }
+ },
+ "brick": {
+  "file": "brick.png",
+  "fw": 16,
+  "fh": 16,
+  "about": "Brick `B`.",
+  "order": [
+   "idle",
+   "bumped",
+   "break"
+  ],
+  "anims": {
+   "idle": {
+    "row": 0,
+    "frames": 1,
+    "dur": [
+     0
+    ],
+    "loop": true,
+    "note": ""
+   },
+   "bumped": {
+    "row": 1,
+    "frames": 2,
+    "dur": [
+     0.08,
+     0.1
+    ],
+    "loop": false,
+    "note": "bumped while not charged: hops, a crack flashes, heals"
+   },
+   "break": {
+    "row": 2,
+    "frames": 2,
+    "dur": [
+     0.04,
+     0.04
+    ],
+    "loop": false,
+    "note": "bumped while charged: two crack frames, then spawn 4 debris and remove the tile"
+   }
+  }
+ },
+ "brick_debris": {
+  "file": "brick_debris.png",
+  "fw": 8,
+  "fh": 8,
+  "about": "Brick debris.",
+  "order": [
+   "spin"
+  ],
+  "anims": {
+   "spin": {
+    "row": 0,
+    "frames": 4,
+    "dur": [
+     0.06,
+     0.06,
+     0.06,
+     0.06
+    ],
+    "loop": true,
+    "note": "4 chunks fly out (up-left, up-right, down-left, down-right) and spin through these frames"
+   }
+  }
+ },
+ "loose_floor": {
+  "file": "loose_floor.png",
+  "fw": 16,
+  "fh": 16,
+  "about": "Loose floor `L`.",
+  "order": [
+   "still",
+   "shake",
+   "fall",
+   "rubble"
+  ],
+  "anims": {
+   "still": {
+    "row": 0,
+    "frames": 1,
+    "dur": [
+     0
+    ],
+    "loop": true,
+    "note": "split lip and ragged underside set it apart from ground"
+   },
+   "shake": {
+    "row": 1,
+    "frames": 2,
+    "dur": [
+     0.06,
+     0.06
+    ],
+    "loop": true,
+    "note": "0.35 s after landing: alternate these and jitter the tile +-1 px x"
+   },
+   "fall": {
+    "row": 2,
+    "frames": 1,
+    "dur": [
+     0
+    ],
+    "loop": true,
+    "note": "while it drops"
+   },
+   "rubble": {
+    "row": 3,
+    "frames": 2,
+    "dur": [
+     0,
+     0
+    ],
+    "loop": true,
+    "note": "landed. 0 = on flat floor, 1 = resting on a plate (lower, holds it down)"
+   }
+  }
+ },
+ "bridge": {
+  "file": "bridge.png",
+  "fw": 16,
+  "fh": 16,
+  "about": "Bridge floor `Z`. Collapse runs as a chain from the lever end.",
+  "order": [
+   "intact",
+   "stress",
+   "snap",
+   "plank"
+  ],
+  "anims": {
+   "intact": {
+    "row": 0,
+    "frames": 1,
+    "dur": [
+     0
+    ],
+    "loop": true,
+    "note": ""
+   },
+   "stress": {
+    "row": 1,
+    "frames": 2,
+    "dur": [
+     0.05,
+     0.05
+    ],
+    "loop": true,
+    "note": "lever pulled: each tile shudders before it goes"
+   },
+   "snap": {
+    "row": 2,
+    "frames": 1,
+    "dur": [
+     0
+    ],
+    "loop": true,
+    "note": "tile breaks in two and falls, 0.06 s after the tile before it"
+   },
+   "plank": {
+    "row": 3,
+    "frames": 4,
+    "dur": [
+     0.07,
+     0.07,
+     0.07,
+     0.07
+    ],
+    "loop": true,
+    "note": "debris planks tumble as they fall"
+   }
+  }
+ },
+ "spikes": {
+  "file": "spikes.png",
+  "fw": 16,
+  "fh": 16,
+  "about": "Spikes `^` and ceiling spikes `v`. Danger reads from the teeth and the blink, not colour.",
+  "order": [
+   "floor",
+   "ceiling"
+  ],
+  "anims": {
+   "floor": {
+    "row": 0,
+    "frames": 3,
+    "dur": [
+     0.16,
+     0.16,
+     0.08
+    ],
+    "loop": true,
+    "note": "blink bright/dim, occasional glint"
+   },
+   "ceiling": {
+    "row": 1,
+    "frames": 3,
+    "dur": [
+     0.16,
+     0.16,
+     0.08
+    ],
+    "loop": true,
+    "note": "same, hung from a ceiling"
+   }
+  }
+ },
+ "spike_vent": {
+  "file": "spike_vent.png",
+  "fw": 16,
+  "fh": 16,
+  "about": "Spike vent `T`. Up 40% of the cycle.",
+  "order": [
+   "down",
+   "warn",
+   "rise",
+   "up",
+   "retract"
+  ],
+  "anims": {
+   "down": {
+    "row": 0,
+    "frames": 1,
+    "dur": [
+     0
+    ],
+    "loop": true,
+    "note": ""
+   },
+   "warn": {
+    "row": 1,
+    "frames": 2,
+    "dur": [
+     0.07,
+     0.07
+    ],
+    "loop": true,
+    "note": "last 0.3 s of the down phase: tips peek, grille rattles. Shake tile +-1 px"
+   },
+   "rise": {
+    "row": 2,
+    "frames": 2,
+    "dur": [
+     0.04,
+     0.04
+    ],
+    "loop": false,
+    "note": ""
+   },
+   "up": {
+    "row": 3,
+    "frames": 2,
+    "dur": [
+     0.2,
+     0.06
+    ],
+    "loop": true,
+    "note": ""
+   },
+   "retract": {
+    "row": 4,
+    "frames": 2,
+    "dur": [
+     0.05,
+     0.05
+    ],
+    "loop": false,
+    "note": ""
+   }
+  }
+ },
+ "loose_ceiling": {
+  "file": "loose_ceiling.png",
+  "fw": 16,
+  "fh": 16,
+  "about": "Loose ceiling `F`.",
+  "order": [
+   "intact",
+   "crack",
+   "empty",
+   "dust",
+   "chunk",
+   "landed"
+  ],
+  "anims": {
+   "intact": {
+    "row": 0,
+    "frames": 1,
+    "dur": [
+     0
+    ],
+    "loop": true,
+    "note": "a chunk outline hangs from the underside"
+   },
+   "crack": {
+    "row": 1,
+    "frames": 2,
+    "dur": [
+     0.05,
+     0.05
+    ],
+    "loop": true,
+    "note": "the 0.4 s tell: flicker these while the dust trickles below"
+   },
+   "empty": {
+    "row": 2,
+    "frames": 1,
+    "dur": [
+     0
+    ],
+    "loop": true,
+    "note": "after the chunk drops"
+   },
+   "dust": {
+    "row": 3,
+    "frames": 4,
+    "dur": [
+     0.08,
+     0.08,
+     0.08,
+     0.08
+    ],
+    "loop": true,
+    "note": "draw in the tile below the ceiling during the tell"
+   },
+   "chunk": {
+    "row": 4,
+    "frames": 4,
+    "dur": [
+     0.07,
+     0.07,
+     0.07,
+     0.07
+    ],
+    "loop": true,
+    "note": "falling chunk tumbles"
+   },
+   "landed": {
+    "row": 5,
+    "frames": 1,
+    "dur": [
+     0
+    ],
+    "loop": true,
+    "note": "chunk becomes rubble"
+   }
+  }
+ },
+ "press": {
+  "file": "press.png",
+  "fw": 16,
+  "fh": 16,
+  "about": "Press `X`. Head is 16x16 and slides. The shaft stretches behind it.",
+  "order": [
+   "rest",
+   "warn",
+   "slam",
+   "hold",
+   "shaft"
+  ],
+  "anims": {
+   "rest": {
+    "row": 0,
+    "frames": 1,
+    "dur": [
+     0
+    ],
+    "loop": true,
+    "note": ""
+   },
+   "warn": {
+    "row": 1,
+    "frames": 2,
+    "dur": [
+     0.05,
+     0.05
+    ],
+    "loop": true,
+    "note": "0.3 s before the slam: lamp lights, teeth whiten. Shake the head +-1 px x at 20 Hz"
+   },
+   "slam": {
+    "row": 2,
+    "frames": 1,
+    "dur": [
+     0
+    ],
+    "loop": true,
+    "note": "while travelling down (0.12 s)"
+   },
+   "hold": {
+    "row": 3,
+    "frames": 1,
+    "dur": [
+     0
+    ],
+    "loop": true,
+    "note": "pinned to the floor for 0.35 s, then rises in rest frame"
+   },
+   "shaft": {
+    "row": 4,
+    "frames": 2,
+    "dur": [
+     0,
+     0
+    ],
+    "loop": true,
+    "note": "0 = piston, tile it from the mount down to the head. 1 = ceiling mount"
+   }
+  }
+ },
+ "press_dust": {
+  "file": "press_dust.png",
+  "fw": 48,
+  "fh": 16,
+  "about": "Press slam dust.",
+  "order": [
+   "puff"
+  ],
+  "anims": {
+   "puff": {
+    "row": 0,
+    "frames": 4,
+    "dur": [
+     0.04,
+     0.06,
+     0.08,
+     0.1
+    ],
+    "loop": false,
+    "note": "centre on the head, bottom on the floor"
+   }
+  }
+ },
+ "dropper": {
+  "file": "dropper.png",
+  "fw": 32,
+  "fh": 32,
+  "about": "Dropper `D` (2x2). The top 2 px are a white lip because you ride it.",
+  "order": [
+   "idle",
+   "tell",
+   "fall",
+   "land",
+   "rise"
+  ],
+  "anims": {
+   "idle": {
+    "row": 0,
+    "frames": 3,
+    "dur": [
+     2.0,
+     0.1,
+     0.4
+    ],
+    "loop": true,
+    "note": "half-lidded, blinks now and then"
+   },
+   "tell": {
+    "row": 1,
+    "frames": 2,
+    "dur": [
+     0.06,
+     0.06
+    ],
+    "loop": true,
+    "note": "you passed under: eyes snap open, strain marks. Shake +-1 px for 0.15 s before it drops"
+   },
+   "fall": {
+    "row": 2,
+    "frames": 1,
+    "dur": [
+     0
+    ],
+    "loop": true,
+    "note": "teeth whiten while it falls"
+   },
+   "land": {
+    "row": 3,
+    "frames": 2,
+    "dur": [
+     0.1,
+     0.1
+    ],
+    "loop": false,
+    "note": "squash on impact (shake screen 2 px, spawn press_dust). Waits 1.5 s"
+   },
+   "rise": {
+    "row": 4,
+    "frames": 2,
+    "dur": [
+     0.3,
+     0.3
+    ],
+    "loop": true,
+    "note": "rides slowly back up, eyes closed: safe to ride"
+   }
+  }
+ },
+ "plate": {
+  "file": "plate.png",
+  "fw": 16,
+  "fh": 16,
+  "about": "Pressure plate `_`.",
+  "order": [
+   "up",
+   "press",
+   "down",
+   "release"
+  ],
+  "anims": {
+   "up": {
+    "row": 0,
+    "frames": 1,
+    "dur": [
+     0
+    ],
+    "loop": true,
+    "note": ""
+   },
+   "press": {
+    "row": 1,
+    "frames": 2,
+    "dur": [
+     0.04,
+     0.04
+    ],
+    "loop": false,
+    "note": ""
+   },
+   "down": {
+    "row": 2,
+    "frames": 1,
+    "dur": [
+     0
+    ],
+    "loop": true,
+    "note": "held by the Spark, an enemy or rubble"
+   },
+   "release": {
+    "row": 3,
+    "frames": 2,
+    "dur": [
+     0.05,
+     0.05
+    ],
+    "loop": false,
+    "note": ""
+   }
+  }
+ },
+ "gate": {
+  "file": "gate.png",
+  "fw": 16,
+  "fh": 16,
+  "about": "Gate `|`. Bars are hard verticals so they read as a wall.",
+  "order": [
+   "pieces",
+   "cap_closed",
+   "cap_opening",
+   "cap_open"
+  ],
+  "anims": {
+   "pieces": {
+    "row": 0,
+    "frames": 2,
+    "dur": [
+     0,
+     0
+    ],
+    "loop": true,
+    "note": "0 = bar section (repeat), 1 = foot (bottom tile). The whole gate slides up into its cap"
+   },
+   "cap_closed": {
+    "row": 1,
+    "frames": 1,
+    "dur": [
+     0
+    ],
+    "loop": true,
+    "note": "cap sits in the ceiling above the gate"
+   },
+   "cap_opening": {
+    "row": 2,
+    "frames": 2,
+    "dur": [
+     0.06,
+     0.06
+    ],
+    "loop": true,
+    "note": "blinks while the gate rises (0.4 s) and during the last second of a timed gate"
+   },
+   "cap_open": {
+    "row": 3,
+    "frames": 1,
+    "dur": [
+     0
+    ],
+    "loop": true,
+    "note": ""
+   }
+  }
+ },
+ "lever": {
+  "file": "lever.png",
+  "fw": 16,
+  "fh": 16,
+  "about": "Lever `K`.",
+  "order": [
+   "off",
+   "pull",
+   "on"
+  ],
+  "anims": {
+   "off": {
+    "row": 0,
+    "frames": 1,
+    "dur": [
+     0
+    ],
+    "loop": true,
+    "note": ""
+   },
+   "pull": {
+    "row": 1,
+    "frames": 3,
+    "dur": [
+     0.05,
+     0.06,
+     0.1
+    ],
+    "loop": false,
+    "note": ""
+   },
+   "on": {
+    "row": 2,
+    "frames": 1,
+    "dur": [
+     0
+    ],
+    "loop": true,
+    "note": ""
+   }
+  }
+ },
+ "spring": {
+  "file": "spring.png",
+  "fw": 16,
+  "fh": 16,
+  "about": "Spring `S`.",
+  "order": [
+   "rest",
+   "bounce"
+  ],
+  "anims": {
+   "rest": {
+    "row": 0,
+    "frames": 1,
+    "dur": [
+     0
+    ],
+    "loop": true,
+    "note": ""
+   },
+   "bounce": {
+    "row": 1,
+    "frames": 3,
+    "dur": [
+     0.05,
+     0.08,
+     0.1
+    ],
+    "loop": false,
+    "note": "compress on contact, launch on the extended frame"
+   }
+  }
+ },
+ "lift_ring": {
+  "file": "lift_ring.png",
+  "fw": 24,
+  "fh": 24,
+  "about": "Lift ring `R`.",
+  "order": [
+   "idle",
+   "pop",
+   "used"
+  ],
+  "anims": {
+   "idle": {
+    "row": 0,
+    "frames": 4,
+    "dur": [
+     0.1,
+     0.1,
+     0.1,
+     0.1
+    ],
+    "loop": true,
+    "note": "centre on the tile centre"
+   },
+   "pop": {
+    "row": 1,
+    "frames": 2,
+    "dur": [
+     0.06,
+     0.1
+    ],
+    "loop": false,
+    "note": ""
+   },
+   "used": {
+    "row": 2,
+    "frames": 1,
+    "dur": [
+     0
+    ],
+    "loop": true,
+    "note": "spent until the Spark touches ground"
+   }
+  }
+ },
+ "shard": {
+  "file": "shard.png",
+  "fw": 16,
+  "fh": 16,
+  "about": "Shard `o`.",
+  "order": [
+   "spin"
+  ],
+  "anims": {
+   "spin": {
+    "row": 0,
+    "frames": 6,
+    "dur": [
+     0.4,
+     0.08,
+     0.06,
+     0.05,
+     0.06,
+     0.08
+    ],
+    "loop": true,
+    "note": "bob +-2 px in code"
+   }
+  }
+ },
+ "big_shard": {
+  "file": "big_shard.png",
+  "fw": 24,
+  "fh": 24,
+  "about": "Big shard `O`. Draw fx sparkles around it.",
+  "order": [
+   "spin"
+  ],
+  "anims": {
+   "spin": {
+    "row": 0,
+    "frames": 6,
+    "dur": [
+     0.5,
+     0.08,
+     0.06,
+     0.05,
+     0.06,
+     0.08
+    ],
+    "loop": true,
+    "note": ""
+   }
+  }
+ },
+ "pickups": {
+  "file": "pickups.png",
+  "fw": 16,
+  "fh": 16,
+  "about": "Items that come out of bump blocks.",
+  "order": [
+   "charge",
+   "life"
+  ],
+  "anims": {
+   "charge": {
+    "row": 0,
+    "frames": 4,
+    "dur": [
+     0.08,
+     0.08,
+     0.08,
+     0.08
+    ],
+    "loop": true,
+    "note": "CHARGE cell that rises out of a C block"
+   },
+   "life": {
+    "row": 1,
+    "frames": 2,
+    "dur": [
+     0.2,
+     0.2
+    ],
+    "loop": true,
+    "note": "1UP: a little Spark"
+   }
+  }
+ },
+ "walker": {
+  "file": "walker.png",
+  "fw": 16,
+  "fh": 16,
+  "about": "Walker `w`: a NOISE blob. Static stripes crawl, so it never reads as the solid-white Spark.",
+  "order": [
+   "walk",
+   "turn",
+   "stomped"
+  ],
+  "anims": {
+   "walk": {
+    "row": 0,
+    "frames": 4,
+    "dur": [
+     0.12,
+     0.12,
+     0.12,
+     0.12
+    ],
+    "loop": true,
+    "note": "faces left, flip for right"
+   },
+   "turn": {
+    "row": 1,
+    "frames": 2,
+    "dur": [
+     0.06,
+     0.06
+    ],
+    "loop": true,
+    "note": "2 frames at a wall or ledge before it turns: squash, eye wide, body flickers"
+   },
+   "stomped": {
+    "row": 2,
+    "frames": 1,
+    "dur": [
+     0
+    ],
+    "loop": true,
+    "note": "hold 0.3 s, then fx burst"
+   }
+  }
+ },
+ "hopper": {
+  "file": "hopper.png",
+  "fw": 16,
+  "fh": 16,
+  "about": "Hopper `k`.",
+  "order": [
+   "idle",
+   "crouch",
+   "jump",
+   "fall",
+   "land",
+   "stomped"
+  ],
+  "anims": {
+   "idle": {
+    "row": 0,
+    "frames": 2,
+    "dur": [
+     0.2,
+     0.2
+    ],
+    "loop": true,
+    "note": ""
+   },
+   "crouch": {
+    "row": 1,
+    "frames": 3,
+    "dur": [
+     0.08,
+     0.08,
+     0.08
+    ],
+    "loop": true,
+    "note": "tell before every hop (0.24 s): squats, eye looks up, strain ticks"
+   },
+   "jump": {
+    "row": 2,
+    "frames": 1,
+    "dur": [
+     0
+    ],
+    "loop": true,
+    "note": ""
+   },
+   "fall": {
+    "row": 3,
+    "frames": 1,
+    "dur": [
+     0
+    ],
+    "loop": true,
+    "note": ""
+   },
+   "land": {
+    "row": 4,
+    "frames": 1,
+    "dur": [
+     0.08
+    ],
+    "loop": false,
+    "note": ""
+   },
+   "stomped": {
+    "row": 5,
+    "frames": 1,
+    "dur": [
+     0
+    ],
+    "loop": true,
+    "note": ""
+   }
+  }
+ },
+ "warden": {
+  "file": "warden.png",
+  "fw": 32,
+  "fh": 32,
+  "about": "Warden `W` (2x2), world boss.",
+  "order": [
+   "walk",
+   "hop_tell",
+   "hop",
+   "fall",
+   "hurt"
+  ],
+  "anims": {
+   "walk": {
+    "row": 0,
+    "frames": 4,
+    "dur": [
+     0.16,
+     0.16,
+     0.16,
+     0.16
+    ],
+    "loop": true,
+    "note": "faces left"
+   },
+   "hop_tell": {
+    "row": 1,
+    "frames": 3,
+    "dur": [
+     0.08,
+     0.08,
+     0.08
+    ],
+    "loop": true,
+    "note": "crouches for 0.3 s before each hop: this is the window to run under"
+   },
+   "hop": {
+    "row": 2,
+    "frames": 1,
+    "dur": [
+     0
+    ],
+    "loop": true,
+    "note": ""
+   },
+   "fall": {
+    "row": 3,
+    "frames": 2,
+    "dur": [
+     0.1,
+     0.1
+    ],
+    "loop": true,
+    "note": "bridge gone: flails as it drops"
+   },
+   "hurt": {
+    "row": 4,
+    "frames": 2,
+    "dur": [
+     0.06,
+     0.06
+    ],
+    "loop": true,
+    "note": ""
+   }
+  }
+ },
+ "pipe": {
+  "file": "pipe.png",
+  "fw": 32,
+  "fh": 16,
+  "about": "Pipe `p` (2 tiles wide). Press down on the mouth to enter.",
+  "order": [
+   "mouth",
+   "body"
+  ],
+  "anims": {
+   "mouth": {
+    "row": 0,
+    "frames": 2,
+    "dur": [
+     0.6,
+     0.15
+    ],
+    "loop": true,
+    "note": "sits on the top pipe tile"
+   },
+   "body": {
+    "row": 1,
+    "frames": 1,
+    "dur": [
+     0
+    ],
+    "loop": true,
+    "note": "repeat below the mouth"
+   }
+  }
+ },
+ "beacon": {
+  "file": "beacon.png",
+  "fw": 16,
+  "fh": 32,
+  "about": "Midway beacon `M`. Anchor bottom-centre on the tile it stands on.",
+  "order": [
+   "dark",
+   "ignite",
+   "lit"
+  ],
+  "anims": {
+   "dark": {
+    "row": 0,
+    "frames": 1,
+    "dur": [
+     0
+    ],
+    "loop": true,
+    "note": ""
+   },
+   "ignite": {
+    "row": 1,
+    "frames": 2,
+    "dur": [
+     0.05,
+     0.08
+    ],
+    "loop": false,
+    "note": "with fx light_up ring and a 2 px shake"
+   },
+   "lit": {
+    "row": 2,
+    "frames": 3,
+    "dur": [
+     0.15,
+     0.15,
+     0.15
+    ],
+    "loop": true,
+    "note": ""
+   }
+  }
+ },
+ "mast": {
+  "file": "mast.png",
+  "fw": 16,
+  "fh": 16,
+  "about": "Goal mast `G`.",
+  "order": [
+   "pieces",
+   "top_lit",
+   "base_lit"
+  ],
+  "anims": {
+   "pieces": {
+    "row": 0,
+    "frames": 3,
+    "dur": [
+     0,
+     0,
+     0
+    ],
+    "loop": true,
+    "note": "0 base (the G tile), 1 pole (stack 6 up), 2 top"
+   },
+   "top_lit": {
+    "row": 1,
+    "frames": 2,
+    "dur": [
+     0.2,
+     0.2
+    ],
+    "loop": true,
+    "note": "after you touch the mast"
+   },
+   "base_lit": {
+    "row": 2,
+    "frames": 1,
+    "dur": [
+     0
+    ],
+    "loop": true,
+    "note": ""
+   }
+  }
+ },
+ "mast_flag": {
+  "file": "mast_flag.png",
+  "fw": 24,
+  "fh": 16,
+  "about": "Goal mast pennant.",
+  "order": [
+   "wave",
+   "lit"
+  ],
+  "anims": {
+   "wave": {
+    "row": 0,
+    "frames": 4,
+    "dur": [
+     0.14,
+     0.14,
+     0.14,
+     0.14
+    ],
+    "loop": true,
+    "note": "draw at pole tile x - 16 so the pennant hangs left of the pole"
+   },
+   "lit": {
+    "row": 1,
+    "frames": 4,
+    "dur": [
+     0.08,
+     0.08,
+     0.08,
+     0.08
+    ],
+    "loop": true,
+    "note": "touched: lights and slides down the pole"
+   }
+  }
+ },
+ "gate_transmitter": {
+  "file": "gate_transmitter.png",
+  "fw": 128,
+  "fh": 224,
+  "about": "Gate transmitter backdrop landmark for 1-4. Draw at 70% opacity behind the play layer.",
+  "order": [
+   "dormant",
+   "awake"
+  ],
+  "anims": {
+   "dormant": {
+    "row": 0,
+    "frames": 4,
+    "dur": [
+     3.2,
+     0.07,
+     0.07,
+     0.09
+    ],
+    "loop": true,
+    "note": "far layer, parallax 0.2x. Dark silhouette, one lit pixel. Arcs crackle about every 4 s"
+   },
+   "awake": {
+    "row": 1,
+    "frames": 4,
+    "dur": [
+     0.8,
+     0.07,
+     0.07,
+     0.09
+    ],
+    "loop": true,
+    "note": "after the Gate is lit: arcs every second, frame lamps on"
+   }
+  }
+ },
+ "fx_dust": {
+  "file": "fx_dust.png",
+  "fw": 16,
+  "fh": 8,
+  "about": "Landing and jump dust.",
+  "order": [
+   "land"
+  ],
+  "anims": {
+   "land": {
+    "row": 0,
+    "frames": 5,
+    "dur": [
+     0.04,
+     0.04,
+     0.04,
+     0.04,
+     0.04
+    ],
+    "loop": false,
+    "note": "landing: centre under the feet"
+   }
+  }
+ },
+ "fx_skid": {
+  "file": "fx_skid.png",
+  "fw": 8,
+  "fh": 8,
+  "about": "Turn skid puff.",
+  "order": [
+   "skid"
+  ],
+  "anims": {
+   "skid": {
+    "row": 0,
+    "frames": 4,
+    "dur": [
+     0.04,
+     0.04,
+     0.04,
+     0.04
+    ],
+    "loop": false,
+    "note": ""
+   }
+  }
+ },
+ "fx_burst": {
+  "file": "fx_burst.png",
+  "fw": 32,
+  "fh": 32,
+  "about": "Stomp burst.",
+  "order": [
+   "stomp"
+  ],
+  "anims": {
+   "stomp": {
+    "row": 0,
+    "frames": 5,
+    "dur": [
+     0.03,
+     0.04,
+     0.05,
+     0.06,
+     0.06
+    ],
+    "loop": false,
+    "note": "stomp, enemy pop, shard collect"
+   }
+  }
+ },
+ "fx_sparkle": {
+  "file": "fx_sparkle.png",
+  "fw": 8,
+  "fh": 8,
+  "about": "Shard sparkle.",
+  "order": [
+   "twinkle"
+  ],
+  "anims": {
+   "twinkle": {
+    "row": 0,
+    "frames": 4,
+    "dur": [
+     0.06,
+     0.06,
+     0.06,
+     0.06
+    ],
+    "loop": false,
+    "note": ""
+   }
+  }
+ },
+ "fx_charge_glow": {
+  "file": "fx_charge_glow.png",
+  "fw": 24,
+  "fh": 24,
+  "about": "CHARGE aura.",
+  "order": [
+   "glow"
+  ],
+  "anims": {
+   "glow": {
+    "row": 0,
+    "frames": 4,
+    "dur": [
+     0.07,
+     0.07,
+     0.07,
+     0.07
+    ],
+    "loop": true,
+    "note": "centre on the Spark, draw behind it"
+   }
+  }
+ },
+ "fx_light": {
+  "file": "fx_light.png",
+  "fw": 48,
+  "fh": 48,
+  "about": "Light-up ring.",
+  "order": [
+   "ring"
+  ],
+  "anims": {
+   "ring": {
+    "row": 0,
+    "frames": 5,
+    "dur": [
+     0.05,
+     0.05,
+     0.05,
+     0.05,
+     0.05
+    ],
+    "loop": false,
+    "note": "beacon light-up, ring pop, mast touch"
+   }
+  }
+ },
+ "fx_hint": {
+  "file": "fx_hint.png",
+  "fw": 8,
+  "fh": 8,
+  "about": "Down arrow over a pipe.",
+  "order": [
+   "down"
+  ],
+  "anims": {
+   "down": {
+    "row": 0,
+    "frames": 2,
+    "dur": [
+     0.3,
+     0.3
+    ],
+    "loop": true,
+    "note": ""
+   }
+  }
+ },
+ "channel_block": {
+  "file": "channel_block.png",
+  "fw": 16,
+  "fh": 16,
+  "about": "Channel blocks `1` and `2`. ONE carries horizontal bars, TWO a diamond, the same marks as the switch.",
+  "order": [
+   "one_solid",
+   "one_off",
+   "one_arm",
+   "two_solid",
+   "two_off",
+   "two_arm"
+  ],
+  "anims": {
+   "one_solid": {
+    "row": 0,
+    "frames": 1,
+    "dur": [
+     0
+    ],
+    "loop": true,
+    "note": "live channel: stand on it"
+   },
+   "one_off": {
+    "row": 1,
+    "frames": 1,
+    "dur": [
+     0
+    ],
+    "loop": true,
+    "note": "dim dashed outline, pass through"
+   },
+   "one_arm": {
+    "row": 2,
+    "frames": 3,
+    "dur": [
+     0.1,
+     0.1,
+     0.1
+    ],
+    "loop": true,
+    "note": "flickers from outline to solid. Play for the 0.3 s before a clocked block turns solid"
+   },
+   "two_solid": {
+    "row": 3,
+    "frames": 1,
+    "dur": [
+     0
+    ],
+    "loop": true,
+    "note": "live channel: stand on it"
+   },
+   "two_off": {
+    "row": 4,
+    "frames": 1,
+    "dur": [
+     0
+    ],
+    "loop": true,
+    "note": "dim dashed outline, pass through"
+   },
+   "two_arm": {
+    "row": 5,
+    "frames": 3,
+    "dur": [
+     0.1,
+     0.1,
+     0.1
+    ],
+    "loop": true,
+    "note": "flickers from outline to solid. Play for the 0.3 s before a clocked block turns solid"
+   }
+  }
+ },
+ "channel_switch": {
+  "file": "channel_switch.png",
+  "fw": 16,
+  "fh": 16,
+  "about": "Channel switch `Y`. Bump it from below to swap which channel is solid.",
+  "order": [
+   "one",
+   "two",
+   "hit"
+  ],
+  "anims": {
+   "one": {
+    "row": 0,
+    "frames": 2,
+    "dur": [
+     0.45,
+     0.45
+    ],
+    "loop": true,
+    "note": "ONE is live: bars lit, rocker thrown left"
+   },
+   "two": {
+    "row": 1,
+    "frames": 2,
+    "dur": [
+     0.45,
+     0.45
+    ],
+    "loop": true,
+    "note": "TWO is live: diamond lit, rocker thrown right"
+   },
+   "hit": {
+    "row": 2,
+    "frames": 3,
+    "dur": [
+     0.05,
+     0.05,
+     0.05
+    ],
+    "loop": false,
+    "note": "on bump: flash, then show the other idle. Hop the tile 4 px up for 0.1 s in code"
+   }
+  }
+ },
+ "spiky": {
+  "file": "spiky.png",
+  "fw": 16,
+  "fh": 16,
+  "about": "Spiked walker: the walker body with teeth on top. It cannot be stomped.",
+  "order": [
+   "walk",
+   "turn",
+   "knocked",
+   "fall"
+  ],
+  "anims": {
+   "walk": {
+    "row": 0,
+    "frames": 4,
+    "dur": [
+     0.12,
+     0.12,
+     0.12,
+     0.12
+    ],
+    "loop": true,
+    "note": "faces left, flip for right. A glint runs along the teeth"
+   },
+   "turn": {
+    "row": 1,
+    "frames": 2,
+    "dur": [
+     0.06,
+     0.06
+    ],
+    "loop": true,
+    "note": "2 frames at a wall or ledge before it turns: squash, eye wide, teeth bristle"
+   },
+   "knocked": {
+    "row": 2,
+    "frames": 1,
+    "dur": [
+     0
+    ],
+    "loop": true,
+    "note": "upside down: hit from below or crushed. Falls off screen"
+   },
+   "fall": {
+    "row": 3,
+    "frames": 1,
+    "dur": [
+     0
+    ],
+    "loop": true,
+    "note": "walked off a ledge"
+   }
+  }
+ },
+ "fuse": {
+  "file": "fuse.png",
+  "fw": 16,
+  "fh": 16,
+  "about": "Fuse `Q`: a socket hung from the ceiling. Bump it from below to blow it.",
+  "order": [
+   "live",
+   "blow",
+   "blown"
+  ],
+  "anims": {
+   "live": {
+    "row": 0,
+    "frames": 2,
+    "dur": [
+     0.3,
+     0.3
+    ],
+    "loop": true,
+    "note": "a small spark runs along the filament"
+   },
+   "blow": {
+    "row": 1,
+    "frames": 4,
+    "dur": [
+     0.06,
+     0.06,
+     0.06,
+     0.06
+    ],
+    "loop": false,
+    "note": "bumped from below: flare, glass bursts, smoke"
+   },
+   "blown": {
+    "row": 2,
+    "frames": 1,
+    "dur": [
+     0
+    ],
+    "loop": true,
+    "note": "dead socket"
+   }
+  }
+ },
+ "relay": {
+  "file": "relay.png",
+  "fw": 48,
+  "fh": 48,
+  "about": "Relay (3x3), World 2 boss. Anchor top-left on its tile. It swaps the channels on a clock.",
+  "order": [
+   "idle",
+   "tell",
+   "swap",
+   "lamps",
+   "overload",
+   "dead"
+  ],
+  "anims": {
+   "idle": {
+    "row": 0,
+    "frames": 4,
+    "dur": [
+     0.12,
+     0.12,
+     0.12,
+     0.12
+    ],
+    "loop": true,
+    "note": "the coil hums"
+   },
+   "tell": {
+    "row": 1,
+    "frames": 3,
+    "dur": [
+     0.1,
+     0.1,
+     0.1
+    ],
+    "loop": true,
+    "note": "0.3 s before each swap: armature lifts, arcs, strain ticks. Shake the sprite +-1 px x in code"
+   },
+   "swap": {
+    "row": 2,
+    "frames": 2,
+    "dur": [
+     0.05,
+     0.05
+    ],
+    "loop": false,
+    "note": "the swap flash"
+   },
+   "lamps": {
+    "row": 3,
+    "frames": 4,
+    "dur": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "loop": true,
+    "note": "0, 1, 2 or 3 lamps blown. Draw over idle, tell and swap at the same position"
+   },
+   "overload": {
+    "row": 4,
+    "frames": 6,
+    "dur": [
+     0.08,
+     0.08,
+     0.08,
+     0.08,
+     0.08,
+     0.08
+    ],
+    "loop": false,
+    "note": "last lamp gone: arcs, sparks, cracks, smoke"
+   },
+   "dead": {
+    "row": 5,
+    "frames": 1,
+    "dur": [
+     0
+    ],
+    "loop": true,
+    "note": "dark and cracked"
+   }
+  }
+ },
+ "ground_w2": {
+  "file": "ground_w2.png",
+  "fw": 16,
+  "fh": 16,
+  "about": "Switchyard ground `#`: rail and sleepers on top, gravel and a cable duct below. Same layout as `ground`.",
+  "order": [
+   "top",
+   "mid",
+   "deep",
+   "bottom",
+   "alt"
+  ],
+  "anims": {
+   "top": {
+    "row": 0,
+    "frames": 4,
+    "dur": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "loop": true,
+    "note": "top-left, top, top-right, one-wide column top"
+   },
+   "mid": {
+    "row": 1,
+    "frames": 4,
+    "dur": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "loop": true,
+    "note": "second row down: left, fill, right, column"
+   },
+   "deep": {
+    "row": 2,
+    "frames": 4,
+    "dur": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "loop": true,
+    "note": "third row and below"
+   },
+   "bottom": {
+    "row": 3,
+    "frames": 4,
+    "dur": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "loop": true,
+    "note": "underside for ceilings and floating ground. The last one is a single tile"
+   },
+   "alt": {
+    "row": 4,
+    "frames": 4,
+    "dur": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "loop": true,
+    "note": "drop-in swaps for variety, pick by hash of world tile x,y"
+   }
+  }
+ },
+ "block_w2": {
+  "file": "block_w2.png",
+  "fw": 16,
+  "fh": 16,
+  "about": "Switchyard block `=`: switch boxes. Same layout as `block`. Use a live pip rarely.",
+  "order": [
+   "lip",
+   "stacked"
+  ],
+  "anims": {
+   "lip": {
+    "row": 0,
+    "frames": 4,
+    "dur": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "loop": true,
+    "note": "top of a stack: plain, vent, live pip, stencil"
+   },
+   "stacked": {
+    "row": 1,
+    "frames": 4,
+    "dur": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "loop": true,
+    "note": "a block with another block above it"
+   }
+  }
+ },
+ "backdrop_w2": {
+  "file": "backdrop_w2.png",
+  "fw": 96,
+  "fh": 128,
+  "about": "Switchyard far silhouettes. Far layer, parallax 0.2x, 70% opacity, every bottom on one horizon line. Lay the pieces edge to edge, one every 96 px, with no gaps: every piece carries the same three cables at its edges, so they join in any order. Mostly pylons (1), with a tower, gantry or hut (0, 2, 3) every third or fourth slot, picked by a hash of the slot number. Never put two of the same non-pylon piece side by side.",
+  "order": [
+   "pieces"
+  ],
+  "anims": {
+   "pieces": {
+    "row": 0,
+    "frames": 4,
+    "dur": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "loop": true,
+    "note": "0 relay tower, 1 pylon, 2 signal gantry, 3 relay hut"
+   }
+  }
+ },
+ "lamp": {
+  "file": "lamp.png",
+  "fw": 16,
+  "fh": 32,
+  "about": "Signal lamp post. Anchor top-left on the tile above the lamp's cell (cell x, cell y - 16), so the plinth stands on the lamp cell's floor. The bulb centre is frame pixel (8, 8): centre `light_mask` there, which puts the mask top-left at (cell x - 120, cell y - 136).",
+  "order": [
+   "off",
+   "ignite",
+   "on"
+  ],
+  "anims": {
+   "off": {
+    "row": 0,
+    "frames": 1,
+    "dur": [
+     0
+    ],
+    "loop": true,
+    "note": "dark post, grey unlit bulb"
+   },
+   "ignite": {
+    "row": 1,
+    "frames": 5,
+    "dur": [
+     0.05,
+     0.05,
+     0.05,
+     0.05,
+     0.05
+    ],
+    "loop": false,
+    "note": "the Spark walks past: the bulb sputters on, flashes, then settles. Then play on"
+   },
+   "on": {
+    "row": 2,
+    "frames": 4,
+    "dur": [
+     0.15,
+     0.15,
+     0.15,
+     0.15
+    ],
+    "loop": true,
+    "note": "steady glow, the bulb dips once per loop"
+   }
+  }
+ },
+ "light_mask": {
+  "file": "light_mask.png",
+  "fw": 256,
+  "fh": 256,
+  "about": "Light circle for dark areas. **This is a mask, not art.** `#f2f2f2` means lit and transparent means unlit: use it to cut the darkness away (or as a light texture), never draw it as colour. Solid out to half the radius, then eight Bayer steps to nothing at the edge. Frames are 256x256 so the large radius fits. Centre the frame on the light: top-left = light position - (128, 128).",
+  "order": [
+   "disc"
+  ],
+  "anims": {
+   "disc": {
+    "row": 0,
+    "frames": 3,
+    "dur": [
+     0,
+     0,
+     0
+    ],
+    "loop": true,
+    "note": "0 small (radius 56), 1 medium (radius 88), 2 large (radius 120)"
+   }
+  }
+ },
+ "weather": {
+  "file": "weather.png",
+  "fw": 16,
+  "fh": 16,
+  "about": "Weather particles. The game scatters and scrolls these itself. Rain and splashes are grey and dark only.",
+  "order": [
+   "rain",
+   "static",
+   "splash"
+  ],
+  "anims": {
+   "rain": {
+    "row": 0,
+    "frames": 4,
+    "dur": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "loop": true,
+    "note": "streaks falling down-left. Scroll them 1 px left for every 2 px down so they move along their slant"
+   },
+   "static": {
+    "row": 1,
+    "frames": 4,
+    "dur": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "loop": true,
+    "note": "1 to 3 px signal flecks. Flash each one for a frame or two, centred at frame pixel (8, 8)"
+   },
+   "splash": {
+    "row": 2,
+    "frames": 3,
+    "dur": [
+     0.05,
+     0.05,
+     0.05
+    ],
+    "loop": false,
+    "note": "a drop hits the ground: bottom row on the floor surface, frame x 7-8 on the hit"
+   }
+  }
+ },
+ "fog": {
+  "file": "fog.png",
+  "fw": 32,
+  "fh": 16,
+  "about": "Fog band: sparse dark dither that tiles seamlessly left to right. Every frame joins every other.",
+  "order": [
+   "band"
+  ],
+  "anims": {
+   "band": {
+    "row": 0,
+    "frames": 4,
+    "dur": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "loop": true,
+    "note": "tile edge to edge in any order, low in a deep drop. Scroll slowly sideways in code"
+   }
+  }
+ },
+ "npc": {
+  "file": "npc.png",
+  "fw": 16,
+  "fh": 24,
+  "about": "Last Relay villagers (\"listeners\"). Anchor top-left at (cell x, cell y - 8), so the feet sit on the floor of the cell. Face left, mirror for right. Grey bodies, two white dot eyes, round tops, no teeth, so they never read as the white striped enemies.",
+  "order": [
+   "mast_idle",
+   "mast_talk",
+   "tally_idle",
+   "tally_talk",
+   "wren_idle",
+   "wren_talk",
+   "brace_idle",
+   "brace_talk",
+   "dot_idle",
+   "dot_talk",
+   "hum_idle",
+   "hum_talk"
+  ],
+  "anims": {
+   "mast_idle": {
+    "row": 0,
+    "frames": 4,
+    "dur": [
+     0.2,
+     0.2,
+     0.2,
+     0.2
+    ],
+    "loop": true,
+    "note": "Old Mast, the keeper: tall, stooped, cloak, long antenna, cane"
+   },
+   "mast_talk": {
+    "row": 1,
+    "frames": 2,
+    "dur": [
+     0.12,
+     0.12
+    ],
+    "loop": true,
+    "note": ""
+   },
+   "tally_idle": {
+    "row": 2,
+    "frames": 4,
+    "dur": [
+     0.2,
+     0.2,
+     0.2,
+     0.2
+    ],
+    "loop": true,
+    "note": "Tally, the trader: round body, big pack of parts, lamp on the pack"
+   },
+   "tally_talk": {
+    "row": 3,
+    "frames": 2,
+    "dur": [
+     0.12,
+     0.12
+    ],
+    "loop": true,
+    "note": ""
+   },
+   "wren_idle": {
+    "row": 4,
+    "frames": 4,
+    "dur": [
+     0.2,
+     0.2,
+     0.2,
+     0.2
+    ],
+    "loop": true,
+    "note": "Wren, a listener kid: small, oversized headphones"
+   },
+   "wren_talk": {
+    "row": 5,
+    "frames": 2,
+    "dur": [
+     0.12,
+     0.12
+    ],
+    "loop": true,
+    "note": ""
+   },
+   "brace_idle": {
+    "row": 6,
+    "frames": 4,
+    "dur": [
+     0.2,
+     0.2,
+     0.2,
+     0.2
+    ],
+    "loop": true,
+    "note": "Brace, the lineworker: hard hat, hook stick, notched isolation handle on the belt"
+   },
+   "brace_talk": {
+    "row": 7,
+    "frames": 2,
+    "dur": [
+     0.12,
+     0.12
+    ],
+    "loop": true,
+    "note": ""
+   },
+   "dot_idle": {
+    "row": 8,
+    "frames": 4,
+    "dur": [
+     0.2,
+     0.2,
+     0.2,
+     0.2
+    ],
+    "loop": true,
+    "note": "Dot, the switch operator: boxy body, one lamp for a head that blinks when talking"
+   },
+   "dot_talk": {
+    "row": 9,
+    "frames": 2,
+    "dur": [
+     0.12,
+     0.12
+    ],
+    "loop": true,
+    "note": ""
+   },
+   "hum_idle": {
+    "row": 10,
+    "frames": 4,
+    "dur": [
+     0.2,
+     0.2,
+     0.2,
+     0.2
+    ],
+    "loop": true,
+    "note": "Hum, the relay technician: heavy transformer torso, fins, small arms"
+   },
+   "hum_talk": {
+    "row": 11,
+    "frames": 2,
+    "dur": [
+     0.12,
+     0.12
+    ],
+    "loop": true,
+    "note": ""
+   }
+  }
+ },
+ "house": {
+  "file": "house.png",
+  "fw": 64,
+  "fh": 64,
+  "about": "Village house fronts, static. The door is centred on the bottom edge: door cell x - 24 is the facade left edge and the facade bottom sits on the door cell's floor. Houses do not mirror.",
+  "order": [
+   "facades",
+   "door"
+  ],
+  "anims": {
+   "facades": {
+    "row": 0,
+    "frames": 5,
+    "dur": [
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "loop": true,
+    "note": "0 keeper (lit window with the broken diagonal mullion), 1 shop, 2 radio shack, 3 switch hut (isolation handle), 4 plain house. Top-left = (door cell x - 24, door cell y - 48)"
+   },
+   "door": {
+    "row": 1,
+    "frames": 2,
+    "dur": [
+     0,
+     0
+    ],
+    "loop": true,
+    "note": "0 closed, 1 open. The door is 16x32 at the top-left of the frame: draw the frame at (door cell x, door cell y - 16), exactly over the door painted on the facade"
+   }
+  }
+ },
+ "interior": {
+  "file": "interior.png",
+  "fw": 16,
+  "fh": 16,
+  "about": "Inside rooms. Every tile but the floor carries the wall panel behind it, so they drop into one grid.",
+  "order": [
+   "tiles"
+  ],
+  "anims": {
+   "tiles": {
+    "row": 0,
+    "frames": 11,
+    "dur": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "loop": true,
+    "note": "0 wall, 1 wall rivets, 2 floor top, 3 window lit, 4 shelf, 5 counter left, 6 counter middle, 7 counter right, 8 hanging lamp, 9 schematic, 10 doorway out. All opaque over the wall"
+   }
+  }
+ },
+ "bubble": {
+  "file": "bubble.png",
+  "fw": 16,
+  "fh": 16,
+  "about": "Speech bubble and talk prompt. Dark fill, grey rim, white text goes on top.",
+  "order": [
+   "parts",
+   "prompt"
+  ],
+  "anims": {
+   "parts": {
+    "row": 0,
+    "frames": 10,
+    "dur": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "loop": true,
+    "note": "9-slice of 8x8 parts at the top-left of each frame: 0 TL, 1 top, 2 TR, 3 left, 4 fill, 5 right, 6 BL, 7 bottom, 8 BR. Step 8 px. 9 tail: 8x16, draw it in place of one bottom part and it hangs 7 px below"
+   },
+   "prompt": {
+    "row": 1,
+    "frames": 2,
+    "dur": [
+     0.4,
+     0.4
+    ],
+    "loop": true,
+    "note": "press down to talk or enter. Centre over the NPC or door, bottom 4 px above its top"
+   }
+  }
+ },
+ "switchboard": {
+  "file": "switchboard.png",
+  "fw": 32,
+  "fh": 32,
+  "about": "Level-select switchboard in the village. Top-left = (cell x - 8, cell y - 16): centred on its cell, standing on the floor.",
+  "order": [
+   "idle",
+   "use"
+  ],
+  "anims": {
+   "idle": {
+    "row": 0,
+    "frames": 2,
+    "dur": [
+     0.5,
+     0.5
+    ],
+    "loop": true,
+    "note": "jack lamps blink"
+   },
+   "use": {
+    "row": 1,
+    "frames": 3,
+    "dur": [
+     0.08,
+     0.08,
+     0.08
+    ],
+    "loop": false,
+    "note": "a plug goes into a jack, sparks, then every lamp lights"
+   }
+  }
+ },
+ "shop_items": {
+  "file": "shop_items.png",
+  "fw": 16,
+  "fh": 16,
+  "about": "Tally's shop items.",
+  "order": [
+   "icons"
+  ],
+  "anims": {
+   "icons": {
+    "row": 0,
+    "frames": 5,
+    "dur": [
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "loop": true,
+    "note": "0 extra life, 1 CHARGE start, 2 shard compass, 3 lantern, 4 sold out"
+   }
+  }
+ },
+ "village_props": {
+  "file": "village_props.png",
+  "fw": 16,
+  "fh": 16,
+  "about": "Village props. Bottoms on the cell floor unless the note says otherwise.",
+  "order": [
+   "props"
+  ],
+  "anims": {
+   "props": {
+    "row": 0,
+    "frames": 6,
+    "dur": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "loop": true,
+    "note": "0 bench, 1 signpost THE LINE (points right, do not mirror), 2 crate, 3 hanging lantern (top-left under the beam), 4 short antenna mast, 5 cable reel"
+   }
+  }
+ },
+ "backdrop_village": {
+  "file": "backdrop_village.png",
+  "fw": 96,
+  "fh": 128,
+  "about": "Last Relay far rooftops and aerials, like `backdrop_w2`: far layer, parallax 0.2x, 70% opacity, every bottom on one horizon line. Lay the pieces edge to edge, one every 96 px: each carries the same cable and ground band at its edges, so they join in any order. A tiny lit window or two per piece.",
+  "order": [
+   "pieces"
+  ],
+  "anims": {
+   "pieces": {
+    "row": 0,
+    "frames": 4,
+    "dur": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "loop": true,
+    "note": "0 pitched houses, 1 domed relay hall, 2 tall aerial, 3 terrace with water tank"
+   }
+  }
+ }
+}

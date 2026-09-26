@@ -12,3 +12,6 @@ Thumbs.db
 # Export output
 build/
 test-user/
+
+# Python
+__pycache__/

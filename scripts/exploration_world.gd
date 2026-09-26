@@ -48,10 +48,17 @@ var exiting := false
 var noise_actor: CharacterBody2D
 var noise_cleared: Dictionary = {}
 var drowned_material = preload("res://scripts/drowned_material.gd").new()
+var biome_material = preload("res://scripts/biome_material.gd").new()
+var action_sprites = preload("res://scripts/action_sprites.gd").new()
+var biome_skies: Dictionary = {}
+var biome_layers: Dictionary = {}   # biome -> {"mid": tex, "near": tex}
 var coherence_light = preload("res://scripts/coherence_light.gd").new()
 var beacon_light_power := 0.0
 var window_light_power := 0.0
 var settings_menu: Node2D
+var intro_open := false
+var banner_biome := ""
+var banner_time := 0.0
 
 func _ready() -> void:
 	GameInput.controller_lost.connect(_controller_lost)
@@ -81,6 +88,14 @@ func _ready() -> void:
 	player.add_child(collision)
 	add_child(player)
 	RunState.respawned.connect(respawn)
+	for biome in ["flats","field","stand","wire","array","source"]:
+		var sky_path := "res://assets/exploration/biomes/%s-sky.png" % biome
+		if ResourceLoader.exists(sky_path): biome_skies[biome] = load(sky_path)
+		for layer in ["mid","near"]:
+			var layer_path := "res://assets/exploration/biomes/%s-%s.png" % [biome,layer]
+			if ResourceLoader.exists(layer_path):
+				if not biome_layers.has(biome): biome_layers[biome] = {}
+				biome_layers[biome][layer] = load(layer_path)
 	var far_path := "res://assets/backgrounds/afterlight-v2/far-terrain.png"
 	if ResourceLoader.exists(far_path): far_texture = load(far_path)
 	var ruins_path := "res://assets/backgrounds/afterlight-v2/mid-ruins.png"
@@ -96,6 +111,10 @@ func _ready() -> void:
 	network = NetworkScript.new(self)
 	gate = GateScript.new(self)
 	enter_room(String(profile.data.room))
+	# first time in: a one-screen explanation of what the game is; any key closes it
+	if room_id == "flats" and not profile.has_flag("intro_memory") and DisplayServer.get_name() != "headless" and OS.get_environment("WS_TEST") == "":
+		intro_open = true
+		RunState.state = "pause"
 
 func _exit_tree() -> void:
 	Music.end_exploration()
@@ -115,6 +134,10 @@ func enter_room(id: String, from := "") -> void:
 			player.reset_at(room.spawn)
 		_notify("SAVE FAILED . PROGRESS HELD IN THIS ROOM")
 		return
+	var new_biome := biome_material.biome_of(id)
+	if new_biome != banner_biome:
+		banner_biome = new_biome
+		banner_time = 3.2
 	room_id = id
 	room = Rooms.get_room(id,profile.data.flags)
 	drowned.enter()
@@ -301,6 +324,7 @@ func _commit(flag: String) -> bool:
 	return false
 
 func activate(id: String) -> void:
+	action_sprites.flip(id,self,elapsed)
 	if shutter.use(self,id): return
 	if id == "cable_archive" and room_id == "array_cable":
 		if _commit("cable_archive"): _notify("THE CABLES KEPT THEIR ROUTINE . SHELTER RETURN OPEN")
@@ -439,6 +463,12 @@ func _unhandled_input(event: InputEvent) -> void:
 		settings_menu.handle_input(event)
 		get_viewport().set_input_as_handled()
 		return
+	if intro_open:
+		if (event is InputEventKey or event is InputEventJoypadButton) and event.pressed and not event.echo:
+			intro_open = false
+			RunState.state = "play"
+			get_viewport().set_input_as_handled()
+		return
 	var use_pressed: bool = GameInput.use_event(event)
 	event = GameInput.exploration_event(event,paused,map_open)
 	if event is InputEventKey and event.pressed and not event.echo:
@@ -511,12 +541,13 @@ func respawn() -> void:
 
 func _physics_process(delta: float) -> void:
 	if not is_instance_valid(player) or room.is_empty(): return
-	if not paused and not map_open:
+	if not paused and not map_open and not intro_open:
 		elapsed += delta
 		beacon_light_power = move_toward(beacon_light_power,1.0 if profile.has_flag("first_beacon") else 0.0,delta/0.8)
 		window_light_power = move_toward(window_light_power,1.0 if profile.has_flag("west_ear") else 0.0,delta/0.8)
 		memory_time = maxf(0.0,memory_time-delta)
 		notice_time = maxf(0.0,notice_time-delta)
+		banner_time = maxf(0.0,banner_time-delta)
 		player.position.x = clampf(player.position.x,8,472)
 		if player.position.y > 278: respawn()
 		if drowned != null: drowned.tick(delta)
@@ -535,20 +566,80 @@ func _notify(text: String) -> void:
 	notice = text
 	notice_time = 5.0
 
+## Parallax rates per biome. Exteriors get real depth (sky < distant < near < play layer);
+## interiors are a wall right behind the player, so they barely move at all.
+const PARALLAX := {
+	"flats": {"far": 0.04, "mid": 0.12, "near": 0.28},
+	"stand": {"far": 0.04, "mid": 0.12, "near": 0.28},
+	"wire":  {"far": 0.04, "mid": 0.12, "near": 0.28},
+	"field": {"far": 0.02, "mid": 0.0, "near": 0.0},
+	"array": {"far": 0.02, "mid": 0.0, "near": 0.0},
+	"source": {"far": 0.02, "mid": 0.0, "near": 0.0},
+}
+
+## Draw one 480-wide strip wrapped horizontally (mirrored copies either side, so no seam at any offset).
+func _draw_strip(tex: Texture2D, offset: float, y: float, h: float, tint: Color) -> void:
+	draw_texture_rect(tex,Rect2(-offset,y,480,h),false,tint)
+	draw_set_transform(Vector2(-offset,0),0,Vector2(-1,1))
+	draw_texture_rect(tex,Rect2(0,y,480,h),false,tint)
+	draw_set_transform(Vector2(-offset+960,0),0,Vector2(-1,1))
+	draw_texture_rect(tex,Rect2(0,y,480,h),false,tint)
+	draw_set_transform(Vector2.ZERO,0,Vector2.ONE)
+
+## Layered backdrop. Camera is fixed per room, so depth comes from the player's own position:
+## each layer slides at its own rate (integer pixels, no shimmer), farther layers also lift a little as
+## the player climbs, and atmospheric depth fades far layers toward the background colour.
+func _draw_backdrop(biome: String) -> void:
+	var rates: Dictionary = PARALLAX.get(biome, PARALLAX["field"])
+	var px: float = player.position.x - 240.0
+	var py: float = player.position.y - 200.0
+	var sky_y := 62.0 if biome in ["array","source"] else 66.0
+	var far: Texture2D = biome_skies[biome]
+	var far_tint := Color(0.62,0.62,0.62)
+	_draw_strip(far, roundf(px*rates.far), sky_y - roundf(py*rates.far*0.5), 160, far_tint)
+	var layers: Dictionary = biome_layers.get(biome, {})
+	if layers.has("mid"):
+		_draw_strip(layers.mid, roundf(px*rates.mid), sky_y+64 - roundf(py*rates.mid*0.5), 96, Color(0.72,0.72,0.72))
+	if layers.has("near"):
+		_draw_strip(layers.near, roundf(px*rates.near), sky_y+64 - roundf(py*rates.near*0.5), 96, Color(0.3,0.3,0.3,0.75))
+	# fade the picture into the floor so the play layer stays the brightest thing
+	for i in 12:
+		draw_rect(Rect2(0,sky_y+160-24+i*2,480,2),Color(DrawUtil.BG,float(i)/12.0))
+
+## Foreground occluders in front of the play layer: a few hanging cables that slide faster than the
+## player. Kept thin and low-contrast so they never hide a ledge or a control.
+func _draw_foreground(biome: String) -> void:
+	if not biome in ["flats","stand","wire"]: return
+	var px: float = player.position.x - 240.0
+	var offset := roundf(px*1.3)
+	var col := Color(0.0,0.0,0.0,0.55)
+	for i in 4:
+		var x0 := fposmod(90.0+i*170.0-offset, 960.0) - 240.0
+		var sag := 18.0 + (i%2)*10.0
+		var prev := Vector2(x0,29)
+		for k in range(1,13):
+			var t := k/12.0
+			var pt := Vector2(x0+t*120.0, 29 + sin(t*PI)*sag)
+			draw_line(prev,pt,col,2)
+			prev = pt
+
 func text_at(at: Vector2,text: String,color := DrawUtil.WHITE,text_scale := 1,align := HORIZONTAL_ALIGNMENT_LEFT) -> void:
 	DrawUtil.text(self,at,text,color,text_scale,align)
 
 func _draw() -> void:
 	if room.is_empty() or not is_instance_valid(player): return
 	draw_rect(Rect2(0,0,480,270),DrawUtil.BG)
-	if far_texture != null and not room_id in ["array_shutter","wire_shaft","array_cable"]:
+	var biome := biome_material.biome_of(room_id)
+	var has_sky: bool = biome_skies.has(biome) and not room_id in ["array_shutter","wire_shaft","array_cable"]
+	if has_sky: _draw_backdrop(biome)
+	if far_texture != null and not has_sky and not room_id in ["array_shutter","wire_shaft","array_cable"]:
 		var offset := roundf(player.position.x*0.08)
 		draw_texture_rect(far_texture,Rect2(-offset-170,-105,960,320),false,Color(0.8,0.8,0.8,0.7))
-	if ruins_texture != null and room_id in ["hub","workshop","gallery","amplifier","return","lookout","causeway","cellar","sump","arrival","wire_shelter","array"]:
+	if ruins_texture != null and not has_sky and room_id in ["hub","workshop","gallery","amplifier","return","lookout","causeway","cellar","sump","arrival","wire_shelter","array"]:
 		var offset := roundf(player.position.x*0.18)
 		draw_texture_rect(ruins_texture,Rect2(-offset-110,-60,960,320),false,Color(0.85,0.85,0.85,0.8))
 	# Non-repeating receiver silhouettes give the room a destination.
-	for i in 0 if room_id in DrownedScript.IDS or room_id in ["array_shutter","array_cable","wire_shaft","basin","pump","float","shelter","conductor","flats","conduit","arrival","wire_shelter","wire_carriage","array","approach","gate","aftermath"] else 3:
+	for i in 0 if has_sky or room_id in DrownedScript.IDS or room_id in ["array_shutter","array_cable","wire_shaft","basin","pump","float","shelter","conductor","flats","conduit","arrival","wire_shelter","wire_carriage","array","approach","gate","aftermath"] else 3:
 		var center := Vector2(110+i*134,75+i%2*22)
 		draw_arc(center,43,0.15,2.99,22,Color(0.15,0.15,0.15),3)
 		draw_line(center+Vector2(0,39),center+Vector2(0,152),Color(0.12,0.12,0.12),3)
@@ -579,6 +670,7 @@ func _draw() -> void:
 			draw_circle(Vector2(118+i*122,105),19,DrawUtil.WHITE if lit else DrawUtil.DARK)
 			text_at(Vector2(118+i*122,136),["WEST LIFT","EAST DISH","SOUTH INTAKE"][i],DrawUtil.GRAY,1,HORIZONTAL_ALIGNMENT_CENTER)
 			draw_line(Vector2(118+i*122,155),Vector2(244,197),DrawUtil.GRAY if lit else DrawUtil.DARK,1)
+	preload("res://scripts/room_dressing.gd").draw(self,room_id,biome_material,biome)
 	for rect in room.platforms: _draw_platform(rect)
 	if room_id == "gallery":
 		draw_line(Vector2(168,209),Vector2(225,209),DrawUtil.GRAY,1)
@@ -591,9 +683,10 @@ func _draw() -> void:
 	if room_id == "workshop":
 		draw_rect(Rect2(296,220,31,4),DrawUtil.WHITE if profile.has_flag("plate_seen") else DrawUtil.GRAY)
 		draw_line(Vector2(312,222),Vector2(444,222),DrawUtil.GRAY,1)
-		draw_rect(Rect2(199,150,24,16),DrawUtil.DARK)
-		draw_rect(Rect2(199,150,24,16),DrawUtil.WHITE,false,1)
-		text_at(Vector2(207,154),"+",DrawUtil.WHITE)
+		if not action_sprites.draw_block(self,Rect2(199,150,24,16),not profile.has_flag("memory")):
+			draw_rect(Rect2(199,150,24,16),DrawUtil.DARK)
+			draw_rect(Rect2(199,150,24,16),DrawUtil.WHITE,false,1)
+			text_at(Vector2(207,154),"+",DrawUtil.WHITE)
 		if memory_time > 0:
 			for x in [237,263]:
 				draw_rect(Rect2(x,181,6,7),DrawUtil.GRAY)
@@ -609,11 +702,14 @@ func _draw() -> void:
 		draw_line(Vector2(243,222),Vector2(257,222),DrawUtil.DARK,1)
 	for exit_data in room.exits:
 		var at: Vector2 = exit_data[1]
-		var color: Color = DrawUtil.GRAY if can_use_exit(exit_data[0]) else DrawUtil.DARK
+		var usable := can_use_exit(exit_data[0])
+		if action_sprites.draw_exit(self,at,usable,room_id+"/"+String(exit_data[0]),elapsed): continue
+		var color: Color = DrawUtil.GRAY if usable else DrawUtil.DARK
 		draw_rect(Rect2(at-Vector2(12,24),Vector2(24,31)),color,false,2)
-		text_at(at-Vector2(3,12),">" if can_use_exit(exit_data[0]) else "X",color)
+		text_at(at-Vector2(3,12),">" if usable else "X",color)
 	for action in room.actions:
 		if action[0] == "memory" or room_id == "wire_shaft": continue
+		if action_sprites.draw_action(self,self,action,elapsed): continue
 		var at: Vector2 = action[1]
 		draw_rect(Rect2(at-Vector2(8,9),Vector2(16,16)),DrawUtil.GRAY,false,1)
 		text_at(at-Vector2(3,6),">" if action[0] == "dash" else "+")
@@ -622,6 +718,7 @@ func _draw() -> void:
 	if player.dash_t > 0:
 		draw_rect(Rect2(p.x-player.face*18-6,p.y-5,15,10),DrawUtil.GRAY)
 	preload("res://scripts/spark_visual.gd").draw(self,player,player.visual_time)
+	if has_sky: _draw_foreground(biome)
 	draw_rect(Rect2(0,0,480,29),Color(0.025,0.025,0.025,0.96))
 	text_at(Vector2(12,7),room.title)
 	var abilities := "DASH >>" if profile.has_flag("dash") else "SIGNAL --"
@@ -638,10 +735,73 @@ func _draw() -> void:
 	if paused and (settings_menu == null or settings_menu.page == "home"):
 		draw_rect(Rect2(0,29,480,217),Color(0,0,0,0.86))
 		text_at(Vector2(240,106),"PAUSED",DrawUtil.WHITE,4,HORIZONTAL_ALIGNMENT_CENTER)
+		text_at(Vector2(240,142),mission_line(),DrawUtil.GRAY,1,HORIZONTAL_ALIGNMENT_CENTER)
 		text_at(Vector2(240,157),("B RESUME . VIEW RETURN TO TITLE" if GameInput.controller_active else "ESC RESUME . Q RETURN TO TITLE"),DrawUtil.GRAY,1,HORIZONTAL_ALIGNMENT_CENTER)
 		text_at(Vector2(240,175),("X REDUCED FLASH: " if GameInput.controller_active else "F REDUCED FLASH: ")+("ON" if AppSettings.reduced_flashes else "OFF"),DrawUtil.GRAY,1,HORIZONTAL_ALIGNMENT_CENTER)
 		text_at(Vector2(240,193),"A SETTINGS" if GameInput.controller_active else "O SETTINGS",DrawUtil.WHITE,1,HORIZONTAL_ALIGNMENT_CENTER)
+	_draw_progress()
+	_draw_banner()
+	if intro_open: _draw_intro()
 	if map_open: _draw_map()
+
+const BANNER := {
+	"flats": ["THE FLATS", "A RECEIVER IS STILL CALLING . FOLLOW IT"],
+	"field": ["THE LISTENING FIELD", "DISTRICT 1 OF 4 . RECONNECT THE THREE EARS"],
+	"drowned": ["THE DROWNED", "DISTRICT 2 OF 4 . DRAIN THE STREET . RESTART THE PUMP"],
+	"stand": ["THE STAND", "DISTRICT 3 OF 4 . STORE THE STORM . POWER THE BRIDGE"],
+	"wire": ["THE WIRE", "THE CROSSING . REPAIR THE CARRIAGE TO REACH THE ARRAY"],
+	"array": ["THE ARRAY", "DISTRICT 4 OF 4 . ISOLATE THE FAULT . ROUTE THE FEED"],
+	"source": ["THE SOURCE", "ALL FOUR HOLD . CARRY THE SIGNAL HOME"],
+}
+
+## One sentence that answers "what is the mission right now?" for the map and pause screens.
+func mission_line() -> String:
+	if profile.has_flag("signal_restored"): return "MISSION COMPLETE . THE NETWORK ANSWERS"
+	var left: Array = []
+	for d in [["FIELD","field_restored"],["DROWNED","drowned_restored"],["STAND","stand_restored"],["ARRAY","array_restored"]]:
+		if not profile.has_flag(d[1]): left.append(d[0])
+	if left.is_empty(): return "ALL FOUR DISTRICTS HOLD . GO TO THE GATE AND BRING THE SIGNAL HOME"
+	return "MISSION . FIX FOUR DISTRICTS THEN THE GATE . LEFT: " + " . ".join(left)
+
+## District card on entering a new biome: name plus its one-line purpose (area titles, Hollow Knight style).
+func _draw_banner() -> void:
+	if banner_time <= 0 or intro_open or map_open or paused or not BANNER.has(banner_biome): return
+	var a := clampf(banner_time/0.6, 0.0, 1.0) * clampf((3.2-banner_time)/0.4, 0.0, 1.0)
+	var card: Array = BANNER[banner_biome]
+	draw_rect(Rect2(0,92,480,50),Color(0,0,0,0.7*a))
+	draw_rect(Rect2(140,92,200,1),Color(1,1,1,0.5*a))
+	draw_rect(Rect2(140,141,200,1),Color(1,1,1,0.5*a))
+	text_at(Vector2(240,102),card[0],Color(1,1,1,a),2,HORIZONTAL_ALIGNMENT_CENTER)
+	text_at(Vector2(240,126),card[1],Color(0.75,0.75,0.75,a),1,HORIZONTAL_ALIGNMENT_CENTER)
+
+## Four districts to fix; lit letters show which are done. Drawn in the top bar centre.
+func _draw_progress() -> void:
+	if map_open or paused: return
+	var districts := [["FIELD","field_restored"],["DROWNED","drowned_restored"],["STAND","stand_restored"],["ARRAY","array_restored"]]
+	var x := 240.0 - 92.0
+	for d in districts:
+		var done: bool = profile.has_flag(d[1]) or profile.has_flag("signal_restored")
+		draw_rect(Rect2(x, 8, 4, 4), DrawUtil.WHITE if done else Color(0.18,0.18,0.18))
+		text_at(Vector2(x + 7, 7), d[0], DrawUtil.GRAY if done else Color(0.3,0.3,0.3))
+		x += 46.0
+	if profile.has_flag("signal_restored"): text_at(Vector2(240, 19), "SIGNAL RESTORED", DrawUtil.WHITE, 1, HORIZONTAL_ALIGNMENT_CENTER)
+
+func _draw_intro() -> void:
+	draw_rect(Rect2(0,0,480,270),Color(0,0,0,0.9))
+	text_at(Vector2(240,36),"WHITE SIGNAL",DrawUtil.WHITE,3,HORIZONTAL_ALIGNMENT_CENTER)
+	var lines := [
+		"THE RELAY NETWORK THAT HELD THIS WORLD TOGETHER IS DEAD",
+		"ONE RECEIVER IN THE FLATS IS STILL CALLING . NOBODY ANSWERS",
+		"YOU ARE THE SPARK . A SMALL REPAIR PROCESS . FOLLOW THE CALL",
+		"",
+		"MISSION . FIX FOUR DISTRICTS . FIELD DROWNED STAND ARRAY",
+		"THEN CARRY THE SIGNAL THROUGH THE GATE AND BRING IT HOME",
+		"THE TOP LINE ALWAYS SAYS WHAT TO DO NEXT . NOTHING YOU FIX IS LOST",
+	]
+	for i in lines.size(): text_at(Vector2(240,78+i*12),lines[i],DrawUtil.WHITE if i in [2,4] else DrawUtil.GRAY,1,HORIZONTAL_ALIGNMENT_CENTER)
+	var ctl := "STICK MOVE . A JUMP . X USE . Y MAP . START PAUSE" if GameInput.controller_active else GameInput.action_label("move_left")+"/"+GameInput.action_label("move_right")+" MOVE . "+GameInput.action_label("jump")+" JUMP . "+GameInput.action_label("interact")+" USE . M MAP . ESC PAUSE"
+	text_at(Vector2(240,172),ctl,DrawUtil.WHITE,1,HORIZONTAL_ALIGNMENT_CENTER)
+	text_at(Vector2(240,214),"PRESS ANY KEY",DrawUtil.WHITE,1,HORIZONTAL_ALIGNMENT_CENTER)
 
 func map_state(id: String) -> String:
 	if id in profile.data.visited: return "visited"
@@ -694,6 +854,7 @@ func _draw_map() -> void:
 	draw_rect(Rect2(0,0,480,270),Color(0.02,0.02,0.02))
 	text_at(Vector2(18,15),"RELAY SURVEY",DrawUtil.WHITE,3)
 	text_at(Vector2(18,44),"OUTLINES ARE SURVEYED . NAMES ARE EXPLORED" if profile.has_flag("survey") else "VISITED PLACES HOLD . FAINT SIGNALS ARE UNEXPLORED",DrawUtil.GRAY)
+	text_at(Vector2(240,232),mission_line(),DrawUtil.WHITE,1,HORIZONTAL_ALIGNMENT_CENTER)
 	var positions := {"hub":Vector2(65,125),"workshop":Vector2(65,70),"gallery":Vector2(180,70),"amplifier":Vector2(295,70),"fourth":Vector2(410,70),"return":Vector2(295,125),"lookout":Vector2(65,183),"basin":Vector2(180,183),"causeway":Vector2(180,125)}
 	var names := {"hub":"HUB","workshop":"WORKSHOP","gallery":"BALLAST","amplifier":"AMPLIFIER","fourth":"FOURTH DISH","return":"RETURN","lookout":"LOOKOUT","basin":"BASIN","causeway":"CAUSEWAY"}
 	for link in [["hub","workshop"],["workshop","gallery"],["gallery","amplifier"],["amplifier","fourth"],["amplifier","return"],["return","hub"],["hub","causeway"],["causeway","return"],["hub","lookout"],["lookout","basin"]]:
@@ -804,22 +965,24 @@ func _draw_region_map() -> void:
 func _draw_flats() -> void:
 	draw_rect(Rect2(0,29,480,195),Color(0.15,0.13,0.09,0.18))
 	if room_id == "flats" and flats_receiver_texture != null:
-		draw_texture(flats_receiver_texture,Vector2(284,128),Color(0.30,0.29,0.26))
+		draw_texture(flats_receiver_texture,Vector2(284,143),Color(0.30,0.29,0.26)) # pedestal foot on the floor line; the shadow ellipse tucks under it
 	for i in 0 if room_id == "flats" and flats_receiver_texture != null else 5:
 		var x := 30+i*105
 		draw_arc(Vector2(x,180+i%2*15),39,0.1,3.04,22,DrawUtil.DARK,2)
 		draw_line(Vector2(x,211),Vector2(x,224),DrawUtil.GRAY,2)
 	if room_id == "flats":
-		draw_rect(Rect2(199,168,24,16),DrawUtil.GRAY)
-		text_at(Vector2(207,172),"+",DrawUtil.BG)
+		if not action_sprites.draw_block(self,Rect2(199,168,24,16),not profile.has_flag("intro_memory")):
+			draw_rect(Rect2(199,168,24,16),DrawUtil.GRAY)
+			text_at(Vector2(207,172),"+",DrawUtil.BG)
 		if memory_time > 0:
-			draw_rect(Rect2(256,188,6,7),DrawUtil.GRAY)
-			draw_rect(Rect2(254,197,10,23),DrawUtil.GRAY)
-			draw_line(Vector2(262,200),Vector2(291,187),DrawUtil.WHITE,2)
+			# the block's memory: the last operator, stood on the floor pointing at the dish, fading out
+			var fade := clampf(memory_time/7.0,0.0,1.0)
+			var ghost := Color(1,1,1,0.25+0.5*fade)
+			if not action_sprites.blit(self,"operator",Vector2(262,224),ghost):
+				draw_rect(Rect2(254,190,12,34),ghost)
+			text_at(Vector2(262,170),"A MEMORY",Color(1,1,1,ghost.a),1,HORIZONTAL_ALIGNMENT_CENTER)
 	elif room_id == "conduit":
-		for x in [211,355]:
-			draw_rect(Rect2(x-16,203,32,21),DrawUtil.GRAY,false,2)
-			text_at(Vector2(x,191),"DOWN",DrawUtil.GRAY,1,HORIZONTAL_ALIGNMENT_CENTER)
+		# the two levers are linked by a buried conduit; the sprites themselves mark the use points
 		draw_line(Vector2(211,235),Vector2(355,235),DrawUtil.GRAY,3)
 	elif room_id == "arrival":
 		var lit: bool = profile.has_flag("first_beacon")
@@ -870,14 +1033,17 @@ func _draw_alignment() -> void:
 		draw_line(at,at+Vector2.UP.rotated(angle)*19,DrawUtil.WHITE,3)
 		draw_circle(at,3,DrawUtil.WHITE)
 		draw_line(at+Vector2(0,23),Vector2(at.x,room.actions[i][1].y-12),DrawUtil.DARK,1)
-	text_at(Vector2(240,49),"THIN LINE: SIGHT . SOLID ARM: DISH",DrawUtil.GRAY,1,HORIZONTAL_ALIGNMENT_CENTER)
 	if profile.has_flag("east_ear"):
-		draw_line(Vector2(110,130),Vector2(380,130),DrawUtil.WHITE,1)
-		text_at(Vector2(240,137),"EAST EAR RESTORED",DrawUtil.WHITE,1,HORIZONTAL_ALIGNMENT_CENTER)
+		text_at(Vector2(240,49),"EAST EAR RESTORED . ALL THREE DISHES ON THEIR MARKS",DrawUtil.WHITE,1,HORIZONTAL_ALIGNMENT_CENTER)
+	else:
+		text_at(Vector2(240,49),"THIN LINE: SIGHT . SOLID ARM: DISH",DrawUtil.GRAY,1,HORIZONTAL_ALIGNMENT_CENTER)
 
 func _draw_platform(rect: Rect2, use_material: bool = true) -> void:
 	draw_rect(rect,DrawUtil.DARK)
-	if use_material and room_id in DrownedScript.IDS and drowned_material.texture != null:
+	var biome := biome_material.biome_of(room_id)
+	if use_material and biome_material.has(biome):
+		biome_material.draw(self,rect,biome,1.0,room.platforms)
+	elif use_material and room_id in DrownedScript.IDS and drowned_material.texture != null:
 		drowned_material.draw(self,rect)
 	else:
 		for x in range(int(rect.position.x)+8,int(rect.end.x),16):

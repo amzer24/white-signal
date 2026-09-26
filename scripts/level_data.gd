@@ -110,9 +110,9 @@ const RELEASED_RELAYS := 3
 
 static func get_level(index: int) -> Dictionary:
 	if index == 1:
-		return listening_field()
+		return ground_signs(listening_field())
 	if index == 2:
-		return the_stand()
+		return ground_signs(the_stand())
 	var tutorial := DATA.duplicate(true)
 	tutorial.name = "THE FLATS LINE"
 	tutorial["objective"] = "REACH THE TRANSMITTER"
@@ -135,6 +135,19 @@ static func platform(l: Dictionary, r: Rect2, kind: String = "block") -> void:
 
 static func sign_at(l: Dictionary, x: float, y: float, words: String) -> void:
 	l.signs.append({"pos": Vector2(x, y), "text": words})
+
+## Sign posts are 22px tall and must stand on something: snap each sign to the
+## nearest platform top at or below its authored height (the R0 convention).
+## Call once the level's platforms are complete.
+static func ground_signs(l: Dictionary) -> Dictionary:
+	for sg in l.signs:
+		var top := INF
+		for p in l.platforms:
+			var r: Rect2 = p.r
+			if sg.pos.x >= r.position.x - 2.0 and sg.pos.x <= r.end.x + 2.0 and r.position.y >= sg.pos.y:
+				top = minf(top, r.position.y)
+		if top != INF: sg.pos = Vector2(sg.pos.x, top - 22.0)
+	return l
 
 static func fixture(l: Dictionary, kind: String, x: float, y: float, id: String = "", dest: Vector2 = Vector2.ZERO) -> void:
 	l.fixtures.append({"kind": kind, "pos": Vector2(x, y), "id": id, "destination": dest})

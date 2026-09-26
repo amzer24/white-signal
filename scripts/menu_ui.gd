@@ -15,8 +15,9 @@ var exploration_saved := false
 var recovery_message := ""
 var recovery_archive := ""
 var exploration_path := "user://ws_exploration_v1.json"
-var exploration_label := "START EXPLORATION"
-var exploration_detail := "A LASTING JOURNEY . DISCOVERIES SAVE AUTOMATICALLY"
+var exploration_label := "START JOURNEY"
+var exploration_detail := "BEGIN AT THE FLATS . PROGRESS SAVES ITSELF"
+var started_new_journey := false
 
 func _notification(what: int) -> void:
     if what == NOTIFICATION_APPLICATION_FOCUS_OUT and page == "keyboard":
@@ -28,18 +29,18 @@ func refresh_exploration() -> void:
     exploration_saved = false
     var profile = preload("res://scripts/exploration_save.gd").new()
     profile.path = exploration_path
-    exploration_label = "START EXPLORATION"
-    exploration_detail = "A LASTING JOURNEY . DISCOVERIES SAVE AUTOMATICALLY"
+    exploration_label = "START JOURNEY"
+    exploration_detail = "BEGIN AT THE FLATS . PROGRESS SAVES ITSELF"
     if profile.load_profile():
         exploration_saved = true
-        exploration_label = "RESUME EXPLORATION"
+        exploration_label = "CONTINUE JOURNEY"
         var place: String = preload("res://scripts/exploration_rooms.gd").get_room(profile.data.room).title
-        exploration_detail = "RESUME: " + place
-        if profile.recovered_backup: exploration_detail = "BACKUP AVAILABLE . " + place
+        exploration_detail = "PICK UP AT " + place
+        if profile.recovered_backup: exploration_detail = "RESTORED FROM BACKUP . " + place
     elif not profile.last_error.is_empty():
         exploration_unreadable = true
-        exploration_label = "EXPLORATION SAVE"
-        exploration_detail = "SAVE UNREADABLE . ORIGINAL RETAINED"
+        exploration_label = "JOURNEY SAVE"
+        exploration_detail = "SAVE COULD NOT BE READ . CHOOSE TO RECOVER"
 
 
 func _ready() -> void:
@@ -56,16 +57,42 @@ func _process(_delta: float) -> void:
     visible = (not settings_only and RunState.state == "menu") or page != "home"
     queue_redraw()
 
+## Exploration is hidden from the title since the 23 Sep 2026 direction change.
+## Its code and saves are kept; tests switch it back on to cover it.
+var show_exploration := false
+
+## World 1 and 2 progress (scripts/world1/w1_game.gd writes it). Tests point this elsewhere.
+var w1_progress_path := "user://w1_progress.json"
+
+func w1_save() -> Dictionary:
+    if not FileAccess.file_exists(w1_progress_path): return {}
+    var data = JSON.parse_string(FileAccess.get_file_as_string(w1_progress_path))
+    if data is Dictionary and data.get("save",{}) is Dictionary: return data.get("save",{})
+    return {}
+
+func w1_detail() -> String:
+    var sv := w1_save()
+    if sv.is_empty(): return "REACH THE CALLER . START IN LAST RELAY, THE LAST VILLAGE ON THE LINE"
+    var at: String = {"test-room": "THE TRAINING YARD", "village": "LAST RELAY"}.get(str(sv.get("level","")), str(sv.get("level","")))
+    return "CONTINUE FROM %s . %d LIVES . %d SHARDS" % [at,int(sv.get("lives",5)),int(sv.get("shards",0))]
+
+func start_world(mode: String) -> void:
+    preload("res://scripts/world1/w1_game.gd").start_mode = mode
+    get_tree().change_scene_to_file("res://scenes/world1_play.tscn")
+
 func home_items() -> Array:
-    var items: Array = [[exploration_label,exploration_detail,"explore"]]
-    if exploration_saved:
-        items.append(["NEW EXPLORATION","KEEP PREVIOUS SAVE . BEGIN A NEW JOURNEY","restart_explore"])
+    var items: Array = [["PLAY",w1_detail(),"world1"]]
+    if show_exploration:
+        items.append([exploration_label,exploration_detail,"explore"])
+        if exploration_saved:
+            items.append(["NEW JOURNEY","START OVER FROM THE FLATS . YOUR OLD SAVE IS KEPT AS A BACKUP","restart_explore"])
     if get_parent().can_resume:
-        items.append(["RESUME CLASSIC","RESUME CLASSIC AT YOUR LAST RELAY BOUNDARY","continue"])
-    items.append(["NEW CLASSIC RUN","RESTART CLASSIC . EXPLORATION SAVE IS SEPARATE","new"])
-    items.append(["SETTINGS","MUSIC . EFFECTS . DISPLAY","settings"])
-    items.append(["HOW TO PLAY","MOVEMENT . GLYPHS . CONDUITS","controls"])
-    items.append(["EXTRAS","CREDITS . AFTERLIGHT STUDY","extras"])
+        items.append(["CLASSIC RUN","THE ORIGINAL ARCADE RUN . CONTINUE FROM YOUR LAST RELAY","continue"])
+    else:
+        items.append(["CLASSIC RUN","THE ORIGINAL ARCADE RUN . ONE LINE, SHARDS AND GLYPHS","new"])
+    items.append(["SETTINGS","MUSIC . EFFECTS . DISPLAY . KEYS","settings"])
+    items.append(["HOW TO PLAY","THE GOAL AND THE CONTROLS","controls"])
+    items.append(["EXTRAS","NEW CLASSIC RUN . AFTERLIGHT STUDY . CREDITS","extras"])
     items.append(["QUIT GAME","RETURN TO DESKTOP","quit"])
     return items
 
@@ -91,17 +118,18 @@ func back() -> void:
 
 func row_count() -> int:
     if page == "home": return home_items().size()
-    if page == "extras": return 3
+    if page == "extras": return 4
+    if page == "play": return 3
     if page in ["recovery","recovery_confirm","recovery_done","new_journey"]: return 2
     if page in ["settings","keyboard"]: return 7
     return 1
 
 func row_rect(index: int) -> Rect2:
-    if page == "extras": return Rect2(120,106+index*31,240,24)
+    if page in ["extras","play"]: return Rect2(120,106+index*31,240,24)
     if page == "keyboard": return Rect2(80,65+index*22,320,21)
     if page in ["recovery","recovery_confirm","recovery_done","new_journey"]: return Rect2(80,174+index*28,320,24)
     if page == "home":
-        return Rect2(120,99+index*16,240,15) if home_items().size() > 7 else Rect2(120,105+index*18,240,17)
+        return Rect2(120,99+index*16,240,15) if home_items().size() > 6 else Rect2(120,105+index*18,240,17)
     if page == "settings": return Rect2(80,84+index*21,320,20)
     return Rect2(120,223,240,22)
 
@@ -114,7 +142,7 @@ func _draw() -> void:
     draw_rect(Rect2(0,0,480,270),Color(0,0,0,0.78 if page == "home" else 0.96))
     if page == "home":
         label(Vector2(240,43),"WHITE SIGNAL",5,DrawUtil.WHITE,HORIZONTAL_ALIGNMENT_CENTER)
-        label(Vector2(240,83),"CARRY THE SPARK TO THE GATE",1,DrawUtil.GRAY,HORIZONTAL_ALIGNMENT_CENTER)
+        label(Vector2(240,83),"SOMEONE IS STILL CALLING . REACH THEM",1,DrawUtil.GRAY,HORIZONTAL_ALIGNMENT_CENTER)
         var items := home_items()
         selected = clampi(selected,0,items.size()-1)
         for i in items.size():
@@ -126,13 +154,13 @@ func _draw() -> void:
         label(Vector2(240,252),"D-PAD SELECT . A CONFIRM" if GameInput.controller_active else "UP/DOWN SELECT . ENTER CONFIRM . CLICK",1,DrawUtil.GRAY,HORIZONTAL_ALIGNMENT_CENTER)
     elif page == "new_journey":
         label(Vector2(60,36),"NEW JOURNEY",3)
-        label(Vector2(60,82),"YOUR PREVIOUS SAVE WILL BE RETAINED",1,DrawUtil.GRAY)
-        label(Vector2(60,103),"THE ACTIVE JOURNEY WILL START AT THE FLATS",1,DrawUtil.GRAY)
-        label(Vector2(60,124),"ABILITIES AND DISCOVERIES START FRESH",1,DrawUtil.WHITE)
+        label(Vector2(60,82),"START OVER FROM THE FLATS WITH NOTHING FOUND",1,DrawUtil.WHITE)
+        label(Vector2(60,103),"YOUR CURRENT SAVE IS COPIED TO A BACKUP FOLDER FIRST",1,DrawUtil.GRAY)
+        label(Vector2(60,124),"THE GAME STARTS STRAIGHT AWAY",1,DrawUtil.GRAY)
         for i in 2:
             var rect := row_rect(i)
             if i == selected: draw_rect(rect,DrawUtil.WHITE)
-            label(rect.position+Vector2(8,8),["BACK","RETAIN SAVE / START NEW"][i],1,DrawUtil.BG if i == selected else DrawUtil.WHITE)
+            label(rect.position+Vector2(8,8),["BACK","START NEW JOURNEY"][i],1,DrawUtil.BG if i == selected else DrawUtil.WHITE)
         label(Vector2(60,239),recovery_message,1,DrawUtil.GRAY)
     elif page == "recovery_done":
         label(Vector2(60,36),"JOURNEY READY",3)
@@ -196,11 +224,21 @@ func _draw() -> void:
     elif page == "extras":
         label(Vector2(80,32),"EXTRAS",4)
         label(Vector2(80,74),"BEHIND THE SIGNAL",1,DrawUtil.GRAY)
-        var items := ["CREDITS","AFTERLIGHT STUDY","BACK"]
+        var items := ["CREDITS","AFTERLIGHT STUDY","NEW CLASSIC RUN","BACK"]
         for i in items.size():
             var rect := row_rect(i)
             if selected == i: draw_rect(rect,DrawUtil.WHITE)
             label(Vector2(240,rect.position.y+8),items[i],2,DrawUtil.BG if selected == i else DrawUtil.GRAY,HORIZONTAL_ALIGNMENT_CENTER)
+        label(Vector2(80,227),"A SELECT . B BACK" if GameInput.controller_active else "ENTER SELECT . ESC BACK",1,DrawUtil.GRAY)
+    elif page == "play":
+        label(Vector2(80,32),"PLAY",4)
+        label(Vector2(80,74),w1_detail(),1,DrawUtil.GRAY)
+        var play_rows := ["CONTINUE","NEW GAME","BACK"]
+        for i in play_rows.size():
+            var rect := row_rect(i)
+            if selected == i: draw_rect(rect,DrawUtil.WHITE)
+            label(Vector2(240,rect.position.y+8),play_rows[i],2,DrawUtil.BG if selected == i else DrawUtil.GRAY,HORIZONTAL_ALIGNMENT_CENTER)
+        label(Vector2(80,210),"NEW GAME STARTS AGAIN FROM THE TEST ROOM . BIG SHARDS AND BEST TIMES ARE KEPT",1,DrawUtil.DARK)
         label(Vector2(80,227),"A SELECT . B BACK" if GameInput.controller_active else "ENTER SELECT . ESC BACK",1,DrawUtil.GRAY)
     elif page == "credits":
         label(Vector2(80,32),"CREDITS",4)
@@ -211,30 +249,32 @@ func _draw() -> void:
         draw_rect(row_rect(0),DrawUtil.WHITE)
         label(Vector2(240,230),"BACK",2,DrawUtil.BG,HORIZONTAL_ALIGNMENT_CENTER)
     else:
-        label(Vector2(80,32),"HOW TO PLAY",4)
+        label(Vector2(80,24),"HOW TO PLAY",4)
+        label(Vector2(80,52),"GOAL: REPAIR THE FOUR DISTRICTS . FIELD . DROWNED . STAND . ARRAY",1,DrawUtil.WHITE)
+        label(Vector2(80,62),"THEN THE GATE OPENS AND THE SIGNAL COMES HOME . THE TOP LINE ALWAYS TELLS YOU WHAT IS NEXT",1,DrawUtil.GRAY)
         var controls := [
             ["MOVE",GameInput.keyboard.key_label("move_left") + " . " + GameInput.keyboard.key_label("move_right")],
             ["JUMP",GameInput.keyboard.key_label("jump") + " . HOLD FOR HEIGHT"],
             ["WALL KICK","HOLD INTO WALL + JUMP"],
-            ["EXPLORE",GameInput.keyboard.key_label("interact") + " / DOWN USE . M MAP"],
-            ["DASH",GameInput.keyboard.key_label("dash") + " . FIND PROTOCOL IN EXPLORE"],
-            ["RESPAWN","R . DISCOVERIES REMAIN IN EXPLORE"],
-            ["PAUSE","P / ESC . Q TITLE IN EXPLORE"],
+            ["USE",GameInput.keyboard.key_label("interact") + " OR DOWN ON LEVERS, WHEELS, DOORS"],
+            ["MAP","M . TAB CHANGES DISTRICT"],
+            ["DASH",GameInput.keyboard.key_label("dash") + " . ONCE YOU HAVE FOUND IT"],
+            ["PAUSE","ESC . THEN Q FOR THE TITLE SCREEN"],
         ]
         if GameInput.controller_active:
             controls = [
                 ["MOVE","LEFT STICK / D-PAD"],
                 ["JUMP","A . HOLD FOR HEIGHT"],
                 ["WALL KICK","HOLD INTO WALL + A"],
-                ["EXPLORE","X USE . Y MAP . LB MAP PAGE"],
-                ["DASH","RB . FIND PROTOCOL IN EXPLORE"],
-                ["BACK","B CLOSE MAP / RESUME"],
-                ["PAUSE","START . VIEW TITLE IN EXPLORE"],
+                ["USE","X ON LEVERS, WHEELS, DOORS"],
+                ["MAP","Y . LB CHANGES DISTRICT"],
+                ["DASH","RB . ONCE YOU HAVE FOUND IT"],
+                ["PAUSE","START . VIEW FOR THE TITLE SCREEN"],
             ]
         for i in controls.size():
-            label(Vector2(80,73+i*18),controls[i][0],1,DrawUtil.GRAY)
-            label(Vector2(160,73+i*18),controls[i][1])
-        label(Vector2(80,205),"CLASSIC: A/X/Y CHOOSE . B SKIP" if GameInput.controller_active else "CLASSIC RUN: 5 SHARDS = SURGE . 1/2/3 CHOOSE",1,DrawUtil.GRAY)
+            label(Vector2(80,80+i*16),controls[i][0],1,DrawUtil.GRAY)
+            label(Vector2(160,80+i*16),controls[i][1])
+        label(Vector2(80,200),"CLASSIC RUN: COLLECT 5 SHARDS FOR A GLYPH CHOICE . " + ("A/X/Y PICK . B SKIP" if GameInput.controller_active else "1/2/3 PICK . S SKIP"),1,DrawUtil.GRAY)
         draw_rect(row_rect(0),DrawUtil.WHITE)
         label(Vector2(240,230),"BACK",2,DrawUtil.BG,HORIZONTAL_ALIGNMENT_CENTER)
 
@@ -242,11 +282,17 @@ func activate() -> void:
     if page == "credits":
         back()
         return
+    if page == "play":
+        if selected == 0: start_world("continue")
+        elif selected == 1: start_world("new")
+        else: back()
+        return
     if page == "extras":
         if selected == 0:
             page = "credits"
             selected = 0
         elif selected == 1: RunState.start_lab()
+        elif selected == 2: RunState.start_run()
         else: back()
         return
     if page == "new_journey":
@@ -259,9 +305,13 @@ func activate() -> void:
         recovery_message = result.message
         selected = 0
         if result.ok:
+            # one step: the old save is archived and the new journey begins immediately
             recovery_archive = result.archive
             refresh_exploration()
-            page = "recovery_done"
+            page = "home"
+            started_new_journey = true
+            if is_inside_tree() and get_tree().current_scene != null:
+                get_tree().change_scene_to_file("res://scenes/exploration.tscn")
         return
     if page == "keyboard":
         if selected < 5: GameInput.keyboard.begin_capture(GameInput.keyboard.ACTIONS[selected])
@@ -310,6 +360,12 @@ func activate() -> void:
                     selected = 0
                     recovery_message = ""
                 else: get_tree().change_scene_to_file("res://scenes/exploration.tscn")
+            "world1":
+                if w1_save().is_empty(): start_world("new")
+                else:
+                    return_selected = selected
+                    page = "play"
+                    selected = 0
             "continue": RunState.resume_run()
             "new": RunState.start_run()
             "lab": RunState.start_lab()

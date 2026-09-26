@@ -1,0 +1,22 @@
+{
+ "finished": true,
+ "route_seconds": 23.4,
+ "nodes": 513964,
+ "shards": {
+  "78,22": true,
+  "193,16": true,
+  "252,15": true
+ },
+ "small_shards": {
+  "total": 13,
+  "reachable": 13,
+  "missing": []
+ },
+ "blocks": {
+  "total": 7,
+  "reachable": 7,
+  "missing": []
+ },
+ "solve_seconds": 539.4,
+ "line": "270 tiles (4320px, 9 screens)  .  FINISHABLE  .  fastest proven route 23.4s  .  big shards reachable 3/3  .  small shards reachable 13/13  .  blocks hittable 7/7  .  17 shards  .  owns: machinery in rhythm (presses, girders, spike vents), lift rings"
+}

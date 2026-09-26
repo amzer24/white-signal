@@ -1,0 +1,21 @@
+{
+ "finished": true,
+ "route_seconds": 17.1,
+ "nodes": 4374,
+ "shards": {
+  "68,12": true,
+  "133,8": true
+ },
+ "small_shards": {
+  "total": 19,
+  "reachable": 19,
+  "missing": []
+ },
+ "blocks": {
+  "total": 2,
+  "reachable": 2,
+  "missing": []
+ },
+ "solve_seconds": 562.2,
+ "line": "180 tiles (2880px, 6 screens)  .  FINISHABLE  .  fastest proven route 17.1s  .  big shards reachable 2/2  .  small shards reachable 19/19  .  blocks hittable 2/2  .  19 shards  .  owns: channel switches"
+}

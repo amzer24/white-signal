@@ -77,7 +77,9 @@ func run() -> void:
     check("slider click can mute music",settings.music_volume==0 and AudioServer.is_bus_mute(AudioServer.get_bus_index("Music")))
     menu.handle_input(key(KEY_ESCAPE))
     check("settings back returns to title",menu.page=="home" and rs.state=="menu")
-    # Use the visible NEW RUN row, including when an older test save exists.
+    # Use the visible NEW RUN row. It only shows when there is no Classic save,
+    # so hide any save this machine has.
+    menu.get_parent().can_resume = false
     var items: Array = menu.home_items()
     for i in items.size():
         if items[i][2]=="new": menu.selected=i

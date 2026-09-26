@@ -1,0 +1,22 @@
+{
+ "finished": true,
+ "route_seconds": 20.4,
+ "nodes": 27771,
+ "shards": {
+  "54,22": true,
+  "105,21": true,
+  "227,15": true
+ },
+ "small_shards": {
+  "total": 28,
+  "reachable": 28,
+  "missing": []
+ },
+ "blocks": {
+  "total": 6,
+  "reachable": 6,
+  "missing": []
+ },
+ "solve_seconds": 422.5,
+ "line": "270 tiles (4320px, 9 screens)  .  FINISHABLE  .  fastest proven route 20.4s  .  big shards reachable 3/3  .  small shards reachable 28/28  .  blocks hittable 6/6  .  31 shards  .  owns: loose floors, loose ceilings, plates and gates"
+}

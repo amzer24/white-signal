@@ -16,6 +16,7 @@ func run() -> void:
     world.activate("bleed")
     world.activate("bleed")
     world.drowned.tick(4)
+    world.enter_room("drowned_street")
     world.activate("impeller")
     check(Guidance.drowned_lead(world.profile).contains("RECOVERED"),"map must stop directing collection after recovery")
     world.enter_room("pump")

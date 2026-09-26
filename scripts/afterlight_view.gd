@@ -117,9 +117,10 @@ func _draw_details(n: Node2D) -> void:
                 n.draw_rect(Rect2(at.x-55+k*25,at.y-105,10,18),Color(0.24,0.24,0.24,local_reveal))
     for beacon in RunState.lit_beacons:
         var at: Vector2 = (beacon-offset).round()
+        # three coherence lamps hung just above the beacon flag, not adrift in the sky
         for i in 3:
-            n.draw_rect(Rect2(at.x-12+i*13,at.y-95,7,13),Color("555555"))
-            n.draw_line(Vector2(at.x-9+i*13,at.y-95),Vector2(at.x-9+i*13,at.y-82),Color("303030"))
+            n.draw_rect(Rect2(at.x-12+i*13,at.y-44,7,13),Color("555555"))
+            n.draw_line(Vector2(at.x-9+i*13,at.y-44),Vector2(at.x-9+i*13,at.y-31),Color("303030"))
     # The lamp's rhythm is visual, not a timer that hides safe ground.
     var lamp := (lamp_position()-offset).round()
     n.draw_line(Vector2(1070-offset.x,45-offset.y),Vector2(1360-offset.x,45-offset.y),Color("3a3a3a"))

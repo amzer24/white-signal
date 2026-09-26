@@ -22,12 +22,13 @@ func run() -> void:
     var host := MenuHost.new()
     root.add_child(host)
     var menu = load("res://scripts/menu_ui.gd").new()
+    menu.show_exploration = true  # hidden from players since the World 1 direction change
     menu.exploration_path = profile.path
     host.add_child(menu)
     root.get_node("RunState").state = "menu"
     assert(menu.home_items().size() == 8)
-    assert(menu.home_items()[1][2] == "restart_explore")
-    menu.selected = 1
+    assert(menu.home_items()[2][2] == "restart_explore")
+    menu.selected = 2
     if DisplayServer.get_name() != "headless":
         await process_frame
         await RenderingServer.frame_post_draw
@@ -35,7 +36,7 @@ func run() -> void:
     menu.handle_input(key(KEY_ENTER))
     assert(menu.page == "new_journey" and menu.selected == 0)
     menu.handle_input(key(KEY_ESCAPE))
-    assert(menu.page == "home" and menu.selected == 1)
+    assert(menu.page == "home" and menu.selected == 2)
     assert(FileAccess.get_file_as_bytes(profile.path) == original)
     var pad := InputEventJoypadButton.new()
     pad.button_index = JOY_BUTTON_A
@@ -57,7 +58,7 @@ func run() -> void:
     click.pressed = true
     click.position = menu.row_rect(1).get_center()
     menu.handle_input(click)
-    assert(menu.page == "recovery_done")
+    assert(menu.page == "home" and menu.started_new_journey)
     assert(FileAccess.get_file_as_bytes(menu.recovery_archive+"/"+profile.path.get_file()) == original)
     assert(FileAccess.get_file_as_bytes(menu.recovery_archive+"/"+profile.path.get_file()+".bak") == old_backup)
     assert(profile.load_profile() and profile.data.room == "flats" and profile.data.flags.is_empty())

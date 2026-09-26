@@ -1,0 +1,35 @@
+# LAST RELAY . the village
+# Tiles are 16 px. Nothing here is proven: it is a hub with no enemies and no timer.
+# Legend: tools/levels/levelkit.py (LEGEND). People and their lines: levels/story/npcs.json
+name: THE RADIO SHACK
+world: village
+hub: yes
+time: 0
+interior: yes
+music: village_theme
+
+== the radio shack ==
+##############################
+##############################
+##############################
+##############################
+##############################
+##..........................##
+##..........................##
+##..........................##
+##..........................##
+##..........................##
+##..........................##
+##..........................##
+##..........................##
+##.H..J..N....N....N....N.n.##
+##############################
+##############################
+##############################
+
+[objects]
+npc#1 id=wren
+npc#2 id=brace
+npc#3 id=dot
+npc#4 id=hum
+door#1 to=village c=57 r=13

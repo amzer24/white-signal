@@ -10,11 +10,15 @@ const DASH_SPEED := 340.0
 const DASH_TIME := 0.13
 const OVERSPEED_DECAY := 350.0
 const CORNER_SLIDE := 4.0
+## After a wall kick, steering is locked away from the wall (Celeste's rule).
+## Without it a single wall can be climbed by kicking and steering back.
+const KICK_LOCK := 0.16
 
 var conduit_cooldown := 0.0
 var coyote_t := 0.0
 var buffer_t := 0.0
 var wall_grace_t := 0.0
+var kick_t := 0.0
 var wall_dir := 0
 var wall_top_y := 0.0
 var jump_held := false
@@ -46,6 +50,7 @@ func reset_at(pos: Vector2) -> void:
     velocity = Vector2.ZERO
     invuln = 0.5
     wall_grace_t = 0.0
+    kick_t = 0.0
     coyote_t = 0.0
     buffer_t = 0.0
     spring_t = 0.0
@@ -68,6 +73,9 @@ func _physics_process(delta: float) -> void:
     wall_grace_t = maxf(0.0, wall_grace_t - delta)
 
     var dir := Input.get_axis("move_left", "move_right")
+    kick_t = maxf(0.0, kick_t - delta)
+    if kick_t > 0.0 and dir != 0.0:
+        dir = float(face)
     var jd := Input.is_action_pressed("jump")
     if jd and not jump_held:
         buffer_t = float(M.buffer)
@@ -127,6 +135,7 @@ func _physics_process(delta: float) -> void:
         coyote_t = 0.0
         wall_grace_t = 0.0
         face = -wall_dir
+        kick_t = KICK_LOCK
         sx_anim = 0.75
         sy_anim = 1.3
         Sfx.beep(500.0 + randf() * 40.0)
@@ -187,7 +196,7 @@ func _physics_process(delta: float) -> void:
                 break
 
     # face + run anim
-    if dir != 0.0:
+    if dir != 0.0 and kick_t <= 0.0:
         face = int(signf(dir))
     anim_t += delta * (11.0 if (absf(velocity.x) > 10.0 and is_on_floor()) else 3.0)
     sliding_anim = not is_on_floor() and is_on_wall() and velocity.y > 0.0 \

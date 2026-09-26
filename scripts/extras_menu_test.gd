@@ -29,7 +29,7 @@ func run() -> void:
     assert(menu.page == "extras" and menu.selected == 0)
     await capture(menu,"extras-menu")
     key(menu,KEY_UP)
-    assert(menu.selected == 2)
+    assert(menu.selected == 3)
     key(menu,KEY_DOWN)
     key(menu,KEY_ENTER)
     assert(menu.page == "credits")
