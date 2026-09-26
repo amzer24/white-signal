@@ -1,5 +1,7 @@
 # WHITE SIGNAL — Game Design Document (living, v8)
 
+> **Superseded on 26 Sep 2026.** The current design is `docs/GDD.md` (the classic Mario-style platformer). This file is kept as history of the earlier exploration and card-draft designs.
+
 > Active implementation: the **Godot 4.7 port** at repo root. `js-original/` is
 > the feel reference. Tuning tables here remain the source of truth for both.
 

@@ -121,12 +121,13 @@ func row_count() -> int:
     if page == "extras": return 4
     if page == "play": return 3
     if page in ["recovery","recovery_confirm","recovery_done","new_journey"]: return 2
-    if page in ["settings","keyboard"]: return 7
+    if page == "settings": return 7
+    if page == "keyboard": return 8
     return 1
 
 func row_rect(index: int) -> Rect2:
     if page in ["extras","play"]: return Rect2(120,106+index*31,240,24)
-    if page == "keyboard": return Rect2(80,65+index*22,320,21)
+    if page == "keyboard": return Rect2(80,60+index*20,320,19)
     if page in ["recovery","recovery_confirm","recovery_done","new_journey"]: return Rect2(80,174+index*28,320,24)
     if page == "home":
         return Rect2(120,99+index*16,240,15) if home_items().size() > 6 else Rect2(120,105+index*18,240,17)
@@ -185,12 +186,12 @@ func _draw() -> void:
         label(Vector2(60,239),recovery_message,1,DrawUtil.GRAY)
     elif page == "keyboard":
         label(Vector2(80,25),"KEYBOARD",4)
-        var names := ["MOVE LEFT","MOVE RIGHT","JUMP","DASH","USE","RESTORE DEFAULTS","BACK"]
+        var names := ["MOVE LEFT","MOVE RIGHT","JUMP","DASH","USE","ARC","RESTORE DEFAULTS","BACK"]
         for i in names.size():
             var rect := row_rect(i)
             if i == selected: draw_rect(rect,DrawUtil.DARK)
             label(rect.position+Vector2(8,7),names[i])
-            if i < 5:
+            if i < 6:
                 var action: String = GameInput.keyboard.ACTIONS[i]
                 label(rect.position+Vector2(308,7),"PRESS KEY..." if GameInput.keyboard.capturing == action else GameInput.keyboard.key_label(action),1,DrawUtil.WHITE,HORIZONTAL_ALIGNMENT_RIGHT)
         label(Vector2(80,230),GameInput.keyboard.error,1,DrawUtil.WHITE)
@@ -314,8 +315,8 @@ func activate() -> void:
                 get_tree().change_scene_to_file("res://scenes/exploration.tscn")
         return
     if page == "keyboard":
-        if selected < 5: GameInput.keyboard.begin_capture(GameInput.keyboard.ACTIONS[selected])
-        elif selected == 5: GameInput.keyboard.restore_defaults()
+        if selected < 6: GameInput.keyboard.begin_capture(GameInput.keyboard.ACTIONS[selected])
+        elif selected == 6: GameInput.keyboard.restore_defaults()
         else: back()
         return
     if page == "settings" and selected == 5:

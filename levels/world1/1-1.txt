@@ -297,5 +297,5 @@ time: 300
 
 [objects]
 p#1 to=1-1-bonus
-hint#1 c=153 r=19 text=SHIFT_DASH
-hint#2 c=94 r=27 text=CLIMB
+hint#1 c=153 r=19 text=PRESS_SHIFT_TO_*DASH*
+hint#2 c=94 r=27 text=CLIMB_THE_BLOCKS

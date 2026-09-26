@@ -5,7 +5,7 @@ extends RefCounted
 
 const ROWS := 17              # one screen; a level may be any multiple of this tall
 const T := 16.0
-const SOLID := "#=?CUBLZpFYQE"
+const SOLID := "#=?CUBLZpFYQEA%"
 const ONE_WAY := "-"
 const CHANNEL := {"1": 0, "2": 1}   # World 2 channel blocks and the channel they belong to
 const BUMPABLE := "?CUhiBYQ"         # blocks that knock out an enemy standing on them
@@ -14,6 +14,7 @@ const PERIODIC := {
 	"T": {"period": 2.0, "phase": 0.0},
 	"m": {"period": 4.0, "phase": 0.0, "dx": 4.0, "dy": 0.0},
 }
+const FLYER := {"range": 6.0, "amp": 12.0, "period": 2.0}   # World 3 wave flyer defaults
 
 var id := ""
 var name := ""
@@ -38,6 +39,8 @@ var rings: Array = []
 var walkers: Array = []
 var pipes: Array = []
 var npcs: Array = []          # {i, c, r, id}
+var arms: Array = []          # World 3 sweep arms: {i, cx, cy, len, speed, start}
+var gust := Vector2(-1, -1)   # World 3 `gust: period,on` header, or (-1, -1) for steady wind
 var doors: Array = []         # {i, c, r, to, house, to_c, to_r}
 var fuses: Array = []         # World 2 fuse cells
 var relay := {}               # World 2 boss: {c, r, period} or empty
@@ -48,6 +51,7 @@ var goal := Vector2i(-1, -1)
 var midway := Vector2i(-1, -1)
 var lever := Vector2i(-1, -1)
 var warden := Vector2i(-1, -1)
+var _found := {}              # find() answers: tile -> [Vector2i]
 
 
 static func load_file(level_id: String):
@@ -59,6 +63,23 @@ static func load_file(level_id: String):
 
 
 ## "2-3" lives in levels/world2/, the test room in levels/world1/.
+## Centres of a sweep arm's static balls, one every 8 px out from the hub.
+func arm_dots(a: Dictionary, at_t: int) -> Array:
+	var ang := (float(a.start) + float(a.speed) * at_t * (1.0 / 60.0)) * (PI / 180.0)   # same order as math.radians
+	var out: Array = []
+	for k in range(1, int(a.len) + 1):
+		out.append(Vector2(float(a.cx) + cos(ang) * 8.0 * k, float(a.cy) + sin(ang) * 8.0 * k))
+	return out
+
+
+## Wind tiles blow all the time, or with a `gust: period,on` header only for
+## the first `on` seconds of every `period`.
+func gust_on(at_t: int) -> bool:
+	if gust.x <= 0.0:
+		return true
+	return fposmod(at_t * (1.0 / 60.0), gust.x) < gust.y
+
+
 static func path_for(level_id: String) -> String:
 	if level_id.begins_with("village"):
 		return "res://levels/village/%s.txt" % level_id
@@ -132,12 +153,17 @@ func at(c: int, r: int) -> String:
 
 
 ## Tiles of `ch`, numbered left to right (column by column), as in levelkit.
+## The grid never changes after loading, so each answer is kept: the game asks
+## several times a frame. Callers must not change the returned array.
 func find(ch: String) -> Array:
+	if _found.has(ch):
+		return _found[ch]
 	var out: Array = []
 	for c in width:
 		for r in rows:
 			if grid[r][c] == ch:
 				out.append(Vector2i(c, r))
+	_found[ch] = out
 	return out
 
 
@@ -239,15 +265,28 @@ func _build() -> void:
 		springs.append(Vector2(p.x * T, p.y * T))
 	for p in find("R"):
 		rings.append(Vector2(p.x * T + 8, p.y * T + 8))
-	for pair in [["w", "walker", 45.0], ["k", "hopper", 45.0], ["s", "spiky", 35.0]]:
+	for pair in [["w", "walker", 45.0], ["k", "hopper", 45.0], ["s", "spiky", 35.0], ["f", "flyer", 40.0]]:
 		i = 1
 		for p in find(pair[0]):
-			var o := opt("%s#%d" % [pair[0], i], {"speed": pair[2], "dir": -1.0})
+			var base := {"speed": pair[2], "dir": -1.0}
+			if pair[0] == "f":
+				base.merge(FLYER)
+			var o := opt("%s#%d" % [pair[0], i], base)
 			o.merge({"kind": pair[1], "i": i, "x": p.x * T + 8, "y": (p.y + 1) * T}, true)
 			walkers.append(o)
 			i += 1
 	for w in walkers:
 		w["path"] = walker_path(w)
+	# World 3: sweep arms and gusts
+	i = 1
+	for p in find("A"):
+		var o := opt("arm#%d" % i, {"len": 4.0, "speed": 90.0, "start": 0.0})
+		o.merge({"i": i, "cx": p.x * T + 8, "cy": p.y * T + 8}, true)
+		arms.append(o)
+		i += 1
+	var gparts := str(meta.get("gust", "")).split(",")
+	if gparts.size() == 2:
+		gust = Vector2(float(gparts[0]), float(gparts[1]))
 	# the village: people and doors (look and talk only, nothing solid)
 	i = 1
 	for p in find("N"):
@@ -327,6 +366,14 @@ static func fall_frames(dist: float) -> int:
 ## Walked until the third turn, then that back-and-forth repeats.
 func walker_path(w: Dictionary, frames := 60 * 700) -> PackedFloat32Array:
 	var xs := PackedFloat32Array()
+	if str(w.kind) == "flyer":
+		# a flyer ignores the ground and swings `range` tiles out and back
+		var span: float = float(w.range) * T
+		var n := maxi(1, int(span / (float(w.speed) / 60.0) + 0.5))
+		for k in frames:
+			var u := 0.0 if span <= 0.0 else 1.0 - absf(float(k % (2 * n)) / n - 1.0)
+			xs.append(float(w.x) + float(w.dir) * span * u)
+		return xs
 	var turns: Array = []
 	var x: float = w.x
 	var d: float = w.dir

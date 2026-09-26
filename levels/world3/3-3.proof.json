@@ -1,0 +1,27 @@
+{
+ "finished": true,
+ "route_seconds": 11.4,
+ "nodes": 4856,
+ "shards": {
+  "45,24": true,
+  "85,17": true,
+  "103,17": true
+ },
+ "small_shards": {
+  "total": 18,
+  "reachable": 18,
+  "missing": []
+ },
+ "blocks": {
+  "total": 2,
+  "reachable": 2,
+  "missing": []
+ },
+ "cracks": {
+  "total": 1,
+  "reachable": 1,
+  "missing": []
+ },
+ "solve_seconds": 23.3,
+ "line": "150 tiles (2400px, 5 screens)  .  FINISHABLE  .  fastest proven route 11.4s  .  big shards reachable 3/3  .  small shards reachable 18/18  .  blocks hittable 2/2  .  cracked walls breakable 1/1  .  20 shards  .  owns: sweep arms"
+}

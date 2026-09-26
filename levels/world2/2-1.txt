@@ -39,8 +39,8 @@ weather: rain
 ..............................
 ........?.........ooo.........
 ..............................
-..............................
-..P...........=......k....=...
+...=====......................
+..P%ooo=......=......k....=...
 ##############################
 ##############################
 ##############################
@@ -226,7 +226,8 @@ weather: rain
 ##############################
 
 [objects]
-hint#1 c=4 r=24 text=HOPPERS_JUMP_ON_A_BEAT
-hint#2 c=33 r=31 text=CLIMB
-hint#3 c=94 r=11 text=CHAIN_THEM
-hint#4 c=126 r=24 text=BUMP_FROM_BELOW
+hint#1 c=17 r=24 text=HOPPERS_JUMP_ON_A_BEAT
+hint#5 c=5 r=26 text=PRESS_X_TO_THROW_*THE_ARC*
+hint#2 c=33 r=31 text=CLIMB_THE_GIRDERS
+hint#3 c=94 r=11 text=STOMP_ALL_THREE_IN_A_ROW
+hint#4 c=126 r=24 text=BUMP_THE_HOPPER_OFF_ITS_BLOCK

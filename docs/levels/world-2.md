@@ -16,6 +16,7 @@ A dead relay yard where the broadcast line splits into two channels. World 2 int
 - **Crushing:** presses, falling droppers, ceiling chunks and falling loose floors now kill any enemy they land on.
 - **No getting stuck inside a block:** when a channel turns solid while the Spark is inside one of its blocks, that block stays open until the Spark leaves it.
 - **Walkers ignore channel blocks.** Keep patrols on ground that never changes.
+- **The Arc** (the attack, key X) is the reward for clearing World 1. 2-1 teaches it with a shed sealed by a cracked wall (`%`), and every World 2 and 3 level hides a stash behind one. It also knocks out spiked walkers from the side.
 
 ## Taller levels
 
@@ -83,6 +84,4 @@ This is all look and sound, so the proofs ignore it.
 
 ## Not done yet
 
-- World 2 has no music of its own.
 - There is no bonus room in World 2.
-- The attack move is planned as the reward for beating World 2, for use in World 3. It isn't built yet.

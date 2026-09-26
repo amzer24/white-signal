@@ -1,14 +1,14 @@
 {
  "finished": true,
- "route_seconds": 12.5,
- "nodes": 164331,
+ "route_seconds": 12.9,
+ "nodes": 166526,
  "shards": {
   "36,18": true,
   "104,11": true
  },
  "small_shards": {
-  "total": 14,
-  "reachable": 14,
+  "total": 17,
+  "reachable": 17,
   "missing": []
  },
  "blocks": {
@@ -16,6 +16,11 @@
   "reachable": 2,
   "missing": []
  },
- "solve_seconds": 974.6,
- "line": "150 tiles (2400px, 5 screens)  .  FINISHABLE  .  fastest proven route 12.5s  .  big shards reachable 2/2  .  small shards reachable 14/14  .  blocks hittable 2/2  .  14 shards  .  owns: the relay (world boss)"
+ "cracks": {
+  "total": 1,
+  "reachable": 1,
+  "missing": []
+ },
+ "solve_seconds": 706.4,
+ "line": "150 tiles (2400px, 5 screens)  .  FINISHABLE  .  fastest proven route 12.9s  .  big shards reachable 2/2  .  small shards reachable 17/17  .  blocks hittable 2/2  .  cracked walls breakable 1/1  .  17 shards  .  owns: the relay (world boss)"
 }

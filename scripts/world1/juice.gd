@@ -190,7 +190,7 @@ static func pulse_box(ci: CanvasItem, center: Vector2, age: float, start := 8.0,
 
 ## The Spark, drawn exactly like scripts/spark_visual.gd (12x14 white block,
 ## visor, scarf, legs), from explicit pose values instead of a player node.
-## `feet` = bottom-centre. pose: "stand", "run", "air", "slide".
+## `feet` = bottom-centre. pose: "stand", "run", "air", "slide", "lie".
 static func spark(ci: CanvasItem, feet: Vector2, face := 1, sx := 1.0, sy := 1.0, pose := "stand",
 		anim_t := 0.0, dash_ready := -1) -> void:
 	var w := maxf(4.0, roundf(12.0 * sx))
@@ -207,7 +207,11 @@ static func spark(ci: CanvasItem, feet: Vector2, face := 1, sx := 1.0, sy := 1.0
 	var scx := bx - 3.0 if face > 0 else bx + w + 1.0
 	ci.draw_rect(Rect2(scx, by + 4 + fl, 3, 2), GRAY)
 	ci.draw_rect(Rect2(scx - 2.0 if face > 0 else scx + 2.0, by + 5.0 - fl, 2, 1), GRAY)
-	if pose == "air":
+	if pose == "lie":
+		# eyes shut: the visor closes to a line, no legs
+		ci.draw_rect(Rect2(vx, by + 3, 4, 3), WHITE)
+		ci.draw_rect(Rect2(vx, by + 4, 4, 1), BG)
+	elif pose == "air":
 		ci.draw_rect(Rect2(bx + 2, by + h - 2, 3, 2), BG)
 		ci.draw_rect(Rect2(bx + w - 5, by + h - 3, 3, 3), BG)
 	elif pose == "run":

@@ -31,9 +31,18 @@ const AIR_FRICTION := 500.0    # slowdown in the air when no direction is held
 const HALF_W := 6.0
 const HALF_H := 7.0
 const STOMP_BOUNCE := 230.0
+const STOMP_GRACE := 6          # frames after a stomp when pressing jump still bounces high
+const STOMP_DEPTH := 14.0       # a falling Spark this deep into an enemy's top still stomps it
 const SPRING_POWER := 500.0
 const RING_LIFT := 300.0
 const EPS := 0.001
+const WIND_SIDE := 900.0     # World 3 side wind, px/s/s, up to WIND_MAX
+const WIND_MAX := 190.0
+const WIND_UP := 1600.0      # updraft, up to RISE_MAX
+const RISE_MAX := 210.0
+const ARC_TIME := 0.12         # the Arc: how long its hit box stays out
+const ARC_COOLDOWN := 0.3      # time from one Arc to the next
+const ARC_REACH := 18.0        # px in front of the Spark's edge
 
 var L: RefCounted
 var proof_mode := false
@@ -74,6 +83,7 @@ var walker_fall := {}       # walker index -> [x, y, vy] once its on_floor is go
 var ring_used := {}         # ring index -> frame
 var lever_t := -1
 var stomp_chain := 0
+var stomp_at := -99         # frame of the last stomp
 var boarded := {}           # mover index -> frame (start=ride girders)
 var tiles := {}             # Vector2i -> "used" / "broken" / "revealed"
 var taken := {}             # Vector2i -> true for collected shards
@@ -88,6 +98,11 @@ var dead := ""
 var won := false
 var won_height := 0.0
 var events: Array = []      # this frame's events, for sound and effects
+var can_arc := false        # the Arc is learned (the game sets this)
+var arc_press := false      # attack pressed this frame (the game sets this before advance)
+var arc_t := 0.0            # time left on the Arc's hit box
+var arc_cd := 0.0
+var arc_face := 1
 
 
 func _init(level: RefCounted) -> void:
@@ -191,10 +206,10 @@ func solid(c: int, r: int, at_t: int) -> bool:
 			if g.has("relay"):
 				return not (relay_down >= 0 and at_t >= relay_down + 15)
 			return not gate_open(g, at_t)
-		"B":
+		"B", "%":
 			return tiles.get(key, "") != "broken"
 		"h", "i":
-			return not proof_mode and tiles.get(key, "") == "revealed"
+			return not proof_mode and tiles.get(key, "") != ""   # revealed, then used: solid either way
 	return Level.SOLID.contains(ch)
 
 
@@ -439,6 +454,15 @@ func step_player(dir: int, jump: bool, dash: bool) -> void:
 		vy = minf(MAX_FALL, vy + GRAVITY * DT)
 	if not on_floor and on_wall and vy > 0.0 and dash_t <= 0.0 and dir != 0 and dir == wall_dir:
 		vy = minf(vy, WALL_SLIDE)
+	# wind (a dash cuts straight through it)
+	var wind := wind_at(x, y)
+	if dash_t <= 0.0:
+		if wind.x > 0.0 and vx < WIND_MAX:
+			vx = minf(WIND_MAX, vx + wind.x * DT)
+		elif wind.x < 0.0 and vx > -WIND_MAX:
+			vx = maxf(-WIND_MAX, vx + wind.x * DT)
+		if wind.y < 0.0 and vy > -RISE_MAX:
+			vy = maxf(-RISE_MAX, vy + wind.y * DT)
 	var was_floor := on_floor
 	var fall_v := vy
 	var m := move(x, y, vx, vy)
@@ -509,11 +533,49 @@ func advance(dir: int, jump: bool, dash: bool, down := false) -> void:
 						var r2: Rect2 = rc2[0]
 						x += r2.position.x - rect.position.x
 						y += r2.position.y - rect.position.y
+	# a jump pressed just after a stomp still gives the high bounce (sim.py advance)
+	if jump and not held and vy < 0.0 and t - stomp_at <= STOMP_GRACE:
+		vy = minf(vy, -JUMP_VEL - 40.0 * maxi(0, stomp_chain - 1))
 	_bumped.clear()
 	drop_held = down
 	step_player(dir, jump, dash)
 	t += 1
 	_after_move(down)
+	_arc()
+
+
+## The Arc: a short burst of static in front of the Spark. It knocks out any
+## enemy it touches, spiked walkers included, and breaks cracked walls (%).
+func _arc() -> void:
+	arc_cd = maxf(0.0, arc_cd - DT)
+	if arc_press and can_arc and arc_cd <= 0.0 and dead == "" and not won:
+		arc_t = ARC_TIME
+		arc_cd = ARC_COOLDOWN
+		arc_face = face
+		ev("arc", {"x": x, "y": y, "face": face})
+	arc_press = false
+	if arc_t <= 0.0 or dead != "":
+		return
+	arc_t -= DT
+	var box := arc_box()
+	for n in L.walkers.size():
+		if killed.has(n):
+			continue
+		var wp := walker_pos(n)
+		if box.intersects(Rect2(wp.x - 7, wp.y - 18, 14, 18)):
+			killed[n] = t
+			ev("arc_hit", {"x": wp.x, "y": wp.y - 9, "kind": str(L.walkers[n].kind)})
+	for c in range(int(floor(box.position.x / T)), int(floor(box.end.x / T)) + 1):
+		for r in range(int(floor(box.position.y / T)), int(floor(box.end.y / T)) + 1):
+			var cell := Vector2i(c, r)
+			if L.at(c, r) == "%" and tiles.get(cell, "") != "broken":
+				tiles[cell] = "broken"
+				ev("wall_break", {"x": c * T + 8.0, "y": r * T + 8.0})
+
+
+func arc_box() -> Rect2:
+	var x0 := x + HALF_W if arc_face > 0 else x - HALF_W - ARC_REACH
+	return Rect2(x0, y - 8.0, ARC_REACH, 14.0)
 
 
 func _hit(x0: float, y0: float, x1: float, y1: float) -> bool:
@@ -664,6 +726,13 @@ func _after_move(down: bool) -> void:
 		if py > float(p.y0) + 1.0 and _hit(float(p.x), float(p.y0), float(p.x) + T, py + T):
 			if hurt("press"):
 				return
+	for a in L.arms:
+		if absf(float(a.cx) - x) < float(a.len) * 8.0 + 20.0 and absf(float(a.cy) - y) < float(a.len) * 8.0 + 20.0:
+			for d in L.arm_dots(a, t):
+				if _hit(d.x - 3.0, d.y - 3.0, d.x + 3.0, d.y + 3.0):
+					if hurt("sweep arm"):
+						return
+					break
 	# springs
 	for sp in L.springs:
 		var top: float = sp.y + 4.0
@@ -694,7 +763,7 @@ func _after_move(down: bool) -> void:
 		var wpos := walker_pos(n)
 		var wx: float = wpos.x
 		var wy: float = wpos.y
-		if walker_dropped(wx, wy):
+		if walker_dropped(wx, wy, str(w.kind) == "flyer"):
 			killed[n] = t
 			if not proof_mode:
 				walker_fall[n] = [wx, wy, 0.0]
@@ -710,10 +779,11 @@ func _after_move(down: bool) -> void:
 			elif dash_t > 0.0:
 				killed[n] = t
 				ev("walker_squish", {"x": wx, "y": wy - 9, "dash": true})
-			elif vy > 60.0 and py1 - (wy - 18.0) < 10.0:
+			elif vy > 60.0 and py1 - (wy - 18.0) < STOMP_DEPTH:
 				killed[n] = t
 				chain += 1
-				vy = -(JUMP_VEL if held else STOMP_BOUNCE) - 40.0 * (chain - 1)
+				stomp_at = t
+				vy = -(JUMP_VEL if held or buffer > 0.0 else STOMP_BOUNCE) - 40.0 * (chain - 1)
 				on_floor = false
 				sx_anim = 0.75
 				sy_anim = 1.3
@@ -821,6 +891,16 @@ func _bump(cell: Vector2i) -> void:
 		ev("bump_used", {"x": at.x, "y": at.y})
 
 
+## Push from the wind tile at the Spark's centre, in px/s/s (sim.py wind_at).
+func wind_at(px: float, py: float) -> Vector2:
+	var ch: String = L.at(int(floor(px / T)), int(floor(py / T)))
+	if not (ch == "<" or ch == ">" or ch == "u") or not L.gust_on(t):
+		return Vector2.ZERO
+	if ch == "u":
+		return Vector2(0.0, -WIND_UP)
+	return Vector2(WIND_SIDE if ch == ">" else -WIND_SIDE, 0.0)
+
+
 func walker_pos(n: int) -> Vector2:
 	var w: Dictionary = L.walkers[n]
 	if walker_fall.has(n):
@@ -832,6 +912,8 @@ func walker_pos(n: int) -> Vector2:
 	if str(w.kind) == "hopper":
 		var s := (t % 96) * DT
 		wy -= maxf(0.0, 220.0 * s - 0.5 * GRAVITY * s * s) if s < 0.48 else 0.0
+	elif str(w.kind) == "flyer":
+		wy += float(w.amp) * sin(TAU * t * DT / float(w.period))
 	return Vector2(wx, wy)
 
 
@@ -839,7 +921,7 @@ func _on_walker(wx: float, wy: float, x0: float, y0: float, x1: float, y1: float
 	return wx - 7 < x1 and wx + 7 > x0 and wy - 18 < y1 and wy > y0
 
 
-func walker_dropped(wx: float, wy: float) -> bool:
+func walker_dropped(wx: float, wy: float, flyer := false) -> bool:
 	## A walker is lost when the floor under it falls away, or when something
 	## heavy lands on it: a falling loose floor, a press, a dropper or a loose
 	## ceiling chunk (sim.py walker_dropped).
@@ -861,10 +943,14 @@ func walker_dropped(wx: float, wy: float) -> bool:
 	var c := int(floor(wx / T))
 	var r := int(floor(wy / T))
 	var ch: String = L.at(c, r)
+	if flyer:
+		return false  # flyers never stand on anything
 	if ch == "L" and loose_state(Vector2i(c, r), t) == "fallen":
 		return true
 	if ch == "Z" and not solid(c, r, t):
 		return true
+	if (ch == "B" or ch == "%") and tiles.get(Vector2i(c, r), "") == "broken":
+		return true   # a brick broken or a cracked wall opened under it
 	for cell in loose_trig:
 		var ly := loose_fall_y(cell, t)
 		var lx: float = cell.x * T
@@ -874,11 +960,21 @@ func walker_dropped(wx: float, wy: float) -> bool:
 
 
 func update_walkers() -> void:
-	## Walkers that lost their floor fall off the screen (drawing only).
+	## Walkers that lost their floor fall until they hit something solid, where
+	## they are knocked out (drawing only).
 	for n in walker_fall:
 		var f: Array = walker_fall[n]
+		if f.size() > 3:
+			continue
 		f[2] = minf(MAX_FALL, float(f[2]) + GRAVITY * DT)
-		f[1] = float(f[1]) + float(f[2]) * DT
+		var ny := float(f[1]) + float(f[2]) * DT
+		var c := int(floor(float(f[0]) / T))
+		var r := int(floor(ny / T))
+		if ny > float(f[1]) + 1.0 and r < L.rows and solid(c, r, t) and not solid(c, int(floor((float(f[1]) - 1.0) / T)), t):
+			f[1] = r * T
+			f.append(t)   # landed: frame it hit the ground
+		else:
+			f[1] = ny
 
 
 func warden_pos(at_t: int) -> Vector2:

@@ -64,8 +64,8 @@ weather: static
 ..............................
 ....................i.........
 ..............................
-..............................
-......O.........oo............
+.......................=====..
+......O.........oo.....%ooo=..
 ..........2222.===============
 ...............===============
 ...............===============
@@ -198,7 +198,7 @@ X#2 phase=0.33
 X#3 phase=0.66
 route#1 via=b100,11|b108,11|b116,11
 O#1 via=36,27|41,24|37,21
-hint#1 c=4 r=24 text=THE_RELAY_SWAPS_THE_CHANNELS
+hint#1 c=4 r=24 text=LEARN_THE_RELAY'S_BEAT
 hint#2 c=34 r=16 text=CLIMB_ON_THE_BEAT
-hint#3 c=94 r=9 text=BLOW_ALL_THREE_FUSES
+hint#3 c=94 r=9 text=BUMP_ALL_THREE_*FUSES*
 npc#1 id=hum

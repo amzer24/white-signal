@@ -1,5 +1,5 @@
 extends SceneTree
-## Renders the World 1 and World 2 showcase to PNGs in test-user/world1-art/.
+## Renders the World 1, World 2 and World 3 showcase to PNGs in test-user/world1-art/.
 ## "E:/Godot games/Godot_v4.7.2-stable_win64.exe" --path . --resolution 960x540 --script res://scripts/world1/showcase_capture.gd
 ## Optional: -- only=<name-prefix> to capture a subset.
 
@@ -27,33 +27,40 @@ const SHOTS := [
 	["v0-village-noshader", 8, 1.0, -1, 0.0, false],
 	["v1-village-sheets", 9, 1.3, -1, 0.0, true],
 	["v1-village-sheets-noshader", 9, 1.3, -1, 0.0, false],
-	["j1-a", 10, 0.66, -1, 0.0, true],
-	["j1-b", 10, 0.93, -1, 0.0, true],
-	["j1-c", 10, 1.08, -1, 0.0, true],
-	["j1-d", 10, 1.6, -1, 0.0, true],
-	["j2-a", 11, 0.9, -1, 0.0, true],
-	["j2-b", 11, 1.12, -1, 0.0, true],
-	["j2-c", 11, 1.48, -1, 0.0, true],
-	["j2-d", 11, 3.25, -1, 0.0, true],
-	["j3-a", 12, 0.66, -1, 0.0, true],
-	["j3-b", 12, 1.02, -1, 0.0, true],
-	["j3-c", 12, 1.35, -1, 0.0, true],
-	["j3-d", 12, 1.6, -1, 0.0, true],
-	["l1-a", 13, 1.0, 0, 0.0, true],
-	["l1-b", 13, 1.0, 0, 640.0, true],
-	["l1-c", 13, 1.2, 0, 1440.0, true],
-	["l1-d", 13, 1.2, 0, 2880.0, true],
-	["l2-a", 13, 1.0, 1, 900.0, true],
-	["l2-b", 13, 1.0, 1, 1460.0, true],
-	["l2-c", 13, 1.0, 1, 1920.0, true],
-	["l3-a", 13, 0.85, 2, 400.0, true],
-	["l3-b", 13, 1.1, 2, 1900.0, true],
-	["l3-c", 13, 1.1, 2, 2900.0, true],
-	["l4-a", 13, 1.0, 3, 0.0, true],
-	["l4-b", 13, 1.0, 3, 2400.0, true],
-	["l4-c", 13, 1.0, 3, 2880.0, true],
-	["l1-a-noshader", 13, 1.0, 0, 0.0, false],
-	["j1-b-noshader", 10, 0.93, -1, 0.0, false],
+	["w3-0-aerials", 10, 1.3, -1, 0.0, true],
+	["w3-0-aerials-tell", 10, 2.2, -1, 0.0, true],
+	["w3-0-aerials-gust", 10, 2.7, -1, 0.0, true],
+	["w3-0-aerials-noshader", 10, 1.3, -1, 0.0, false],
+	["w3-1-backdrop", 11, 20.0, -1, 0.0, true],
+	["w3-1-backdrop-b", 11, 43.0, -1, 0.0, true],
+	["w3-1-backdrop-noshader", 11, 20.0, -1, 0.0, false],
+	["j1-a", 12, 0.66, -1, 0.0, true],
+	["j1-b", 12, 0.93, -1, 0.0, true],
+	["j1-c", 12, 1.08, -1, 0.0, true],
+	["j1-d", 12, 1.6, -1, 0.0, true],
+	["j2-a", 13, 0.9, -1, 0.0, true],
+	["j2-b", 13, 1.12, -1, 0.0, true],
+	["j2-c", 13, 1.48, -1, 0.0, true],
+	["j2-d", 13, 3.25, -1, 0.0, true],
+	["j3-a", 14, 0.66, -1, 0.0, true],
+	["j3-b", 14, 1.02, -1, 0.0, true],
+	["j3-c", 14, 1.35, -1, 0.0, true],
+	["j3-d", 14, 1.6, -1, 0.0, true],
+	["l1-a", 15, 1.0, 0, 0.0, true],
+	["l1-b", 15, 1.0, 0, 640.0, true],
+	["l1-c", 15, 1.2, 0, 1440.0, true],
+	["l1-d", 15, 1.2, 0, 2880.0, true],
+	["l2-a", 15, 1.0, 1, 900.0, true],
+	["l2-b", 15, 1.0, 1, 1460.0, true],
+	["l2-c", 15, 1.0, 1, 1920.0, true],
+	["l3-a", 15, 0.85, 2, 400.0, true],
+	["l3-b", 15, 1.1, 2, 1900.0, true],
+	["l3-c", 15, 1.1, 2, 2900.0, true],
+	["l4-a", 15, 1.0, 3, 0.0, true],
+	["l4-b", 15, 1.0, 3, 2400.0, true],
+	["l4-c", 15, 1.0, 3, 2880.0, true],
+	["l1-a-noshader", 15, 1.0, 0, 0.0, false],
+	["j1-b-noshader", 12, 0.93, -1, 0.0, false],
 ]
 
 func _initialize() -> void:
@@ -92,7 +99,7 @@ func run() -> void:
 		scene.set("auto_clock", true)
 		scene.call("show_page", 0)
 		for key in [KEY_RIGHT, KEY_RIGHT, KEY_RIGHT, KEY_RIGHT, KEY_RIGHT, KEY_RIGHT, KEY_RIGHT,
-				KEY_RIGHT, KEY_RIGHT, KEY_RIGHT, KEY_RIGHT, KEY_RIGHT, KEY_RIGHT, KEY_DOWN, KEY_DOWN, KEY_UP, KEY_S, KEY_T, KEY_P, KEY_P, KEY_F, KEY_F, KEY_SPACE, KEY_1]:
+				KEY_RIGHT, KEY_RIGHT, KEY_RIGHT, KEY_RIGHT, KEY_RIGHT, KEY_RIGHT, KEY_RIGHT, KEY_RIGHT, KEY_DOWN, KEY_DOWN, KEY_UP, KEY_S, KEY_T, KEY_P, KEY_P, KEY_F, KEY_F, KEY_SPACE, KEY_1]:
 			var ev := InputEventKey.new()
 			ev.keycode = key
 			ev.pressed = true

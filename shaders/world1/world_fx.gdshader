@@ -18,6 +18,7 @@ uniform vec3 ramp1 : source_color = vec3(0.227);
 uniform vec3 ramp2 : source_color = vec3(0.541);
 uniform vec3 ramp3 : source_color = vec3(0.949);
 uniform float hud_rows = 17.0;                // the HUD strip is never darkened
+uniform vec2 view = vec2(480.0, 270.0);       // logical screen size (wider on wide screens)
 
 float bayer4(vec2 p) {
 	int x = int(mod(p.x, 4.0));
@@ -34,7 +35,7 @@ vec3 tint(float l) {
 }
 
 void fragment() {
-	vec2 px = floor(UV * vec2(480.0, 270.0));
+	vec2 px = floor(UV * view);
 	vec3 c = texture(screen_tex, SCREEN_UV).rgb;
 	float l = dot(c, vec3(0.299, 0.587, 0.114));
 	if (px.y >= hud_rows) {

@@ -1,8 +1,8 @@
 extends Node2D
-## World 1 and World 2 art and juice showcase. Standalone: open
-## scenes/world1_showcase.tscn and press F6. Pages: 10 gallery pages (pages 5 to
+## World 1, World 2 and World 3 art and juice showcase. Standalone: open
+## scenes/world1_showcase.tscn and press F6. Pages: 12 gallery pages (pages 5 to
 ## 7 are the World 2 Switchyard, page 8 the atmosphere sheets, pages 9 and 10
-## the Last Relay village), 3 juice pages
+## the Last Relay village, pages 11 and 12 the World 3 Aerials), 3 juice pages
 ## (18 looping demos) and a level page that renders the real World 1 maps with
 ## the new tiles.
 ##

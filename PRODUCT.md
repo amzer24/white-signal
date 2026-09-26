@@ -4,36 +4,36 @@
 
 ## Platform
 
-Desktop Godot game. This directory is the active Godot 4.7 project; `js-original/` is the playable JavaScript feel reference and design specification. The enclosing workspace's Sprite Studio web documentation does not describe this game.
+Desktop game made in Godot 4.7, for Windows first. Keyboard and gamepad. `js-original/` is the first JavaScript version and is kept only as history.
 
 ## Product Purpose
 
-An exploration-first pixel platformer about repairing a collapsed relay network. Permanent abilities, discovered rooms, local repairs and return routes persist. The separate Classic mode retains the original shard/glyph draft-run design. The Signal represents coherence; restoring the network reconnects places and reveals traces of the Operators.
+A classic Mario-style pixel platformer for ages 10 and up. A small spark of signal follows a dead line, gate by gate, to find out who is still calling. Levels are short and every one is proven finishable by a checker. Between worlds the player returns to Last Relay, a village whose people tell the story. The aim is dead simple to play and hard to master.
 
 ## Operating Context
 
-Open `project.godot` with Godot 4.7+ and run `scenes/main.tscn`. The game uses a 480×270 logical canvas with nearest-neighbor texture filtering and canvas scaling. Keyboard, mouse menu input and gamepad mappings are implemented. Physical controller verification and remapping remain outstanding.
-
-The title offers Start/Resume Exploration, Resume Classic when a relay-boundary save exists, New Classic Run, Settings, How to Play and Afterlight. Exploration displays the saved room and resumes permanent discoveries. Classic resumes at a relay boundary; starting Classic does not replace the exploration profile. Map: M/Y, district: Tab/LB, legend: H/X. Settings are available from the title and exploration pause screen.
+Open `project.godot` with Godot 4.7 or later and run it. The game starts on the title screen (`scenes/title.tscn`). A new game plays a short story intro, then starts in Last Relay. The logical canvas is 480x270 and widens up to 720x270 on wide screens. Progress saves automatically to `user://w1_progress.json` and settings to `user://ws_settings.cfg`.
 
 ## Capabilities and Constraints
 
-- Exploration connects Flats, Field, Drowned, Stand, Wire/Array and the Source, with saved restoration, aftermath and revisits. Drowned and Stand have seven-room expansions; optional Siphon, Array inspection and Wire maintenance-shaft branches are implemented. Overall biome breadth, art, encounter roster and pacing are unfinished. The design atlas remains a plan, not shipped scope.
-- The Wire shaft supports base wall-kick ascent, transactional archive/release, a recallable service lift, interior relighting, motor feedback and a replayable Operator memory. The Array inspection bay introduces a patroller with dash, stomp and avoidance routes.
-- Classic preserves the original relay/draft framework. It is a separate mode, not the progression model for exploration.
-- Afterlight, titled THE ROOM REMEMBERS, is an optional lighting study with three replayable memories. It preserves the campaign boundary and is not another finished campaign relay.
-- Exploration currently uses a provisional dark Dead Carrier loop; listening and mixing remain pending. The supplied `assets/audio/tutorial.wav` is the Classic tutorial score. It loops during R0, continues through death/respawn, pauses and resumes with the run, and stops when leaving R0 for R1. It does not score Afterlight. Runtime loop configuration is applied to a duplicated audio resource; the supplied source is unchanged.
-- Music and effects have separate volume controls, with zero muting the corresponding bus. Defaults are 65% music and 80% effects. Fullscreen can be changed in Settings or with F11.
-- Preferences persist through Godot ConfigFile at `user://ws_settings.cfg`, separately from campaign progress. Changes apply immediately; the settings page reports a save failure when persistence fails.
+- Three worlds of four levels are built and proven: The Flats, The Switchyard and The Aerials. World 4, Dead Air, and the ending are planned.
+- Moves: run, jump, wall kick, dash, stomp, drop through girders, and the Arc (an attack earned by clearing World 1).
+- Lives, a 300-second timer per level, shards as currency at Tally's shop, 3 big shards hidden in most levels, one checkpoint per level.
+- Last Relay has seven villagers with speech bubbles and voices, a shop, a radio shack and a switchboard for replaying levels.
+- All music and sound is 8-bit, written as code for the NES's four voices. Every level has its own track.
+- All art uses four greys, tinted per world, generated in code.
+- Keys can be remapped. Settings cover music and effects volume, fullscreen, reduced flashing and camera shake.
+- Text follows an upper middle-grade reading level (Flesch-Kincaid grade 5 to 6.5), with at most three lines per speech bubble.
+- The earlier Classic card-draft run and exploration campaign stay in the code, reachable only from EXTRAS.
 
 ## Brand Commitments
 
-Preserve WHITE SIGNAL's established monochrome pixel-art identity, custom pixel lettering, and relay-world terminology. Menu additions extend that incumbent style.
+Keep WHITE SIGNAL's four-grey pixel art, custom pixel lettering and relay-world words (the Spark, the line, relays, gates, Last Relay). From the intro on, the Spark is the only pure white thing in story scenes. Quiet, lonely and hopeful in tone, never grim.
 
 ## Evidence on Hand
 
-`docs/plans/RELEASE-GATES.md` records incomplete release requirements and scoped evidence. Recent `docs/plans/*` records distinguish installed functionality from prototypes and older packages. `README.md` contains run instructions but historical scope descriptions must be checked against those current records. `js-original/GDD.md` contains the broader game design. `scripts/menu_ui.gd`, `scripts/app_settings.gd`, `scripts/music.gd`, and `scripts/draw_util.gd` define the shipped menu, preferences, score lifecycle, and drawing vocabulary. See `docs/UI.md` for the observed menu/settings design and its reference captures.
+`docs/GDD.md` is the current design. `docs/levels/` holds each world's design notes, and `docs/story/` holds the intro script, shot list and story arc. Every level has a proof (`levels/world*/*.proof.json`) and a map. The Godot tests are listed in `README.md`. `docs/research/title-screen-2026-09-26.md` backs the title screen design.
 
 ## Open Decisions
 
-Audience demographics and a formal accessibility standard have not been established in this scope. Planned campaign content is not a shipped capability.
+What big shards unlock, whether there is one caller or many, World 4's design, and the ending. See section 9 of `docs/GDD.md`.

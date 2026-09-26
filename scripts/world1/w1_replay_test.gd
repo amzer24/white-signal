@@ -6,7 +6,7 @@ extends SceneTree
 
 const Level := preload("res://scripts/world1/w1_level.gd")
 const Sim := preload("res://scripts/world1/w1_sim.gd")
-const LEVELS := ["test-room", "1-1", "1-2", "1-3", "1-4", "2-1", "2-2", "2-3", "2-4"]
+const LEVELS := ["test-room", "1-1", "1-2", "1-3", "1-4", "2-1", "2-2", "2-3", "2-4", "3-1", "3-2", "3-3", "3-4"]
 
 
 func _initialize() -> void:

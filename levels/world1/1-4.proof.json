@@ -17,6 +17,11 @@
   "reachable": 3,
   "missing": []
  },
- "solve_seconds": 230.9,
+ "cracks": {
+  "total": 0,
+  "reachable": 0,
+  "missing": []
+ },
+ "solve_seconds": 210.0,
  "line": "240 tiles (3840px, 8 screens)  .  FINISHABLE  .  fastest proven route 17.0s  .  big shards reachable 3/3  .  small shards reachable 15/15  .  blocks hittable 3/3  .  15 shards  .  owns: droppers, timed gates, the warden"
 }

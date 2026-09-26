@@ -305,5 +305,5 @@ X#3 phase=0.66
 T#1 phase=0.5
 T#2 phase=0.83
 T#3 phase=0.16
-hint#1 c=122 r=24 text=KICK_BETWEEN_THE_WALLS
+hint#1 c=122 r=24 text=JUMP_FROM_WALL_TO_WALL
 npc#1 id=brace

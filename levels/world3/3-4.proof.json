@@ -1,0 +1,27 @@
+{
+ "finished": true,
+ "route_seconds": 10.0,
+ "nodes": 45796,
+ "shards": {
+  "14,27": true,
+  "51,5": true,
+  "71,6": true
+ },
+ "small_shards": {
+  "total": 9,
+  "reachable": 9,
+  "missing": []
+ },
+ "blocks": {
+  "total": 0,
+  "reachable": 0,
+  "missing": []
+ },
+ "cracks": {
+  "total": 1,
+  "reachable": 1,
+  "missing": []
+ },
+ "solve_seconds": 79.9,
+ "line": "90 tiles (1440px, 3 screens)  .  FINISHABLE  .  fastest proven route 10.0s  .  big shards reachable 3/3  .  small shards reachable 9/9  .  blocks hittable 0/0  .  cracked walls breakable 1/1  .  9 shards  .  owns: everything World 3 has, going up"
+}

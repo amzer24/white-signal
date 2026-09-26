@@ -53,6 +53,13 @@ LEGEND = {
     's': 'spiked walker (cannot be stomped or dashed; crush it or bump it from below)',
     'Q': 'fuse (bump from below to blow it; blow them all to bring the relay down)',
     'E': 'relay (3x3 boss cabinet; swaps the channels on a clock while it runs)',
+    # World 3
+    'f': 'wave flyer (patrols in the air on a sine wave; stomp it) f#k range= amp= period= speed= dir=',
+    '>': 'wind blowing right (pushes the Spark; with a gust: header it blows on a clock)',
+    '<': 'wind blowing left',
+    'u': 'updraft (lifts the Spark)',
+    'A': 'sweep arm hub (solid; a bar of static turns around it) arm#k len= speed= start=',
+    '%': 'cracked wall (solid; the Arc breaks it, so what is behind it is a secret, never the main route)',
     # look and feel only (the proofs ignore it)
     'J': 'lamp post (lights up when you pass; pushes back the dark)',
     # the village (look and talk only; nothing here is solid)
@@ -65,7 +72,7 @@ LEGEND = {
     'g': 'signpost',
 }
 
-SOLID = set('#=?CUBLZpFYQE')
+SOLID = set('#=?CUBLZpFYQEA%')
 CHANNEL = {'1': 0, '2': 1}
 BUMPABLE = set('?CUhiBYQ')   # blocks that knock out an enemy standing on them
 ONE_WAY = set('-')
@@ -267,14 +274,36 @@ class Objects:
         self.springs = [(c * TILE, r * TILE) for (c, r) in L.find('S')]
         self.rings = [(c * TILE + 8, r * TILE + 8) for (c, r) in L.find('R')]
         self.walkers = []
-        for ch, kind, speed in (('w', 'walker', 45.0), ('k', 'hopper', 45.0), ('s', 'spiky', 35.0)):
+        for ch, kind, speed in (('w', 'walker', 45.0), ('k', 'hopper', 45.0), ('s', 'spiky', 35.0),
+                                ('f', 'flyer', 40.0)):
             for i, (c, r) in enumerate(L.find(ch), 1):
-                o = opts(L, f'{ch}#{i}', {'speed': speed, 'dir': -1.0})
+                o = opts(L, f'{ch}#{i}', dict({'speed': speed, 'dir': -1.0},
+                                              **(FLYER_DEFAULTS if ch == 'f' else {})))
                 self.walkers.append({'kind': kind, 'i': i, 'x': c * TILE + 8, 'y': (r + 1) * TILE, **o})
         self.walker_paths = [walker_path(L, w) for w in self.walkers]
         self.fuses = L.find('Q')
         relay = blocks3x3(L, 'E')
         self.relay = {'c': relay[0][0], 'r': relay[0][1], **opts(L, 'relay#1', {'period': 2.5})} if relay else None
+        # World 3: sweep arms and gusts
+        self.arms = []
+        for i, (c, r) in enumerate(L.find('A'), 1):
+            o = opts(L, f'arm#{i}', {'len': 4.0, 'speed': 90.0, 'start': 0.0})
+            self.arms.append({'i': i, 'cx': c * TILE + 8, 'cy': r * TILE + 8, **o})
+        g = str(L.meta.get('gust', '')).split(',')
+        self.gust = (float(g[0]), float(g[1])) if len(g) == 2 else None
+
+    def arm_dots(self, a, t):
+        """Centres of a sweep arm's static balls: one every 8 px out from the hub."""
+        ang = math.radians(a['start'] + a['speed'] * t * DT)
+        return [(a['cx'] + math.cos(ang) * 8 * k, a['cy'] + math.sin(ang) * 8 * k)
+                for k in range(1, int(a['len']) + 1)]
+
+    def gust_on(self, t):
+        """Wind tiles blow all the time, or with a `gust: period,on` header only
+        for the first `on` seconds of every `period`."""
+        if self.gust is None:
+            return True
+        return (t * DT) % self.gust[0] < self.gust[1]
 
     # periodic -----------------------------------------------------------
     def mover_rect(self, m, t):
@@ -310,10 +339,20 @@ def fall_frames(dist):
     return n
 
 
+FLYER_DEFAULTS = {'range': 6.0, 'amp': 12.0, 'period': 2.0}
+
+
 def walker_path(level, w, frames=60 * 700):
     """Walkers turn at walls and at ledges, so their route is a fixed loop. It is
     walked until the third turn, then that back-and-forth repeats, so a walker
-    keeps moving for the longest level timer (600 s)."""
+    keeps moving for the longest level timer (600 s). A flyer ignores the ground
+    and swings `range` tiles out from where it starts and back."""
+    if w['kind'] == 'flyer':
+        span = w['range'] * TILE
+        if span <= 0:
+            return [w['x']] * frames
+        n = max(1, int(span / (w['speed'] * DT) + 0.5))   # frames for one leg
+        return [w['x'] + w['dir'] * span * (1 - abs((k % (2 * n)) / n - 1)) for k in range(frames)]
     xs, turns = [], []
     x, d = w['x'], w['dir']
     row = int(w['y'] // TILE) - 1

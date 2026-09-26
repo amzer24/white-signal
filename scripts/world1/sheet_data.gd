@@ -1883,6 +1883,26 @@ const SHEETS := {
 					0.12
 				],
 				"loop": true
+			},
+			"spire_idle": {
+				"row": 12,
+				"frames": 4,
+				"dur": [
+					0.2,
+					0.2,
+					0.2,
+					0.2
+				],
+				"loop": true
+			},
+			"spire_talk": {
+				"row": 13,
+				"frames": 2,
+				"dur": [
+					0.12,
+					0.12
+				],
+				"loop": true
 			}
 		}
 	},
@@ -2049,6 +2069,872 @@ const SHEETS := {
 					0,
 					0,
 					0,
+					0
+				],
+				"loop": true
+			}
+		}
+	},
+	"ground_w3": {
+		"file": "ground_w3.png",
+		"fw": 16,
+		"fh": 16,
+		"anims": {
+			"top": {
+				"row": 0,
+				"frames": 4,
+				"dur": [
+					0,
+					0,
+					0,
+					0
+				],
+				"loop": true
+			},
+			"mid": {
+				"row": 1,
+				"frames": 4,
+				"dur": [
+					0,
+					0,
+					0,
+					0
+				],
+				"loop": true
+			},
+			"deep": {
+				"row": 2,
+				"frames": 4,
+				"dur": [
+					0,
+					0,
+					0,
+					0
+				],
+				"loop": true
+			},
+			"bottom": {
+				"row": 3,
+				"frames": 4,
+				"dur": [
+					0,
+					0,
+					0,
+					0
+				],
+				"loop": true
+			},
+			"alt": {
+				"row": 4,
+				"frames": 4,
+				"dur": [
+					0,
+					0,
+					0,
+					0
+				],
+				"loop": true
+			}
+		}
+	},
+	"block_w3": {
+		"file": "block_w3.png",
+		"fw": 16,
+		"fh": 16,
+		"anims": {
+			"lip": {
+				"row": 0,
+				"frames": 4,
+				"dur": [
+					0,
+					0,
+					0,
+					0
+				],
+				"loop": true
+			},
+			"stacked": {
+				"row": 1,
+				"frames": 4,
+				"dur": [
+					0,
+					0,
+					0,
+					0
+				],
+				"loop": true
+			}
+		}
+	},
+	"backdrop_w3": {
+		"file": "backdrop_w3.png",
+		"fw": 96,
+		"fh": 128,
+		"anims": {
+			"pieces": {
+				"row": 0,
+				"frames": 4,
+				"dur": [
+					0,
+					0,
+					0,
+					0
+				],
+				"loop": true
+			}
+		}
+	},
+	"flyer": {
+		"file": "flyer.png",
+		"fw": 16,
+		"fh": 16,
+		"anims": {
+			"fly": {
+				"row": 0,
+				"frames": 4,
+				"dur": [
+					0.1,
+					0.1,
+					0.1,
+					0.1
+				],
+				"loop": true
+			},
+			"turn": {
+				"row": 1,
+				"frames": 2,
+				"dur": [
+					0.06,
+					0.06
+				],
+				"loop": true
+			},
+			"stomped": {
+				"row": 2,
+				"frames": 1,
+				"dur": [
+					0
+				],
+				"loop": true
+			}
+		}
+	},
+	"sweep_arm": {
+		"file": "sweep_arm.png",
+		"fw": 16,
+		"fh": 16,
+		"anims": {
+			"pivot": {
+				"row": 0,
+				"frames": 2,
+				"dur": [
+					0.25,
+					0.25
+				],
+				"loop": true
+			},
+			"dot": {
+				"row": 1,
+				"frames": 2,
+				"dur": [
+					0.08,
+					0.08
+				],
+				"loop": true
+			}
+		}
+	},
+	"wind": {
+		"file": "wind.png",
+		"fw": 16,
+		"fh": 16,
+		"anims": {
+			"side": {
+				"row": 0,
+				"frames": 4,
+				"dur": [
+					0.07,
+					0.07,
+					0.07,
+					0.07
+				],
+				"loop": true
+			},
+			"up": {
+				"row": 1,
+				"frames": 4,
+				"dur": [
+					0.07,
+					0.07,
+					0.07,
+					0.07
+				],
+				"loop": true
+			},
+			"gust_tell": {
+				"row": 2,
+				"frames": 3,
+				"dur": [
+					0.15,
+					0.15,
+					0.15
+				],
+				"loop": false
+			}
+		}
+	},
+	"wind_vane": {
+		"file": "wind_vane.png",
+		"fw": 16,
+		"fh": 32,
+		"anims": {
+			"spin": {
+				"row": 0,
+				"frames": 4,
+				"dur": [
+					0.08,
+					0.08,
+					0.08,
+					0.08
+				],
+				"loop": true
+			},
+			"still": {
+				"row": 1,
+				"frames": 1,
+				"dur": [
+					0
+				],
+				"loop": true
+			}
+		}
+	},
+	"title_logo": {
+		"file": "title_logo.png",
+		"fw": 240,
+		"fh": 44,
+		"anims": {
+			"unlit": {
+				"row": 0,
+				"frames": 1,
+				"dur": [
+					0
+				],
+				"loop": true
+			},
+			"lit": {
+				"row": 1,
+				"frames": 1,
+				"dur": [
+					0
+				],
+				"loop": true
+			},
+			"glow": {
+				"row": 2,
+				"frames": 1,
+				"dur": [
+					0
+				],
+				"loop": true
+			}
+		}
+	},
+	"title_logo_antenna": {
+		"file": "title_logo_antenna.png",
+		"fw": 24,
+		"fh": 12,
+		"anims": {
+			"pulse": {
+				"row": 0,
+				"frames": 5,
+				"dur": [
+					0.32,
+					0.32,
+					0.32,
+					0.64,
+					0.07
+				],
+				"loop": true
+			},
+			"steady": {
+				"row": 1,
+				"frames": 1,
+				"dur": [
+					0
+				],
+				"loop": true
+			}
+		}
+	},
+	"title_scene": {
+		"file": "title_scene.png",
+		"fw": 320,
+		"fh": 64,
+		"anims": {
+			"far": {
+				"row": 0,
+				"frames": 1,
+				"dur": [
+					0
+				],
+				"loop": true
+			},
+			"mid": {
+				"row": 1,
+				"frames": 1,
+				"dur": [
+					0
+				],
+				"loop": true
+			}
+		}
+	},
+	"title_pole": {
+		"file": "title_pole.png",
+		"fw": 24,
+		"fh": 64,
+		"anims": {
+			"pole": {
+				"row": 0,
+				"frames": 2,
+				"dur": [
+					0,
+					0
+				],
+				"loop": true
+			}
+		}
+	},
+	"title_caller": {
+		"file": "title_caller.png",
+		"fw": 8,
+		"fh": 8,
+		"anims": {
+			"blink": {
+				"row": 0,
+				"frames": 4,
+				"dur": [
+					3.0,
+					0.08,
+					0.16,
+					0.1
+				],
+				"loop": true
+			},
+			"blink_gray": {
+				"row": 1,
+				"frames": 4,
+				"dur": [
+					3.0,
+					0.08,
+					0.16,
+					0.1
+				],
+				"loop": true
+			}
+		}
+	},
+	"arc": {
+		"file": "arc.png",
+		"fw": 24,
+		"fh": 16,
+		"anims": {
+			"swing": {
+				"row": 0,
+				"frames": 4,
+				"dur": [
+					0.02,
+					0.04,
+					0.06,
+					0.08
+				],
+				"loop": false
+			}
+		}
+	},
+	"arc_hit": {
+		"file": "arc_hit.png",
+		"fw": 16,
+		"fh": 16,
+		"anims": {
+			"hit": {
+				"row": 0,
+				"frames": 3,
+				"dur": [
+					0.03,
+					0.05,
+					0.07
+				],
+				"loop": false
+			}
+		}
+	},
+	"crack": {
+		"file": "crack.png",
+		"fw": 16,
+		"fh": 16,
+		"anims": {
+			"w1": {
+				"row": 0,
+				"frames": 4,
+				"dur": [
+					0,
+					0,
+					0,
+					0
+				],
+				"loop": true
+			},
+			"w2": {
+				"row": 1,
+				"frames": 4,
+				"dur": [
+					0,
+					0,
+					0,
+					0
+				],
+				"loop": true
+			},
+			"w3": {
+				"row": 2,
+				"frames": 4,
+				"dur": [
+					0,
+					0,
+					0,
+					0
+				],
+				"loop": true
+			},
+			"break": {
+				"row": 3,
+				"frames": 4,
+				"dur": [
+					0.04,
+					0.06,
+					0.08,
+					0.1
+				],
+				"loop": false
+			}
+		}
+	},
+	"arc_icon": {
+		"file": "arc_icon.png",
+		"fw": 16,
+		"fh": 16,
+		"anims": {
+			"hud": {
+				"row": 0,
+				"frames": 2,
+				"dur": [
+					0,
+					0
+				],
+				"loop": true
+			},
+			"pickup": {
+				"row": 1,
+				"frames": 4,
+				"dur": [
+					0.1,
+					0.1,
+					0.1,
+					0.1
+				],
+				"loop": true
+			}
+		}
+	},
+	"intro_npc": {
+		"file": "intro_npc.png",
+		"fw": 16,
+		"fh": 24,
+		"anims": {
+			"listener_sit": {
+				"row": 0,
+				"frames": 2,
+				"dur": [
+					0,
+					0
+				],
+				"loop": true
+			},
+			"mast_lantern_walk": {
+				"row": 1,
+				"frames": 4,
+				"dur": [
+					0.2,
+					0.2,
+					0.2,
+					0.2
+				],
+				"loop": true
+			},
+			"mast_lantern_stand": {
+				"row": 2,
+				"frames": 2,
+				"dur": [
+					0.4,
+					0.4
+				],
+				"loop": true
+			},
+			"mast_lantern_look": {
+				"row": 3,
+				"frames": 2,
+				"dur": [
+					0.5,
+					0.5
+				],
+				"loop": true
+			}
+		}
+	},
+	"intro_poles": {
+		"file": "intro_poles.png",
+		"fw": 48,
+		"fh": 64,
+		"anims": {
+			"switch_ready": {
+				"row": 0,
+				"frames": 2,
+				"dur": [
+					0.5,
+					0.5
+				],
+				"loop": true
+			},
+			"switch_pull": {
+				"row": 1,
+				"frames": 5,
+				"dur": [
+					0.1,
+					0.1,
+					0.15,
+					0.1,
+					0.25
+				],
+				"loop": false
+			},
+			"switch_after": {
+				"row": 2,
+				"frames": 2,
+				"dur": [
+					0.6,
+					0.6
+				],
+				"loop": true
+			},
+			"dead": {
+				"row": 3,
+				"frames": 3,
+				"dur": [
+					0,
+					0,
+					0
+				],
+				"loop": true
+			}
+		}
+	},
+	"intro_static": {
+		"file": "intro_static.png",
+		"fw": 32,
+		"fh": 16,
+		"anims": {
+			"crawl": {
+				"row": 0,
+				"frames": 4,
+				"dur": [
+					0.06,
+					0.06,
+					0.06,
+					0.06
+				],
+				"loop": true
+			},
+			"stall": {
+				"row": 1,
+				"frames": 3,
+				"dur": [
+					0.08,
+					0.08,
+					0.08
+				],
+				"loop": true
+			},
+			"die": {
+				"row": 2,
+				"frames": 4,
+				"dur": [
+					0.1,
+					0.1,
+					0.1,
+					0.1
+				],
+				"loop": false
+			}
+		}
+	},
+	"spark_close": {
+		"file": "spark_close.png",
+		"fw": 48,
+		"fh": 48,
+		"anims": {
+			"curled": {
+				"row": 0,
+				"frames": 2,
+				"dur": [
+					1.2,
+					1.2
+				],
+				"loop": true
+			},
+			"stir": {
+				"row": 1,
+				"frames": 3,
+				"dur": [
+					0,
+					0,
+					0
+				],
+				"loop": true
+			},
+			"flare": {
+				"row": 2,
+				"frames": 4,
+				"dur": [
+					0.06,
+					0.06,
+					0.1,
+					0.12
+				],
+				"loop": false
+			},
+			"sit": {
+				"row": 3,
+				"frames": 2,
+				"dur": [
+					0.5,
+					0.5
+				],
+				"loop": true
+			}
+		}
+	},
+	"intro_wire_close": {
+		"file": "intro_wire_close.png",
+		"fw": 32,
+		"fh": 32,
+		"anims": {
+			"grass": {
+				"row": 0,
+				"frames": 4,
+				"dur": [
+					0,
+					0,
+					0,
+					0
+				],
+				"loop": true
+			},
+			"wire": {
+				"row": 1,
+				"frames": 2,
+				"dur": [
+					0,
+					0
+				],
+				"loop": true
+			},
+			"wire_end": {
+				"row": 2,
+				"frames": 1,
+				"dur": [
+					0
+				],
+				"loop": true
+			},
+			"wire_lit": {
+				"row": 3,
+				"frames": 2,
+				"dur": [
+					0,
+					0
+				],
+				"loop": true
+			},
+			"ring": {
+				"row": 4,
+				"frames": 3,
+				"dur": [
+					0.06,
+					0.06,
+					0.06
+				],
+				"loop": true
+			},
+			"ring_pop": {
+				"row": 5,
+				"frames": 3,
+				"dur": [
+					0.05,
+					0.05,
+					0.05
+				],
+				"loop": false
+			}
+		}
+	},
+	"intro_far": {
+		"file": "intro_far.png",
+		"fw": 64,
+		"fh": 64,
+		"anims": {
+			"keeper_night": {
+				"row": 0,
+				"frames": 2,
+				"dur": [
+					0.8,
+					0.15
+				],
+				"loop": true
+			},
+			"gate_far": {
+				"row": 1,
+				"frames": 1,
+				"dur": [
+					0
+				],
+				"loop": true
+			}
+		}
+	},
+	"intro_window": {
+		"file": "intro_window.png",
+		"fw": 320,
+		"fh": 176,
+		"anims": {
+			"frame": {
+				"row": 0,
+				"frames": 1,
+				"dur": [
+					0
+				],
+				"loop": true
+			}
+		}
+	},
+	"title_hero": {
+		"file": "title_hero.png",
+		"fw": 64,
+		"fh": 64,
+		"anims": {
+			"idle": {
+				"row": 0,
+				"frames": 8,
+				"dur": [
+					0.12,
+					0.12,
+					0.12,
+					0.12,
+					0.12,
+					0.12,
+					0.12,
+					0.12
+				],
+				"loop": true
+			},
+			"look": {
+				"row": 1,
+				"frames": 8,
+				"dur": [
+					0.12,
+					0.12,
+					0.12,
+					0.12,
+					0.12,
+					0.12,
+					0.12,
+					0.12
+				],
+				"loop": false
+			},
+			"leap": {
+				"row": 2,
+				"frames": 5,
+				"dur": [
+					0.1,
+					0.06,
+					0.1,
+					0.1,
+					0.1
+				],
+				"loop": false
+			},
+			"blink": {
+				"row": 3,
+				"frames": 8,
+				"dur": [
+					0.12,
+					0.12,
+					0.12,
+					0.12,
+					0.12,
+					0.12,
+					0.12,
+					0.12
+				],
+				"loop": true
+			},
+			"answer": {
+				"row": 4,
+				"frames": 8,
+				"dur": [
+					0.12,
+					0.12,
+					0.12,
+					0.12,
+					0.12,
+					0.12,
+					0.12,
+					0.12
+				],
+				"loop": true
+			}
+		}
+	},
+	"title_cliff": {
+		"file": "title_cliff.png",
+		"fw": 160,
+		"fh": 128,
+		"anims": {
+			"edge": {
+				"row": 0,
+				"frames": 1,
+				"dur": [
+					0
+				],
+				"loop": true
+			},
+			"grass": {
+				"row": 1,
+				"frames": 4,
+				"dur": [
+					0.16,
+					0.16,
+					0.16,
+					0.16
+				],
+				"loop": true
+			},
+			"fill": {
+				"row": 2,
+				"frames": 1,
+				"dur": [
 					0
 				],
 				"loop": true

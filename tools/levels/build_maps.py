@@ -58,6 +58,10 @@ def draw_tile(d, x, y, ch, lvl, c, r):
     elif ch in 'hi':
         d.rectangle(box, outline=ACT, width=1)
         d.text((cx, cy), ch, font=FONT, fill=ACT, anchor='mm')
+    elif ch == '%':
+        d.rectangle(box, fill=(70, 70, 78), outline=ACT)
+        d.line((x + 3, y + 3, cx, cy, x + 5, y + T - 3), fill=BG, width=2)
+        d.line((cx, cy, x + T - 3, cy - 2), fill=BG, width=2)
     elif ch == 'B':
         d.rectangle(box, fill=(84, 60, 48), outline=(40, 30, 24))
         d.line((x, cy, x + T, cy), fill=(40, 30, 24))
@@ -308,6 +312,29 @@ def check_collectables(lvl, path, extra=()):
     mark(path)
     for steps in extra:
         mark(steps)
+    # designer hints for hard-to-find stashes: stash#1 via=b96,12|99,13 means
+    # "bump that block, stand there", then look for anything still missing nearby
+    for key, o in lvl.overrides.items():
+        if not key.startswith('stash#'):
+            continue
+        legs = parse_via(str(o.get('via', '')))
+        if not legs:
+            continue
+        before = [st[2] for st in path if st[2].body.floor and st[2].body.x < (legs[0][1] - 1) * TILE]
+        run0 = before[-1] if before else None
+        ok = True
+        for wp in legs:
+            seg, _, ok = solve_leg(lvl, run0, wp, 300_000)
+            if not ok:
+                break
+            mark(seg)
+            run0 = seg[-1][2] if seg else run0
+        if ok:
+            for k, fn in items.items():
+                if k not in got and abs(k[1] - legs[-1][1]) <= 16:
+                    seg, _, ok2 = sim.solve(lvl, run0=run0, max_nodes=100_000, reach=fn, target=(k[1], k[2]), drop=True)
+                    if ok2:
+                        mark(seg)
     for k, fn in sorted(items.items(), key=lambda kv: kv[0][1]):
         if k in got:
             continue
@@ -329,6 +356,27 @@ def check_collectables(lvl, path, extra=()):
         return {'total': len(mine), 'reachable': sum(k in got for k in mine),
                 'missing': [[k[1], k[2]] for k in mine if k not in got]}
     return report('o'), report('?CUhi')
+
+
+def check_cracks(lvl, path):
+    """Every cracked wall must be reachable by the Arc: the Spark gets close enough,
+    from either side, for the Arc's box (18 px past its edge, y-8 to y+6) to touch it."""
+    cells = lvl.find('%')
+    got = []
+    for c, r in cells:
+        x0, x1, y0, y1 = c * TILE, (c + 1) * TILE, r * TILE, (r + 1) * TILE
+        fn = (lambda x0, x1, y0, y1: lambda x, y: y - 8 < y1 and y + 6 > y0 and (
+            (x + HALF_W < x1 and x + HALF_W + 18 > x0) or (x - HALF_W - 18 < x1 and x - HALF_W > x0)))(x0, x1, y0, y1)
+        if any(fn(x, y) for _, fr, _ in path for x, y in fr):
+            got.append((c, r))
+            continue
+        before = [st[2] for st in path if st[2].body.floor and st[2].body.x < (c - 2) * TILE]
+        for run0, nodes in ([(before[-1], 60_000)] if before else []) + [(None, 60_000)]:
+            _, _, ok = sim.solve(lvl, run0=run0, max_nodes=nodes, reach=fn, target=(c, r), drop=True)
+            if ok:
+                got.append((c, r))
+                break
+    return {'total': len(cells), 'reachable': len(got), 'missing': [[c, r] for c, r in cells if (c, r) not in got]}
 
 
 def parse_via(text):
@@ -404,6 +452,7 @@ def prove(lvl):
     big_routes = []
     if not ok:
         result['stuck_at'] = stuck
+    sim.CRACKS_OPEN = True   # from here on, the Arc can open cracked walls
     for k, (c, r) in enumerate(lvl.find('O'), 1):
         # optional designer waypoints: O#2 via=16,13|13,11 (proved one leg at a time)
         via = str(lvl.overrides.get(f'O#{k}', {}).get('via', ''))
@@ -436,6 +485,8 @@ def prove(lvl):
                 big_routes.append(seg)
         result['shards'][f'{c},{r}'] = ok2
     result['small_shards'], result['blocks'] = check_collectables(lvl, path, big_routes)
+    result['cracks'] = check_cracks(lvl, path)
+    sim.CRACKS_OPEN = False
     result['solve_seconds'] = round(time.time() - t0, 1)
     return path, result
 
@@ -459,7 +510,8 @@ def main():
                        f"  .  fastest proven route {res['route_seconds']}s  .  big shards reachable {o_ok}/{o_total}"
                        f"  .  small shards reachable {res['small_shards']['reachable']}/{res['small_shards']['total']}"
                        f"  .  blocks hittable {res['blocks']['reachable']}/{res['blocks']['total']}"
-                       f"  .  {shards} shards  .  owns: {lvl.meta.get('owns', '-')}")
+                       + (f"  .  cracked walls breakable {res['cracks']['reachable']}/{res['cracks']['total']}" if res['cracks']['total'] else "")
+                       + f"  .  {shards} shards  .  owns: {lvl.meta.get('owns', '-')}")
         print(name, res['line'], flush=True)
         with open(os.path.splitext(f)[0] + '.proof.json', 'w') as fh:
             json.dump(res, fh, indent=1)

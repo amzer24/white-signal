@@ -25,7 +25,7 @@ func run() -> void:
     assert(controls.capturing == "jump")
     menu._notification(Node.NOTIFICATION_APPLICATION_FOCUS_OUT)
     assert(controls.capturing.is_empty() and controls.bindings.jump == KEY_J)
-    menu.selected = 5
+    menu.selected = 6   # RESTORE DEFAULTS (the Arc row sits above it)
     menu.activate()
     assert(controls.bindings.is_empty())
     menu.handle_input(key(KEY_ESCAPE))

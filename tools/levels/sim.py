@@ -25,6 +25,7 @@ class Run:
     ring_used: tuple = ()    # (ring index, frame)
     lever: int = -1
     stomp_chain: int = 0
+    stomp_at: int = -99      # frame of the last stomp (jump just after it still bounces high)
     boarded: tuple = ()      # (mover index, frame) for girders that start when ridden
     toggles: int = 0         # channel switch bumps so far
     fuses: frozenset = frozenset()    # blown fuse cells
@@ -39,6 +40,11 @@ def has_channels(world):
     if not hasattr(world, '_has_channel'):
         world._has_channel = any(ch in world.L.grid[r] for ch in CHANNEL for r in range(world.L.rows))
     return world._has_channel
+
+
+# The main route never breaks cracked walls (the replay has no attack button).
+# Big shard and collectable checks set this, since the Arc can open them.
+CRACKS_OPEN = False
 
 
 class World:
@@ -86,6 +92,8 @@ class World:
             return CHANNEL[ch] == self.channel(t) and (c, r) not in self.run.pending
         if ch == 'L':
             return self.loose_state((c, r), t) != 'fallen'
+        if ch == '%':
+            return not CRACKS_OPEN
         if ch == 'Z':
             return self.run.lever < 0 or t < self.run.lever + 18 + 4 * abs(c - self.lever_cells[0][0])
         if ch == '|':
@@ -200,6 +208,15 @@ class World:
         return nx, ny, floor, on_wall, wall_dir, wall_top, vx, vy
 
     # --- one frame of everything ----------------------------------------
+    def wind_at(self, x, y):
+        """Push from the wind tile at the Spark's centre, as (ax, ay) in px/s/s."""
+        ch = self.L.at(math.floor(x / TILE), math.floor(y / TILE))
+        if ch not in '<>u' or not self.o.gust_on(self.run.t):
+            return 0.0, 0.0
+        if ch == 'u':
+            return 0.0, -P.WIND_UP
+        return (P.WIND_SIDE if ch == '>' else -P.WIND_SIDE), 0.0
+
     def on_girder_only(self, x, y):
         """Everything under the feet is thin girder: nothing solid, not a moving girder."""
         t = self.run.t
@@ -224,6 +241,9 @@ class World:
                         self.run = run
                     nx, ny, *_ = next(r for r in self.rects(t + 1) if r[5] == key)
                     b = replace(b, x=b.x + nx - rx, y=b.y + ny - ry)
+        # a jump pressed just after a stomp still gives the high bounce
+        if jump and not b.held and b.vy < 0 and t - run.stomp_at <= P.STOMP_GRACE:
+            b = replace(b, vy=min(b.vy, -P.JUMP_VEL - 40 * max(0, run.stomp_chain - 1)))
         self.bumped = []
         nb = P.step(b, dir_, jump, dash, self, down)
         t += 1
@@ -337,6 +357,11 @@ class World:
             y = self.press_y(p, t)
             if y > p['y0'] + 1 and hit(p['x'], p['y0'], p['x'] + TILE, y + TILE):
                 return replace(run, dead='press', **self._fix(changes))
+        for a in o.arms:
+            if abs(a['cx'] - b.x) < a['len'] * 8 + 20 and abs(a['cy'] - b.y) < a['len'] * 8 + 20:
+                for dx, dy in o.arm_dots(a, t):
+                    if hit(dx - 3, dy - 3, dx + 3, dy + 3):
+                        return replace(run, dead='sweep arm', **self._fix(changes))
         # springs
         for sx, sy in o.springs:
             top = sy + 4
@@ -356,7 +381,7 @@ class World:
             if n in killed:
                 continue
             wx, wy = self.walker_xy(n, t)
-            if self.walker_dropped(run, wx, wy, t):
+            if self.walker_dropped(run, wx, wy, t, w['kind'] == 'flyer'):
                 killed.add(n)
                 continue
             if abs(wx - b.x) > 40:
@@ -366,11 +391,12 @@ class World:
                     return replace(run, dead='spiky', **self._fix(changes))
                 if b.dash_t > 0:
                     killed.add(n)
-                elif b.vy > 60 and (py1 - (wy - 18)) < 10:
+                elif b.vy > 60 and (py1 - (wy - 18)) < P.STOMP_DEPTH:
                     killed.add(n)
                     chain += 1
-                    vy = -(P.JUMP_VEL if b.held else P.STOMP_BOUNCE) - 40 * (chain - 1)
+                    vy = -(P.JUMP_VEL if b.held or b.buffer > 0 else P.STOMP_BOUNCE) - 40 * (chain - 1)
                     b = replace(b, vy=vy, floor=False)
+                    changes['stomp_at'] = t
                 else:
                     return replace(run, dead='walker', **self._fix(changes))
         if killed != set(run.killed):
@@ -399,9 +425,11 @@ class World:
         if w['kind'] == 'hopper':
             s = (t % 96) * DT
             wy -= max(0.0, 220 * s - 0.5 * P.GRAVITY * s * s) if s < 0.48 else 0.0
+        elif w['kind'] == 'flyer':
+            wy += w['amp'] * math.sin(2 * math.pi * t * DT / w['period'])
         return wx, wy
 
-    def walker_dropped(self, run, wx, wy, t):
+    def walker_dropped(self, run, wx, wy, t, flyer=False):
         """A walker is lost when the floor under it falls away, or when something
         heavy lands on it: a falling loose floor, a press, a dropper or a loose
         ceiling chunk."""
@@ -424,10 +452,14 @@ class World:
                     return True
         c, r = int(wx // TILE), int(wy // TILE)
         ch = self.L.at(c, r)
+        if flyer:
+            return False   # flyers never stand on anything
         if ch == 'L' and self.loose_state((c, r), t) == 'fallen':
             return True
         if ch == 'Z' and not self.solid(c, r, t):
             return True
+        if ch == '%' and CRACKS_OPEN:
+            return True   # a cracked wall opened under it
         for cell, f in run.loose:
             fall = t - f - 21
             if 0 <= fall < self.o.loose_land[cell][0]:
@@ -481,6 +513,9 @@ def solve(level, start=None, max_nodes=250_000, weight=2.5, target=None, run0=No
     gx = (target or w.goal)[0] * TILE + 8
     periods = [int(round(o['period'] * 4)) for o in w.o.movers + w.o.presses + w.o.vents
                + ([w.o.relay] if w.o.relay else [])]
+    periods += [int(round(360.0 / abs(a['speed']) * 4)) for a in w.o.arms if a['speed']]
+    if w.o.gust:
+        periods.append(int(round(w.o.gust[0] * 4)))
     cycle = math.lcm(*periods) if periods else 1   # in quarter seconds
     if tcycle:   # also tell apart moments by time, so waiting for enemies to line up counts
         cycle = math.lcm(cycle, tcycle)

@@ -1,5 +1,5 @@
 extends Node2D
-## Gallery pages: every World 1 and World 2 sheet and animation at true scale
+## Gallery pages: every World 1, World 2 and World 3 sheet and animation at true scale
 ## (1 art px = 1 game px), labelled with the 3x5 game font. One-shot animations replay
 ## after a short pause so every frame is seen.
 
@@ -10,7 +10,8 @@ const WHITE := DrawUtil.WHITE
 
 const PAGES := ["TERRAIN AND BLOCKS", "TRAPS AND SWITCHES", "ACTORS AND PICKUPS", "GATE LANDMARK",
 	"SWITCHYARD TILES AND ACTORS", "SWITCHYARD RELAY BOSS", "SWITCHYARD BACKDROP",
-	"ATMOSPHERE: LAMP, LIGHT, WEATHER, FOG", "LAST RELAY: THE VILLAGE", "LAST RELAY: VILLAGE SHEETS"]
+	"ATMOSPHERE: LAMP, LIGHT, WEATHER, FOG", "LAST RELAY: THE VILLAGE", "LAST RELAY: VILLAGE SHEETS",
+	"AERIALS: TILES, FOES AND WIND", "AERIALS: BACKDROP AND SPIRE"]
 
 var sh
 var page := 0
@@ -32,6 +33,8 @@ func _draw() -> void:
 		7: _page_atmosphere()
 		8: _page_village()
 		9: _page_village_sheets()
+		10: _page_w3_tiles()
+		11: _page_w3_backdrop()
 
 # ------------------------------------------------------------------ helpers
 
@@ -763,7 +766,7 @@ func _page_atmosphere() -> void:
 
 # ------------------------------------------------------------------ Last Relay village
 
-const NPC_IDS := ["mast", "tally", "wren", "brace", "dot", "hum"]
+const NPC_IDS := ["mast", "tally", "wren", "brace", "dot", "hum", "spire"]
 const NPC_LINES := [
 	"THE RELAY STILL HUMS. SO DO I.",
 	"PARTS FOR SHARDS. FAIR TRADE.",
@@ -838,8 +841,8 @@ func _page_village() -> void:
 func _page_village_sheets() -> void:
 	# ---- villagers: idle, talk, idle mirrored
 	_section(Vector2(8, 16), "VILLAGERS  IDLE / TALK / MIRRORED")
-	for i in 6:
-		var x := 8.0 + i * 78.0
+	for i in NPC_IDS.size():
+		var x := 8.0 + i * 67.0
 		var id: String = NPC_IDS[i]
 		sh.draw_anim(self, "npc", id + "_idle", clock + i * 0.1, Vector2(x, 28))
 		sh.draw_anim(self, "npc", id + "_talk", clock, Vector2(x + 20, 28))
@@ -887,3 +890,187 @@ func _page_village_sheets() -> void:
 		_label(Vector2(20 + i * 24, 231), ["SHUT", "OPEN"][i])
 	DrawUtil.text(self, Vector2(64, 196), "FACADES AND BACKDROP ARE ON THE", DARK)
 	DrawUtil.text(self, Vector2(64, 206), "PREVIOUS PAGE, AT TRUE SCALE", DARK)
+
+# ------------------------------------------------------------------ World 3: the Aerials
+
+## Slab, ledge, column, single and variants for one world's ground sheet.
+func _ground_demo(sheet: String, x0: float, y0: float) -> void:
+	for r in 3:
+		var anim: String = ["top", "mid", "deep"][r]
+		for c in 5:
+			var col := 0 if c == 0 else (2 if c == 4 else 1)
+			if r == 0 and c == 2:
+				_frame(sheet, "alt", 0, Vector2(x0 + c * 16, y0 + r * 16))
+			elif r == 1 and c == 3:
+				_frame(sheet, "alt", 2, Vector2(x0 + c * 16, y0 + r * 16))
+			else:
+				_frame(sheet, anim, col, Vector2(x0 + c * 16, y0 + r * 16))
+	for c in 3:
+		var col2 := 0 if c == 0 else (2 if c == 2 else 1)
+		_frame(sheet, "top", col2, Vector2(x0 + 92 + c * 16, y0))
+		_frame(sheet, "bottom", col2, Vector2(x0 + 92 + c * 16, y0 + 16))
+	_frame(sheet, "top", 3, Vector2(x0 + 152, y0))
+	_frame(sheet, "mid", 3, Vector2(x0 + 152, y0 + 16))
+	_frame(sheet, "deep", 3, Vector2(x0 + 152, y0 + 32))
+	_frame(sheet, "bottom", 3, Vector2(x0 + 176, y0))
+	for i in 4:
+		_frame(sheet, "alt", i, Vector2(x0 + 200 + i * 18, y0))
+	_label(Vector2(x0 + 40, y0 + 52), "SLAB")
+	_label(Vector2(x0 + 116, y0 + 36), "LEDGE")
+	_label(Vector2(x0 + 160, y0 + 52), "COLUMN")
+	_label(Vector2(x0 + 184, y0 + 20), "ONE")
+	_label(Vector2(x0 + 234, y0 + 20), "VARIANTS")
+
+## Where a patrolling flyer is `t` s into a loop between x0 and x1: it flies a
+## sine wave, then shows the 2-frame turn tell at each end.
+## Returns [top-left, anim, face right, anim time].
+func _flyer_at(t: float, x0: float, x1: float, y: float) -> Array:
+	var speed := 36.0
+	var leg := (x1 - x0) / speed
+	var tell: float = sh.length("flyer", "turn")
+	var loop := fposmod(t, (leg + tell) * 2.0)
+	var x := x1
+	var anim := "fly"
+	var right := false
+	if loop < leg:
+		x = x1 - loop * speed
+	elif loop < leg + tell:
+		x = x0
+		anim = "turn"
+	elif loop < leg * 2.0 + tell:
+		x = x0 + (loop - leg - tell) * speed
+		right = true
+	else:
+		anim = "turn"
+		right = true
+	return [Vector2(x, y + roundf(sin(x * 0.09) * 9.0)), anim, right, t]
+
+func _page_w3_tiles() -> void:
+	_section(Vector2(8, 16), "GROUND #  MAST PLATFORMS")
+	_ground_demo("ground_w3", 8, 28)
+
+	_section(Vector2(300, 16), "BLOCK =  MAST PANELS")
+	for c in 3:
+		_frame("block_w3", "lip", [0, 2, 3][c], Vector2(300 + c * 16, 28))
+		_frame("block_w3", "stacked", [1, 0, 1][c], Vector2(300 + c * 16, 44))
+	for i in 4:
+		_frame("block_w3", "lip", i, Vector2(360 + i * 18, 28))
+		_frame("block_w3", "stacked", i, Vector2(360 + i * 18, 48))
+	_label(Vector2(324, 64), "STACK")
+	_label(Vector2(394, 68), "PLAIN VENT PIP MAST")
+
+	# ---- wave flyer: frames, then a patrol in a sine wave with a tell at each end
+	_section(Vector2(8, 88), "WAVE FLYER")
+	_row(4, 100, 26, [
+		["FLY", "flyer", "fly", -1], ["TURN", "flyer", "turn", -1], ["STOMP", "flyer", "stomped", 0],
+	])
+	var fl: Array = _flyer_at(clock, 104.0, 212.0, 108.0)
+	sh.draw_anim(self, "flyer", fl[1], fl[3], fl[0], fl[2])
+	for c in 9:
+		_frame("ground_w3", "top", 0 if c == 0 else (2 if c == 8 else 1), Vector2(96 + c * 16, 148))
+	J.spark(self, Vector2(108, 148), 1, 1.0, 1.0, "stand", clock, 1)
+	_label(Vector2(166, 168), "PATROL IN A SINE WAVE")
+
+	# ---- sweep arm: a fire bar of static turning about a riveted hub
+	_section(Vector2(248, 88), "SWEEP ARM")
+	_row(244, 100, 26, [["PIVOT", "sweep_arm", "pivot", -1], ["DOT", "sweep_arm", "dot", -1]])
+	var hub := Vector2(400, 128)
+	var ang := clock * TAU / 3.0
+	for k in range(1, 5):
+		var p := hub + Vector2(cos(ang), sin(ang)) * (k * 8.0)
+		sh.draw_anim(self, "sweep_arm", "dot", clock + k * 0.03, p.floor() - Vector2(8, 8))
+	sh.draw_anim(self, "sweep_arm", "pivot", clock, hub - Vector2(8, 8))
+	_label(Vector2(400, 168), "ONE TURN IN 3 S")
+	# the Spark beside a dot: solid white against a dark core with a white rim
+	J.spark(self, Vector2(262, 148), 1, 1.0, 1.0, "stand", clock, 1)
+	sh.draw_anim(self, "sweep_arm", "dot", clock, Vector2(270, 132))
+	_label(Vector2(276, 152), "SPARK  DOT", DARK)
+
+	# ---- wind frames
+	_section(Vector2(8, 178), "WIND  SIDE, UP, TELL")
+	for i in 4:
+		_frame("wind", "side", i, Vector2(8 + i * 18, 190))
+		_frame("wind", "up", i, Vector2(8 + i * 18, 212))
+	for i in 3:
+		_frame("wind", "gust_tell", i, Vector2(84 + i * 18, 190))
+	_row(80, 212, 26, [["SIDE", "wind", "side", -1], ["UP", "wind", "up", -1]])
+	_label(Vector2(110, 208), "TELL")
+
+	# ---- a wind zone: a breeze, a 0.45 s tell, then a gust. A windsock marks it
+	_section(Vector2(150, 178), "WIND ZONE")
+	var zone := Rect2(150, 190, 128, 40)
+	var wt := fposmod(clock, 3.0)
+	var tell_at := 2.0
+	var tl: float = sh.length("wind", "gust_tell")
+	for i in 7:
+		var row_y := zone.position.y + float((i * 11) % 34)
+		var travel := clock * 60.0
+		if wt >= tell_at + tl:
+			travel += (wt - tell_at - tl) * 140.0
+		var x := zone.end.x - 16.0 - fposmod(i * 37.0 + travel, zone.size.x - 16.0)
+		if wt >= tell_at and wt < tell_at + tl:
+			sh.draw_anim(self, "wind", "gust_tell", wt - tell_at, Vector2(x, row_y))
+		else:
+			sh.draw_anim(self, "wind", "side", clock + i * 0.07, Vector2(x, row_y))
+	for c in 8:
+		_frame("ground_w3", "top", 0 if c == 0 else (2 if c == 7 else 1), Vector2(150 + c * 16, 230))
+	sh.draw_anim(self, "wind_vane", "spin", clock, Vector2(262, 230 - 32))
+	var gust := "BREEZE"
+	if wt >= tell_at + tl:
+		gust = "GUST"
+	elif wt >= tell_at:
+		gust = "TELL"
+	_label(Vector2(214, 250), gust, WHITE if gust == "GUST" else GRAY)
+
+	# ---- an updraft column
+	_section(Vector2(300, 178), "UPDRAFT")
+	for i in 5:
+		var ux := 300.0 + float((i * 7) % 24)
+		var uy := 214.0 - fposmod(i * 13.0 + clock * 50.0, 26.0)
+		sh.draw_anim(self, "wind", "up", clock + i * 0.05, Vector2(ux, uy))
+	for c in 3:
+		_frame("ground_w3", "top", 0 if c == 0 else (2 if c == 2 else 1), Vector2(300 + c * 16, 230))
+
+	# ---- the windsock frames
+	_section(Vector2(372, 178), "WINDSOCK")
+	_row(368, 190, 30, [["SPIN", "wind_vane", "spin", -1], ["STILL", "wind_vane", "still", 0]])
+	for i in 4:
+		_frame("wind_vane", "spin", i, Vector2(430 + (i % 2) * 20, 190 + int(i / 2.0) * 34))
+
+## Backdrop pieces in slot order: never the same piece twice in a row.
+const W3_SLOTS := [0, 3, 2, 1, 3, 0, 2, 3, 1, 2]
+
+func _page_w3_backdrop() -> void:
+	var scroll := clock * 40.0
+	var far := scroll * 0.2
+	var first := int(floorf(far / 96.0))
+	for k in range(first, first + 7):
+		var piece: int = W3_SLOTS[posmod(k, W3_SLOTS.size())]
+		var x := k * 96.0 - far
+		sh.draw_frame(self, "backdrop_w3", "pieces", piece, Vector2(x, 100), false, Color(1, 1, 1, 0.7))
+		_label(Vector2(x + 48, 88), ["MASTS", "DISH", "ROOFTOPS", "PYLONS"][piece], DARK)
+	# a flyer crossing in front, then the deck at 1x
+	var fl: Array = _flyer_at(clock, 40.0, 300.0, 150.0)
+	sh.draw_anim(self, "flyer", fl[1], fl[3], fl[0], fl[2])
+	var near := fposmod(scroll, 16.0)
+	for c in 32:
+		_frame("ground_w3", "top", 1 if c % 7 else 0, Vector2(c * 16 - near, 228))
+		_frame("ground_w3", "mid", 1, Vector2(c * 16 - near, 244))
+	# Spire the rigger on the deck, talking now and then
+	var cell := Vector2(400, 212)
+	var talking := fposmod(clock, 4.0) < 2.2
+	_npc("spire", cell, talking, clock)
+	if talking:
+		_bubble(cell + Vector2(8, -12), "WIND'S UP. CLIP ON.")
+	J.spark(self, Vector2(370, 228), 1, 1.0, 1.0, "stand", clock, 1)
+	var notes := [
+		"AERIALS FAR LAYER.  70% OPACITY, PARALLAX 0.2X",
+		"PIECES ARE 96 WIDE, EDGE TO EDGE. CABLE AND CLOUD LINE JOIN",
+		"MAST TIPS DRAWN LIT. THE GAME TINTS THE GREYS VIOLET",
+	]
+	for i in notes.size():
+		DrawUtil.text(self, Vector2(8, 20 + i * 10), notes[i], GRAY)
+	_section(Vector2(360, 52), "SPIRE THE RIGGER")
+	sh.draw_anim(self, "npc", "spire_idle", clock, Vector2(368, 62))
+	sh.draw_anim(self, "npc", "spire_talk", clock, Vector2(388, 62))
+	sh.draw_anim(self, "npc", "spire_idle", clock, Vector2(408, 62), true)

@@ -29,6 +29,7 @@ import json
 import math
 import sys
 import wave
+from fractions import Fraction
 from pathlib import Path
 
 import numpy as np
@@ -102,6 +103,7 @@ class Voice:
         self.short = np.zeros(ticks, dtype=bool)
         self.scale = None      # loops with lock_phase: tiny pitch trim so each pass ends in phase
         self.restart = None    # loops with lock_phase (noise): restart the shift register every N ticks
+        self.restart_at = 0    # ...counting passes from this tick (a loop that follows an intro)
 
     def put(self, t0: float, dur: float, f0: float, f1: float | None = None, *,
             v0: float = 15, v1: float | None = None, vcurve: float = 1.0,
@@ -235,8 +237,9 @@ def _render_noise(v: Voice) -> np.ndarray:
         # count register steps afresh in each block, so every block gets the same noise
         blk = v.restart * SPT
         n = len(rate)
-        r = np.concatenate([rate, np.zeros(-n % blk)]).reshape(-1, blk) / FS
-        pos = np.cumsum(r, axis=1).ravel()[:n].astype(np.int64)
+        pad = ((-v.restart_at) % v.restart) * SPT       # so a block starts at restart_at
+        r = np.concatenate([np.zeros(pad), rate, np.zeros(-(n + pad) % blk)]).reshape(-1, blk) / FS
+        pos = np.cumsum(r, axis=1).ravel()[pad:pad + n].astype(np.int64)
     short = np.repeat(v.short, SPT)
     bit = np.where(short, LFSR_SHORT[pos % len(LFSR_SHORT)], LFSR_LONG[pos % len(LFSR_LONG)])
     vol = np.repeat(v.vol, SPT) / 15.0
@@ -319,13 +322,40 @@ LOOP_XFADE = 0.08          # loops: the end is blended into the start over this 
 LOOP_SEARCH = 0.005        # loops: look this far either side of the set length for the best seam
 
 
-def finish_loop(x: np.ndarray, length: float, trim_db: float,
-                power: bool = False) -> tuple[np.ndarray, dict]:
-    """Cut a seamless loop out of a steady render. x starts one full loop early (pre-roll)
-    so the filters have settled. The tail past the loop is crossfaded into the head, so the
-    last sample runs straight on into the first. No head ramp or fade-out: those would click.
-    power=True uses an equal-power blend, for loops whose seam is mostly noise: two different
-    stretches of noise blended in a straight line dip by up to 3 dB halfway through."""
+def _pcm_stats(y: np.ndarray) -> tuple[np.ndarray, dict]:
+    pcm = np.clip(np.round(y * 32767), -32768, 32767).astype(np.int16)
+    z = pcm / 32768.0
+    return pcm, {
+        "duration": round(len(pcm) / SR, 3),
+        "peak_dbfs": round(db(float(np.max(np.abs(z)))), 2),
+        "rms_dbfs": round(db(float(np.sqrt(np.mean(z ** 2)))), 2),
+        "loudest_50ms_rms_dbfs": round(db(short_term_max_rms(z)), 2),
+    }
+
+
+def finish_intro_loop(x: np.ndarray, intro: float, length: float, trim_db: float
+                      ) -> tuple[np.ndarray, dict, np.ndarray, dict]:
+    """A loop with a one-off intro in front, as two files. x is the intro followed by at least
+    two passes of the loop. The loop is cut from the second pass exactly as finish_loop cuts
+    it, and the intro is x up to the first pass, at the loop's gain. The intro's last sample
+    runs straight on into the loop's first, so playing one file straight after the other
+    sounds like one piece. The intro's head gets the usual 1 ms ramp. Its end has no fade."""
+    i = int(round(intro * SR))
+    out = _seam_loop(x[i:], length, False)
+    gain = min(10 ** (PEAK_CEIL_DB / 20) / np.max(np.abs(out)),
+               10 ** ((TARGET_ST_DB + trim_db) / 20) / short_term_max_rms(out))
+    head = x[:i].copy()
+    fi = int(0.001 * SR)
+    head[:fi] *= np.linspace(0, 1, fi, endpoint=False) ** 0.5
+    if np.max(np.abs(head)) * gain > 10 ** (PEAK_CEIL_DB / 20):
+        raise ValueError("finish_intro_loop: the intro peaks above the ceiling at the loop's gain")
+    loop_pcm, loop_stats = _pcm_stats(out * gain)
+    intro_pcm, intro_stats = _pcm_stats(head * gain)
+    return intro_pcm, intro_stats, loop_pcm, loop_stats
+
+
+def _seam_loop(x: np.ndarray, length: float, power: bool) -> np.ndarray:
+    """The seam-blending half of finish_loop: x starts one pass early, returns one pass."""
     L = int(round(length * SR))
     xf = int(LOOP_XFADE * SR)
     sr = int(LOOP_SEARCH * SR)
@@ -341,20 +371,23 @@ def finish_loop(x: np.ndarray, length: float, trim_db: float,
     w_in, w_out = (np.sin(w * math.pi / 2), np.cos(w * math.pi / 2)) if power else (w, 1 - w)
     out = seg[:n].copy()
     out[:xf] = seg[:xf] * w_in + seg[n:n + xf] * w_out
+    return out
+
+
+def finish_loop(x: np.ndarray, length: float, trim_db: float,
+                power: bool = False) -> tuple[np.ndarray, dict]:
+    """Cut a seamless loop out of a steady render. x starts one full loop early (pre-roll)
+    so the filters have settled. The tail past the loop is crossfaded into the head, so the
+    last sample runs straight on into the first. No head ramp or fade-out: those would click.
+    power=True uses an equal-power blend, for loops whose seam is mostly noise: two different
+    stretches of noise blended in a straight line dip by up to 3 dB halfway through."""
+    out = _seam_loop(x, length, power)
     gain = min(10 ** (PEAK_CEIL_DB / 20) / np.max(np.abs(out)),
                10 ** ((TARGET_ST_DB + trim_db) / 20) / short_term_max_rms(out))
-    pcm = np.clip(np.round(out * gain * 32767), -32768, 32767).astype(np.int16)
-    y = pcm / 32768.0
-    stats = {
-        "duration": round(len(pcm) / SR, 3),
-        "peak_dbfs": round(db(float(np.max(np.abs(y)))), 2),
-        "rms_dbfs": round(db(float(np.sqrt(np.mean(y ** 2)))), 2),
-        "loudest_50ms_rms_dbfs": round(db(short_term_max_rms(y)), 2),
-    }
-    return pcm, stats
+    return _pcm_stats(out * gain)
 
 
-def lock_phase(s: Sound, length: float) -> dict:
+def lock_phase(s: Sound, length: float, start: float = 0.0) -> dict:
     """Make a loop render the same at the start of every pass, not just nearly the same.
 
     The notes repeat every pass, but the oscillators run on: a pulse or the triangle ends a
@@ -365,27 +398,42 @@ def lock_phase(s: Sound, length: float) -> dict:
     register restarts at every pass. The render then repeats sample for sample, so the seam
     blends identical audio. The run-in pass is also overwritten with a copy of the loop pass
     (notes ringing in from the end included), so what leads into the seam is exactly what
-    leads into it in the game. Returns the pitch trim per voice, in cents."""
+    leads into it in the game. Returns the pitch trim per voice, in cents.
+
+    start > 0 is for a loop with an intro in front (see finish_intro_loop): the passes begin
+    at `start`, the intro is left as it is, and every pass, the first one straight after the
+    intro included, must be written identically."""
     lt = int(round(length * TICK_HZ))
     if lt * SPT % OS or abs(lt / TICK_HZ - length) > 1e-9:
         raise ValueError("lock_phase: loop length must be a whole number of ticks, divisible by 4")
+    s0 = int(round(start * TICK_HZ))
+    if s0 * SPT % OS or abs(s0 / TICK_HZ - start) > 1e-9:
+        raise ValueError("lock_phase: intro length must be a whole number of ticks, divisible by 4")
     n = len(s.p1.vol)
     for name, v in (("p1", s.p1), ("p2", s.p2), ("tri", s.tri), ("noi", s.noi)):
+        if s0:
+            m = n - s0 - lt
+            for arr in (v.freq, v.vol, v.duty, v.short):
+                if not np.array_equal(arr[s0 + lt:], arr[s0:s0 + m]):
+                    raise ValueError(f"lock_phase: {name} does not repeat every {length} s")
+            continue
         m = n - 2 * lt
         for arr in (v.freq, v.vol, v.duty, v.short):
             if not np.array_equal(arr[2 * lt:], arr[lt:lt + m]):
                 raise ValueError(f"lock_phase: {name} does not repeat every {length} s")
             arr[:lt] = arr[lt:2 * lt]
     trims = {}
+    a, b = (s0, s0 + lt) if s0 else (lt, 2 * lt)
     for name, v, div in (("p1", s.p1, 16), ("p2", s.p2, 16), ("tri", s.tri, 32)):
-        f = _snap(v.freq[lt:2 * lt], div)
+        f = _snap(v.freq[a:b], div)
         if v.kind == "tri":
-            f = np.where(v.vol[lt:2 * lt] > 0, f, 0.0)
+            f = np.where(v.vol[a:b] > 0, f, 0.0)
         cycles = float(np.sum(f)) / TICK_HZ
         if cycles >= 1:
             v.scale = round(cycles) / cycles
             trims[name] = round(1200 * math.log2(v.scale), 4)
     s.noi.restart = lt
+    s.noi.restart_at = s0
     return trims
 
 
@@ -418,15 +466,18 @@ SOUNDS: dict[str, dict] = {}
 
 def sfx(name: str, dur: float, category: str, trigger: str, trim_db: float = 0.0,
         fade: float = 0.012, loop: bool = False, power_seam: bool = False,
-        lock: bool = False):
+        lock: bool = False, intro: tuple[str, float, str] | None = None):
     """loop=True: dur is the loop length. The function is called on a longer Sound and must
     fill all of s.dur with a pattern that repeats a whole number of times per loop.
     power_seam=True: blend the loop seam at equal power (for loops that are mostly noise).
-    lock=True: lock the oscillators so every pass renders identically (see lock_phase)."""
+    lock=True: lock the oscillators so every pass renders identically (see lock_phase).
+    intro=(name, length, trigger): a looping sound with a one-off intro in front, written as a
+    second file that plays once and runs straight into the loop. The function writes the intro
+    from 0 and the passes from `length` on (see finish_intro_loop). Needs loop and lock."""
     def deco(fn):
         SOUNDS[name] = dict(fn=fn, dur=dur, category=category, trigger=trigger,
                             trim_db=trim_db, fade=fade, loop=loop, power_seam=power_seam,
-                            lock=lock)
+                            lock=lock, intro=intro)
         return fn
     return deco
 
@@ -541,14 +592,15 @@ def _(s):
     s.tri.put(0.4, 0.2, N("D4"))
 
 
-@sfx("extra_life", 0.95, "pickups", "Player earns a life (100 shards or a 1UP block)", fade=0.05)
+@sfx("extra_life", 1.05, "pickups", "Player earns a life (100 shards or a 1UP block)", fade=0.05)
 def _(s):
-    bpm = 300
-    s.seq(s.p1, 0, bpm, [("A5", 0.5), ("D6", 0.5), ("F#6", 0.5), ("E6", 0.5), ("A6", 0.5),
-                         ("D7", 3)], duty=50, venv=[13, 12, 11, 10], last_decay=0.55)
+    # FIRST LIGHT's hook at a sprint (A D~ D E F#), jumping to a ringing high D
+    bpm = 360
+    s.seq(s.p1, 0, bpm, [("A5", 0.5), ("D6", 1), ("D6", 0.5), ("E6", 0.5), ("F#6", 0.5),
+                         ("D7", 3)], duty=50, venv=[13, 12, 11, 10], last_decay=0.5)
     s.echo(s.p1, s.p2, 0.07, 0.4, duty=25)
     s.tri.put(0, 0.2, N("D4"))
-    s.tri.put(0.25, 0.25, N("A4"))
+    s.tri.put(0.25, 0.2, N("A4"))
     s.tri.put(0.5, 0.2, N("D5"))
 
 
@@ -654,19 +706,20 @@ def _(s):
 
 @sfx("level_clear", 2.7, "jingles", "Level finished (after the mast slide)", fade=0.12)
 def _(s):
+    # FIRST LIGHT's hook in double time in D (A D~ D E F#~ D), then up to a held high D
     bpm = 150
-    mel = [("A4", 0.25), ("D5", 0.25), ("F#5", 0.25), ("A5", 0.25), ("B5", 0.5), ("A5", 0.5),
-           ("F#5", 0.25), ("G5", 0.25), ("A5", 0.5), ("E5", 0.5), ("D6", 2.0)]
+    mel = [("A4", 0.25), ("D5", 0.5), ("D5", 0.25), ("E5", 0.25), ("F#5", 0.5), ("D5", 0.25),
+           ("A5", 0.5), ("F#5", 0.25), ("A5", 0.25), ("D6", 2.0)]
     s.seq(s.p1, 0, bpm, mel, duty=25, venv=[14, 13, 12, 11, 11, 10], last_decay=1.05)
-    har = [("F#4", 0.25), ("A4", 0.25), ("D5", 0.25), ("F#5", 0.25), ("G5", 0.5), ("F#5", 0.5),
-           ("D5", 0.25), ("E5", 0.25), ("F#5", 0.5), ("C#5", 0.5), ("A5", 2.0)]
+    har = [("F#4", 0.25), ("A4", 0.5), ("A4", 0.25), ("C#5", 0.25), ("D5", 0.5), ("A4", 0.25),
+           ("F#5", 0.5), ("D5", 0.25), ("F#5", 0.25), ("A5", 2.0)]
     s.seq(s.p2, 0, bpm, har, duty=12, venv=[9, 9, 8, 8, 7], last_decay=1.0)
-    bass = [("D3", 1), ("G2", 1), ("D3", 0.5), ("A2", 0.5), ("D3", 1.0)]
+    bass = [("D3", 1), ("A2", 1), ("G2", 0.5), ("A2", 0.5), ("D3", 2.0)]
     s.seq(s.tri, 0, bpm, bass, gate=0.8, last_decay=0.8)
     beat = 60 / bpm
-    for i in range(10):
+    for i in range(6):
         s.noi.put(i * beat / 2, 0.03, 1, venv=[8 if i % 2 == 0 else 5, 3, 1])
-    s.noi.put(4 * beat, 0.25, 4, 9, venv=[12, 10, 8, 6, 5, 4, 3, 2, 1], glide="lin")
+    s.noi.put(3 * beat, 0.25, 4, 9, venv=[12, 10, 8, 6, 5, 4, 3, 2, 1], glide="lin")
 
 
 @sfx("world_clear", 4.6, "jingles", "World finished: the Gate is lit", fade=0.2)
@@ -698,14 +751,15 @@ def _(s):
 
 @sfx("game_over", 3.1, "jingles", "Last life lost (restart the world at level 1)", fade=0.2)
 def _(s):
-    bpm = 96
-    lead = [("D5", 0.5), ("C5", 0.5), ("Bb4", 0.5), ("A4", 0.5), ("G4", 0.75), ("F4", 0.25),
-            ("E4", 0.5), ("D4", 2.0)]
+    # FIRST LIGHT's hook slowed and turned minor (A D~ D E F~ E), sinking to a low D
+    bpm = 110
+    lead = [("A4", 0.5), ("D5", 1), ("D5", 0.5), ("E5", 0.5), ("F5", 1), ("E5", 0.5),
+            ("D5", 2.0)]
     s.seq(s.p1, 0, bpm, lead, duty=50, venv=[12, 11, 11, 10, 10, 9, 9, 9], vib=(5, 0.1),
-          last_decay=1.25)
+          last_decay=0.9)
     s.echo(s.p1, s.p2, 0.12, 0.35, duty=12)
-    bass = [("D3", 1), ("G2", 1), ("A2", 1), ("D2", 2.0)]
-    s.seq(s.tri, 0, bpm, bass, gate=0.9, last_decay=1.2)
+    bass = [("D3", 1.5), ("Bb2", 1.5), ("A2", 1), ("D2", 2.0)]
+    s.seq(s.tri, 0, bpm, bass, gate=0.9, last_decay=0.9)
     s.noi.put(0, 0.3, 12, 14, venv=[6, 5, 4, 3, 2, 1], glide="lin")
 
 
@@ -729,7 +783,7 @@ def _(s):
     s.echo(s.p1, s.p2, 0.03, 0.35, duty=12)
 
 
-@sfx("menu_move", 0.05, "ui", "Menu cursor moves", trim_db=-5.0)
+@sfx("menu_move", 0.05, "ui", "Menu cursor moves", trim_db=-8.0)
 def _(s):
     s.p1.put(0, 0.045, N("A6"), venv=[12, 8, 4], duty=12)
 
@@ -1414,14 +1468,15 @@ def _(s):
 
 def _tune(text: str) -> list[tuple[str | None, float]]:
     """Note text to (note, beats) pairs for Sound.seq. 'F#5:1.5' is a note and its length in
-    beats, '-:1' is a rest, and '|' bar lines are checked: every bar must hold 4 beats."""
+    beats, '-:1' is a rest, and '|' bar lines are checked: every bar must hold 4 beats.
+    Lengths can also be fractions, so 'C5:1/3' is a triplet eighth (used for 12/8)."""
     out: list[tuple[str | None, float]] = []
     for i, bar in enumerate(text.split("|")):
         notes = [tok.split(":") for tok in bar.split()]
-        beats = sum(float(b) for _, b in notes)
-        if notes and abs(beats - 4) > 1e-9:
-            raise ValueError(f"_tune: bar {i + 1} holds {beats} beats, not 4")
-        out += [(None if n == "-" else n, float(b)) for n, b in notes]
+        beats = sum(Fraction(b) for _, b in notes)
+        if notes and beats != 4:
+            raise ValueError(f"_tune: bar {i + 1} holds {float(beats)} beats, not 4")
+        out += [(None if n == "-" else n, float(Fraction(b))) for n, b in notes]
     return out
 
 
@@ -1431,20 +1486,22 @@ VILLAGE_LOOP = VILLAGE_BARS * 4 * 60 / VILLAGE_BPM          # 38.4 s
 
 # chord per bar ("G+A" is half a bar each), with the bass (root, fifth) and the three
 # notes of the broken chord on pulse 2
-VILLAGE_CHORDS = "D Bm G A  D Bm G+A D  G A F#m Bm  G A D A".split()
+VILLAGE_CHORDS = "D Bm Em A  D Bm G+A D  G A F#m Bm  D Bm G A".split()
 VILLAGE_BASS = {"D": ("D3", "A2"), "Bm": ("B2", "F#2"), "G": ("G2", "D3"), "A": ("A2", "E2"),
-                "F#m": ("F#2", "C#3")}
+                "F#m": ("F#2", "C#3"), "Em": ("E2", "B2")}
 VILLAGE_ARP = {"D": ("D4", "F#4", "A4"), "Bm": ("B3", "D4", "F#4"), "G": ("G3", "B3", "D4"),
-               "A": ("A3", "C#4", "E4"), "F#m": ("F#3", "A3", "C#4")}
-VILLAGE_MELODY = """
-A4:.5 D5:.5 F#5:1.5 E5:.5 D5:1 | B4:.5 D5:.5 F#5:1 E5:1 D5:1 |
-B4:.5 D5:.5 G5:1.5 F#5:.5 E5:1 | E5:1.5 F#5:.5 E5:1 -:1 |
-A4:.5 D5:.5 F#5:1.5 E5:.5 D5:1 | B4:.5 D5:.5 F#5:1 A5:1 F#5:1 |
+               "A": ("A3", "C#4", "E4"), "F#m": ("F#3", "A3", "C#4"), "Em": ("E3", "G3", "B3")}
+# A lullaby hook (A D F# E D) that leans over the beat, sung twice on neighbouring chords,
+# then an answer. The middle quotes FIRST LIGHT's hook on G and then on A, and the lullaby
+# comes back for the last four bars.
+VILLAGE_HOOK = """
+A4:.5 D5:1 F#5:1 E5:.5 D5:1 | B4:.5 D5:1 F#5:1 E5:.5 D5:1 |"""
+VILLAGE_MELODY = VILLAGE_HOOK + """
+B4:.5 D5:1 G5:1 F#5:.5 E5:1 | E5:1.5 F#5:.5 E5:1 -:1 |""" + VILLAGE_HOOK + """
 G5:1 F#5:.5 E5:.5 E5:1 C#5:1 | D5:3 -:1 |
-B5:1.5 A5:.5 G5:1 D5:1 | A5:1.5 G5:.5 F#5:1 E5:1 |
-F#5:1.5 E5:.5 C#5:1 A4:1 | B4:1 D5:1 F#5:2 |
-G5:1.5 F#5:.5 E5:1 D5:1 | E5:1 F#5:.5 G5:.5 A5:2 |
-F#5:1.5 E5:.5 D5:2 | E5:1.5 D5:.5 C#5:1 -:1
+D5:.5 G5:1 G5:.5 A5:.5 B5:1 G5:.5 | E5:.5 A5:1 A5:.5 B5:.5 C#6:1 A5:.5 |
+F#5:1.5 E5:.5 C#5:1 A4:1 | B4:1 D5:1 F#5:2 |""" + VILLAGE_HOOK + """
+B4:.5 D5:1 G5:1 F#5:.5 E5:1 | E5:1.5 D5:.5 C#5:1 -:1
 """
 
 
@@ -1494,7 +1551,9 @@ def _(s):
 # ---- level music: one loop per level, written as note text like the village theme.
 #
 # World 1 tracks all quote the opening of the FIRST LIGHT theme (m_1_1): scale steps
-# 5 1 1 2 3 1 in the rhythm short short short short long long (in G: D G G A B G).
+# 5 1 1 2 3 1 in the rhythm short LONG short short LONG short (in G: D G G A B G).
+# Every loop states its own hook at least three times a pass and keeps its lead within an
+# octave and a fifth, no higher than E6 (tools/audio/music_check.py measures this).
 # World 2 tracks all share the Switchyard motif: 5 b6 5 8 b7 5 in the rhythm
 # short short short long short long (in A minor: E F E A G E).
 # Every tempo is 3600 / n BPM for a whole number n, so a sixteenth note lasts exactly n
@@ -1521,15 +1580,16 @@ def _tone(chord: str, tok: str, lo: int) -> str:
     root, kind = chord[:i], chord[i:]
     r = lo + (_midi(root + "4") - lo) % 12
     third = 3 if kind in ("m", "dim") else 4
-    semis = {"R": 0, "3": third, "5": 6 if kind == "dim" else 7, "7": 10, "8": 12,
-             "10": 12 + third, "12": 19}[tok]
+    semis = {"R": 0, "2": 2, "3": third, "4": 5, "5": 6 if kind == "dim" else 7, "7": 10,
+             "8": 12, "9": 14, "10": 12 + third, "12": 19}[tok]
     return _note(r + semis - (12 if down else 0))
 
 
 def _comp(chords: str, pattern: str | list[str], base: str) -> list[tuple[str | None, float]]:
     """A part that follows the chords. pattern is one bar of tokens, used for every bar, or a
     list with one bar per chord. Tokens: R 3 5 7 8 10 12 are the root, third, fifth, flat
-    seventh, octave, and the third and fifth an octave up. '_' in front drops a tone an
+    seventh, octave, and the third and fifth an octave up. 2, 4 and 9 are the second, fourth
+    and ninth. '_' in front drops a tone an
     octave, '-' is a rest, a plain note name plays as written. Each token takes the chord
     sounding when it starts ('G+D' is half a bar of each). Roots sit at or above `base`."""
     bars = chords.split()
@@ -1581,19 +1641,25 @@ KIT = {
     "z": (1, [9, 7, 8, 6, 7, 5, 4, 3, 2, 1], False),    # burst of static (a channel flip)
     "c": (2, dec(10, 45, 0.6), False),                  # crash, lightning
     "t": (12, dec(7, 60, 0.7), False),                  # far thunder
+    "f": (8, [3, 6, 4, 2, 1], False),                   # a flyer's wingbeat
+    "g": (6, [2, 4, 6, 8, 8, 7, 5, 3, 2, 1], False),    # a gust's whoosh
+    "i": (1, [5, 2], True),                             # clock tick
+    "o": (4, [6, 2], True),                             # clock tock
 }
 
 
-def _drums(s: Sound, o: float, bpm: float, bars: list[str], level: float = 1.0) -> None:
-    """One character per sixteenth note, 16 to a bar, '.' for nothing (see KIT)."""
-    step = 15 / bpm
+def _drums(s: Sound, o: float, bpm: float, bars: list[str], level: float = 1.0,
+           steps: int = 16) -> None:
+    """One character per sixteenth note, 16 to a bar, '.' for nothing (see KIT). steps=12
+    gives 12 to a bar instead, one per triplet eighth, for 12/8."""
+    step = 15 / bpm * 16 / steps
     for b, pat in enumerate(bars):
-        if len(pat) != 16:
-            raise ValueError(f"_drums: bar {b + 1} has {len(pat)} steps, not 16")
+        if len(pat) != steps:
+            raise ValueError(f"_drums: bar {b + 1} has {len(pat)} steps, not {steps}")
         for i, ch in enumerate(pat):
             if ch != ".":
                 p, env, short = KIT[ch]
-                s.noi.put(o + (b * 16 + i) * step, len(env) * FRAME / TICK_HZ, p, venv=env,
+                s.noi.put(o + (b * steps + i) * step, len(env) * FRAME / TICK_HZ, p, venv=env,
                           level=level, short=short)
 
 
@@ -1632,16 +1698,16 @@ ARP_ENV = [5, 4, 3, 2]
 
 TRAIN_N, TRAIN_BARS = 30, 16
 TRAIN_LOOP = _loop_len(TRAIN_BARS, TRAIN_N)                  # 32.0 s
-TRAIN_CHORDS = "C Am F G  C Am Dm G  F G Em Am  Dm G C G"
-TRAIN_MELODY = """
-G4:.5 C5:.5 C5:.5 D5:.5 E5:1 C5:1 | E5:.5 -:.25 E5:.25 D5:.5 C5:.5 A4:1 -:1 |
-A4:.5 C5:.5 F5:.5 A5:.5 G5:.5 F5:.5 E5:.5 D5:.5 | D5:1 B4:.5 G4:.5 -:2 |
-G4:.5 C5:.5 C5:.5 D5:.5 E5:1 G5:1 | A5:.5 G5:.5 E5:.5 C5:.5 D5:.5 E5:.5 C5:1 |
-F5:.5 E5:.5 D5:.5 F5:.5 A5:1 F5:1 | G5:1 D5:.5 B4:.5 -:2 |
-C6:.5 A5:.5 F5:.5 A5:.5 C6:.5 -:.5 A5:1 | B5:.5 G5:.5 D5:.5 G5:.5 B5:.5 -:.5 G5:1 |
-G5:.5 E5:.5 B4:.5 E5:.5 G5:.5 A5:.5 B5:1 | C6:1 B5:.5 A5:.5 E5:2 |
-F5:.5 -:.25 F5:.25 E5:.5 D5:.5 A5:1 F5:1 | G5:.5 -:.25 G5:.25 F5:.5 D5:.5 B4:1 G4:1 |
-C5:.5 E5:.5 G5:.5 C6:.5 B5:.5 G5:.5 E5:.5 D5:.5 | D5:.5 B4:.5 G4:1 -:1 D4:.5 E4:.25 F4:.25
+TRAIN_CHORDS = "C G Am F+G  C G F+G C  F G Em G  C G F+G C"
+# The FIRST LIGHT hook in C, then a hopping answer with rests that comes back every other bar.
+TRAIN_HOOK = """
+G4:.5 C5:1 C5:.5 D5:.5 E5:1 C5:.5 | D5:.5 -:.5 B4:.5 G4:.5 -:.5 B4:.5 D5:1 |"""
+TRAIN_MELODY = TRAIN_HOOK + """
+A4:.5 C5:1 C5:.5 D5:.5 E5:1 A5:.5 | G5:.5 -:.5 F5:.5 E5:.5 -:.5 D5:.5 D5:1 |""" + TRAIN_HOOK + """
+A5:.5 -:.5 G5:.5 F5:.5 -:.5 E5:.5 D5:1 | C5:2 -:2 |
+F5:1.5 E5:.5 D5:.5 C5:.5 A4:1 | G5:1.5 F5:.5 E5:.5 D5:.5 B4:1 |
+E5:1.5 D5:.5 C5:.5 B4:.5 G4:1 | D5:.5 E5:.5 F5:.5 G5:.5 B5:1 -:1 |""" + TRAIN_HOOK + """
+A5:.5 -:.5 G5:.5 F5:.5 -:.5 E5:.5 D5:1 | C5:2 -:2
 """
 
 
@@ -1653,9 +1719,9 @@ def _(s):
     bpm = _bpm(TRAIN_N)
     melody = _tune(TRAIN_MELODY)
     chop = "-:.5 5:.5 -:.5 8:.5 -:.5 5:.5 -:.5 8:.5"
-    answer = "-:.5 5:.5 -:.5 8:.5 G5:.5 A5:.5 B5:.5 D6:.5"
-    # pulse 2 plays the off-beat "pah" and answers the melody in the gaps at bars 4 and 8
-    p2 = _comp(TRAIN_CHORDS, [answer if b in (3, 7) else chop for b in range(TRAIN_BARS)], "C4")
+    answer = "-:.5 5:.5 -:.5 8:.5 5:.5 8:.5 10:.5 12:.5"
+    # pulse 2 plays the off-beat "pah" and answers the melody in the gaps at bars 8 and 16
+    p2 = _comp(TRAIN_CHORDS, [answer if b in (7, 15) else chop for b in range(TRAIN_BARS)], "C4")
     bass = _comp(TRAIN_CHORDS, "R:.75 8:.25 5:.5 8:.5 R:.75 8:.25 5:.5 8:.5", "E2")
     beat = "k.h.s.h.k.k.s.h."
     drums = [beat] * 7 + ["k.h.s.h.k.s.s.ss"] + [beat] * 7 + ["k.h.s.h.s.s.ssss"]
@@ -1671,29 +1737,27 @@ def _(s):
 
 
 # ---- m_1_1 FIRST LIGHT: the main theme. G major, 150 BPM, 24 bars (A, B, A again).
+# The hook is the game's signature: scale steps 5 1 1 2 3 1 (D G G A B G) in the rhythm
+# short LONG short short LONG short, so two notes in every bar land off the beat and hold
+# across it. The answer bar keeps the same rhythm. A states the hook four times, B is a
+# slower falling line for contrast, and A comes back unchanged so the hook returns right away.
 
 FL_N, FL_BARS = 24, 24
 FL_LOOP = _loop_len(FL_BARS, FL_N)                           # 38.4 s
-FL_CHORDS = ("G D Em C  G D C D    Em C G D  Em C Am D    "
-             "G D Em C  G D C+D G+D")
-FL_MELODY_A = """
-D5:.5 G5:.5 G5:.5 A5:.5 B5:1 G5:1 | A5:.5 B5:.5 A5:.5 F#5:.5 D5:2 |
-E5:.5 G5:.5 G5:.5 A5:.5 B5:1 E6:1 | D6:1 C6:.5 B5:.5 G5:2 |
-D5:.5 G5:.5 G5:.5 A5:.5 B5:1 D6:1 | C6:.5 B5:.5 A5:.5 B5:.5 A5:1 F#5:1 |
-G5:.5 A5:.5 G5:.5 E5:.5 C5:1 E5:1 | D5:1.5 E5:.5 F#5:1 A5:1
-"""
+FL_CHORDS = ("G D Em C+D  G D C+D G    Em C Am D  Em C Am D    "
+             "G D Em C+D  G D C+D G+D")
+FL_HOOK = """
+D5:.5 G5:1 G5:.5 A5:.5 B5:1 G5:.5 | A5:.5 B5:1 A5:.5 F#5:.5 D5:1.5 |
+E5:.5 G5:1 G5:.5 A5:.5 B5:1 E6:.5 | D6:.5 C6:1 B5:.5 A5:.5 B5:.5 A5:1 |
+D5:.5 G5:1 G5:.5 A5:.5 B5:1 G5:.5 | A5:.5 B5:1 A5:.5 F#5:.5 D5:1.5 |
+E6:.5 C6:1 A5:.5 G5:.5 A5:1 F#5:.5 |"""
+FL_MELODY_A = FL_HOOK + " G5:2 -:2"
 FL_MELODY_B = """
-B4:.5 E5:1 E5:.5 F#5:.5 G5:1 -:.5 | E5:.5 G5:1 A5:.5 G5:2 |
-D5:.5 G5:1 G5:.5 A5:.5 B5:1 -:.5 | A5:1 F#5:1 D5:2 |
-B4:.5 E5:1 E5:.5 F#5:.5 G5:1 B5:.5 | C6:1 B5:.5 A5:.5 G5:1 E5:1 |
-A5:1.5 G5:.5 F#5:.5 E5:.5 C6:1 | B5:1 A5:1 F#5:1 A5:1
+B5:1.5 A5:.5 G5:1 E5:1 | G5:1.5 F#5:.5 E5:1 C5:1 | A5:1.5 G5:.5 E5:1 C5:1 | F#5:1.5 G5:.5 A5:2 |
+B5:1.5 A5:.5 G5:1 E5:1 | G5:1.5 F#5:.5 E5:1 C5:1 | C6:1.5 B5:.5 A5:1 E5:1 |
+F#5:.5 G5:.5 A5:.5 B5:.5 C6:1 -:1
 """
-FL_MELODY_C = """
-D5:.5 G5:.5 G5:.5 A5:.5 B5:1 G5:1 | A5:.5 B5:.5 A5:.5 F#5:.5 D5:2 |
-E5:.5 G5:.5 G5:.5 A5:.5 B5:1 E6:1 | D6:1 C6:.5 B5:.5 C6:1 E6:1 |
-D6:1.5 B5:.5 G5:1 B5:1 | C6:.5 B5:.5 A5:.5 B5:.5 A5:1 F#5:1 |
-E5:.5 G5:.5 C6:1 B5:.5 A5:.5 F#5:1 | G5:2 -:1 B4:.5 C5:.5
-"""
+FL_MELODY_C = FL_HOOK + " G5:2 -:1 B4:.5 C5:.5"
 
 
 @sfx("m_1_1", FL_LOOP, "music",
@@ -1735,23 +1799,22 @@ def _(s):
 
 BONUS_N, BONUS_BARS = 20, 16
 BONUS_LOOP = _loop_len(BONUS_BARS, BONUS_N)                  # 21.33 s
-BONUS_CHORDS = "E C#m A B  E C#m F#m B  A B G#m C#m  A B E B"
-BONUS_MELODY = """
-B5:.5 G#5:.5 B5:.5 E6:.5 D#6:.5 E6:.5 B5:1 | G#5:.5 E5:.5 G#5:.5 C#6:.5 B5:1 G#5:1 |
-A5:.5 C#6:.5 E6:.5 C#6:.5 B5:.5 A5:.5 F#5:1 | F#5:.5 G#5:.5 A5:.5 B5:.5 -:2 |
-B4:.5 E5:.5 E5:.5 F#5:.5 G#5:1 E5:1 | B4:.5 E5:.5 E5:.5 F#5:.5 G#5:1 C#6:1 |
-A5:.5 G#5:.5 F#5:.5 E5:.5 F#5:.5 A5:.5 C#6:1 | B5:1 A5:.5 F#5:.5 D#5:2 |
-E6:.5 -:.5 C#6:.5 -:.5 A5:.5 C#6:.5 E6:1 | D#6:.5 -:.5 B5:.5 -:.5 F#5:.5 B5:.5 D#6:1 |
-B5:.5 D#6:.5 G#6:.5 D#6:.5 B5:.5 G#5:.5 D#5:1 | E5:.5 G#5:.5 C#6:.5 E6:.5 D#6:1 C#6:1 |
-C#6:.5 B5:.5 A5:.5 B5:.5 C#6:1 E6:1 | D#6:.5 C#6:.5 B5:.5 C#6:.5 D#6:1 F#6:1 |
-E6:.5 B5:.5 G#5:.5 B5:.5 E6:.5 -:.5 E6:.5 -:.5 |
-D#6:.25 E6:.25 D#6:.25 C#6:.25 B5:1 -:1 F#5:.5 A5:.5
-"""
+BONUS_CHORDS = "E C#m A B  E C#m F#m+B E  A B G#m B  E C#m F#m+B E"
+# The hook climbs three steps and jumps to the fifth, held over the beat; it comes back a
+# fourth higher in bar 3. The middle is repeated sparkle notes.
+BONUS_HOOK = """
+E5:.5 F#5:.5 G#5:.5 B5:1 G#5:.5 B5:1 | C#6:.5 B5:.5 G#5:.5 E5:1 F#5:.5 G#5:1 |"""
+BONUS_END = """
+F#5:.5 A5:.5 C#6:.5 B5:1 A5:.5 F#5:.5 D#5:.5 | E5:2 -:2 |"""
+BONUS_MELODY = BONUS_HOOK + """
+A5:.5 B5:.5 C#6:.5 E6:1 C#6:.5 E6:1 | D#6:.5 C#6:.5 B5:.5 F#5:1 D#5:.5 F#5:1 |"""     + BONUS_HOOK + BONUS_END + """
+C#6:.5 -:.5 C#6:.5 -:.5 B5:.5 C#6:.5 A5:1 | B5:.5 -:.5 B5:.5 -:.5 A5:.5 B5:.5 F#5:1 |
+G#5:.5 -:.5 G#5:.5 -:.5 F#5:.5 G#5:.5 D#5:1 | F#5:.5 G#5:.5 A5:.5 B5:.5 C#6:.5 D#6:.5 -:1 |"""     + BONUS_HOOK + BONUS_END
 
 
 @sfx("m_1_1_bonus", BONUS_LOOP, "music",
      "Level 1-1 bonus room music, on the Music bus. Short, playful and sparkly, E major, "
-     "180 BPM, 16 bars; bars 5 and 6 quote FIRST LIGHT. LOOPS (the file loops by itself in "
+     "180 BPM, 16 bars; a hook that climbs to the fifth, sparkle notes in the middle. LOOPS (the file loops by itself in "
      "Godot, no click at the seam)", trim_db=2.0, loop=True, lock=True)
 def _(s):
     bpm = _bpm(BONUS_N)
@@ -1778,26 +1841,24 @@ def _(s):
 LG_N, LG_BARS = 25, 24
 LG_LOOP = _loop_len(LG_BARS, LG_N)                           # 40.0 s
 LG_CHORDS = ("Em Em+F C B  Em Em+F Am B    C D Em Em  C D B B    "
-             "Em Em+F C B  Am B Em B")
-LG_MELODY = """
--:.5 B4:.5 E5:.5 E5:.5 F#5:.5 G5:1 E5:.5 | B5:.75 A5:.25 G5:.5 F#5:.5 F5:.75 E5:.25 C5:1 |
-E5:.5 G5:.5 -:.25 G5:.25 A5:.5 G5:.75 E5:.25 C5:1 | D#5:.75 F#5:.75 B5:.5 A5:.75 F#5:.75 D#5:.5 |
--:.5 B4:.5 E5:.5 E5:.5 F#5:.5 G5:1 B5:.5 | E6:.75 D6:.25 B5:.5 G5:.5 A5:.75 G5:.25 F5:1 |
-E5:.5 A5:.5 -:.25 A5:.25 C6:.5 B5:.75 A5:.25 E5:1 | F#5:.75 A5:.75 D#6:.5 C6:.75 B5:.75 A5:.5 |
-G5:.5 F#5:.25 G5:.25 E5:1 -:.5 C5:.5 E5:.5 G5:.5 | A5:.5 G5:.25 A5:.25 F#5:1 -:.5 D5:.5 F#5:.5 A5:.5 |
-B5:1.5 A5:.25 G5:.25 F#5:.5 E5:.5 D#5:.5 E5:.5 | B4:.75 G4:.75 E4:.5 -:2 |
-G5:.5 F#5:.25 G5:.25 E5:1 -:.5 C6:.5 B5:.5 G5:.5 | A5:.5 G5:.25 A5:.25 F#5:1 -:.5 D6:.5 C6:.5 A5:.5 |
-B5:.75 A5:.75 F#5:.5 D#5:.75 C5:.75 B4:.5 | D#5:.25 E5:.25 F#5:.25 A5:.25 -:1 B4:.5 -:.5 B4:.5 -:.5 |
--:.5 B4:.5 E5:.5 E5:.5 F#5:.5 G5:1 E5:.5 | B5:.75 A5:.25 G5:.5 F#5:.5 F5:.75 E5:.25 C5:1 |
-E5:.5 G5:.5 -:.25 G5:.25 A5:.5 G5:.75 E5:.25 C5:1 | D#5:.75 F#5:.75 B5:.5 A5:.75 F#5:.75 D#5:.5 |
-E5:.5 A5:.5 -:.25 A5:.25 C6:.5 B5:.75 A5:.25 E5:1 | F#5:.75 A5:.75 D#6:.5 C6:.75 B5:.75 A5:.5 |
-G5:.75 F#5:.75 E5:.5 B4:.75 G4:.75 E4:.5 | F#4:.25 G4:.25 A4:.25 B4:.25 D#5:.5 F#5:.5 A5:.5 -:1.5
-"""
+             "Em Em+F C B  Em Em+F Am B")
+# The FIRST LIGHT notes (B E E F# G E) knocked loose: grouped 3+3+2 sixteenths, twice a bar.
+# The middle drops to short two-bar cries with gaps, while the floor crumbles in the drums.
+LG_A = """
+B4:.75 E5:.75 E5:.5 F#5:.75 G5:.75 E5:.5 | B5:.75 A5:.75 G5:.5 F5:.75 E5:1.25 |
+E5:.75 G5:.75 A5:.5 G5:.75 E5:.75 C5:.5 | D#5:.75 F#5:.75 A5:.5 B5:2 |
+B4:.75 E5:.75 E5:.5 F#5:.75 G5:.75 E5:.5 | B5:.75 A5:.75 G5:.5 F5:.75 E5:1.25 |
+A5:.75 C6:.75 B5:.5 A5:.75 E5:.75 C5:.5 | F#5:.75 A5:.75 D#6:.5 C6:.75 B5:.75 A5:.5 |"""
+LG_MELODY = LG_A + """
+G5:.5 F#5:.25 G5:.25 E5:1 -:2 | A5:.5 G5:.25 A5:.25 F#5:1 -:2 |
+B5:.5 A5:.25 B5:.25 G5:1 -:1 E5:.5 F#5:.5 | G5:1.5 F#5:.5 E5:1 -:1 |
+G5:.5 F#5:.25 G5:.25 E5:1 -:2 | A5:.5 G5:.25 A5:.25 F#5:1 -:2 |
+B5:.5 A5:.25 B5:.25 F#5:1 -:1 D#5:.5 F#5:.5 | F#5:1 -:1 B4:.5 -:.5 B4:.5 -:.5 |""" + LG_A
 
 
 @sfx("m_1_2", LG_LOOP, "music",
      "Level 1-2 LOOSE GROUND music, on the Music bus. Nervous and off-balance, E minor, "
-     "144 BPM, 24 bars; opens with the FIRST LIGHT figure a half-beat late. LOOPS (the file "
+     "144 BPM, 24 bars; opens with the FIRST LIGHT notes knocked loose into 3+3+2. LOOPS (the file "
      "loops by itself in Godot, no click at the seam)", trim_db=2.4, loop=True, lock=True)
 def _(s):
     bpm = _bpm(LG_N)
@@ -1824,24 +1885,24 @@ def _(s):
 
 PR_N, PR_BARS = 32, 20
 PR_LOOP = _loop_len(PR_BARS, PR_N)                           # 42.67 s
-PR_CHORDS = "Cm Cm Ab Bb  Cm Cm Ab G  Fm Fm Cm Cm  Ab Bb G G  Cm Ab Fm G"
-PR_MELODY = """
+PR_CHORDS = "Cm Cm Ab Bb  Cm Cm Ab G  Fm Fm Cm Cm  Cm Cm Ab G  Cm Ab Fm G"
+# A stamping repeated-note hook (C C Eb, then a falling three) with a bar of silence after
+# each, like a press between strokes. FIRST LIGHT (G C C D Eb C) closes the loop in minor.
+PR_HOOK = """
 C5:.75 C5:.75 Eb5:.5 -:.5 G5:.5 F5:.5 Eb5:.5 | D5:.75 Eb5:.75 C5:.5 -:2 |
-C5:.75 C5:.75 Eb5:.5 -:.5 Ab5:.5 G5:.5 F5:.5 | G5:.75 F5:.75 D5:.5 -:1 Bb4:.5 D5:.5 |
-G4:.5 C5:.5 C5:.5 D5:.5 Eb5:1 C5:1 | G5:.75 G5:.75 F5:.5 Eb5:.5 D5:.5 C5:1 |
-Eb5:.5 Ab5:.5 C6:.5 Ab5:.5 G5:.75 F5:.75 Eb5:.5 | D5:.75 G5:.75 B5:.5 -:1 G4:.5 B4:.5 |
+C5:.75 C5:.75 Eb5:.5 -:.5 Ab5:.5 Eb5:.5 F5:.5 |"""
+PR_MELODY = PR_HOOK + """ G5:.75 F5:.75 D5:.5 -:2 |""" + PR_HOOK + """ G5:.75 F5:.75 D5:.5 B4:.5 -:1.5 |
 Ab5:1 -:.25 Ab5:.25 G5:.25 F5:.25 C5:1 F5:1 | Ab5:.5 G5:.5 F5:.5 Eb5:.5 F5:2 |
-G5:1 -:.25 G5:.25 F5:.25 Eb5:.25 C5:1 Eb5:1 | D5:.5 Eb5:.5 D5:.5 C5:.5 G4:2 |
-C6:.75 C6:.75 Bb5:.5 Ab5:.75 G5:.75 Eb5:.5 | D6:.75 D6:.75 C6:.5 Bb5:.75 F5:.75 D5:.5 |
-B5:.75 B5:.75 G5:.5 D5:.75 B4:.75 G4:.5 | -:2 D5:.25 D5:.25 D5:.5 F5:.5 B4:.5 |
-G4:.5 C5:.5 C5:.5 D5:.5 Eb5:1 G5:1 | Ab5:.75 G5:.75 Eb5:.5 C5:2 |
+G5:1 -:.25 G5:.25 F5:.25 Eb5:.25 C5:1 Eb5:1 | D5:.5 Eb5:.5 D5:.5 C5:.5 G4:2 |""" + PR_HOOK + """
+G5:.75 F5:.75 D5:.5 -:2 |
+G4:.5 C5:1 C5:.5 D5:.5 Eb5:1 C5:.5 | Eb5:.5 F5:1 Eb5:.5 C5:.5 Ab4:1.5 |
 F5:.75 Ab5:.75 C6:.5 Bb5:.75 Ab5:.75 F5:.5 | G5:.75 D5:.75 B4:.5 -:1 G4:.5 -:.5
 """
 
 
 @sfx("m_1_3", PR_LOOP, "music",
      "Level 1-3 THE PRESSES music, on the Music bus. Mechanical and syncopated over a steady "
-     "thud, C minor, 112.5 BPM, 20 bars; bars 5 and 17 quote FIRST LIGHT. LOOPS (the file "
+     "thud, C minor, 112.5 BPM, 20 bars; a stamping hook, FIRST LIGHT in minor at the end. LOOPS (the file "
      "loops by itself in Godot, no click at the seam)", trim_db=3.2, loop=True, lock=True)
 def _(s):
     bpm = _bpm(PR_N)
@@ -1869,27 +1930,29 @@ def _(s):
 
 GT_N, GT_BARS = 22, 24
 GT_LOOP = _loop_len(GT_BARS, GT_N)                           # 35.2 s
-GT_CHORDS = ("Dm Dm Bb C  Dm Dm Bb A    Gm Gm Dm Dm  Bb C A A    "
-             "Bb C Dm Dm  Bb C A A")
-GT_MELODY = """
-D5:1.5 A4:.5 D5:.5 E5:.5 F5:1 | E5:.5 F5:.5 G5:.5 E5:.5 A5:2 |
-F5:1.5 D5:.5 F5:.5 G5:.5 Bb5:1 | A5:.5 G5:.5 E5:.5 C5:.5 G5:2 |
-D5:1.5 A4:.5 D5:.5 E5:.5 F5:1 | A5:.5 G5:.5 F5:.5 E5:.5 D5:1 F5:1 |
-Bb5:1 A5:.5 G5:.5 F5:1 D5:1 | E5:1 C#5:.5 E5:.5 A5:2 |
+GT_CHORDS = ("Dm Dm+A Bb C+A  Dm Dm+A Bb C+A    Gm Gm Dm Dm  Bb C A A    "
+             "Bb C D D  Bb C A A")
+# FIRST LIGHT in D minor (A D D E F D) in its own rhythm, then a march, then the hook in
+# major climbing Bb, C, and landing on D major: the call to arms.
+GT_HOOK = """
+A4:.5 D5:1 D5:.5 E5:.5 F5:1 D5:.5 | E5:.5 F5:1 E5:.5 C#5:.5 A4:1.5 |"""
+GT_CALL = """
+F5:.5 Bb5:1 Bb5:.5 C6:.5 D6:1 Bb5:.5 | G5:.5 C6:1 C6:.5 D6:.5 E6:1 C6:.5 |"""
+GT_A = GT_HOOK + """
+F5:.5 Bb5:1 Bb5:.5 C6:.5 D6:1 Bb5:.5 | C6:.5 D6:1 C6:.5 A5:.5 E5:1.5 |"""
+GT_MELODY = GT_A + GT_A + """
 G5:.75 A5:.75 Bb5:.5 D6:1 Bb5:1 | A5:.5 Bb5:.5 A5:.5 G5:.5 D5:2 |
 F5:.75 G5:.75 A5:.5 D6:1 A5:1 | G5:.5 A5:.5 G5:.5 F5:.5 E5:1 D5:1 |
-D5:.5 F5:.5 Bb5:.5 D6:.5 F6:1 D6:1 | E6:.5 D6:.5 C6:.5 G5:.5 E5:1 G5:1 |
-A5:.25 G5:.25 A5:.25 Bb5:.25 A5:.5 E5:.5 C#5:1 E5:1 | A5:.5 -:.5 A5:.5 -:.5 C#6:1 E6:1 |
-F5:.5 Bb5:.5 Bb5:.5 C6:.5 D6:1 Bb5:1 | G5:.5 C6:.5 C6:.5 D6:.5 E6:1 C6:1 |
-D6:2.5 C6:.5 A5:1 | F5:.5 E5:.5 D5:.5 E5:.5 F5:1 A5:1 |
-Bb5:1.5 A5:.5 Bb5:.5 C6:.5 D6:1 | C6:1.5 Bb5:.5 C6:.5 D6:.5 E6:1 |
-C#6:2 A5:1 E5:1 | C#5:.5 E5:.5 A5:.5 C#6:.5 E6:.5 C#6:.5 A5:.5 E5:.5
+G5:.75 A5:.75 Bb5:.5 D6:1 Bb5:1 | C6:.5 D6:.5 C6:.5 Bb5:.5 G5:2 |
+A5:.25 G5:.25 A5:.25 Bb5:.25 A5:.5 E5:.5 C#5:1 E5:1 | A5:.5 -:.5 A5:.5 -:.5 A5:1 C#6:1 |"""     + GT_CALL + """
+D6:1.5 A5:.5 F#5:1 A5:1 | B5:.5 A5:1 F#5:.5 E5:.5 D5:1.5 |""" + GT_CALL + """
+C#6:1.5 B5:.5 A5:1 E5:1 | C#5:.5 E5:.5 A5:.5 C#6:.5 E6:.5 C#6:.5 A5:.5 E5:.5
 """
 
 
 @sfx("m_1_4", GT_LOOP, "music",
      "Level 1-4 THE GATE music, the World 1 finale, on the Music bus. Tense then heroic, "
-     "D minor, 163.6 BPM, 24 bars; bars 17 and 18 turn FIRST LIGHT into a major-key call. "
+     "D minor, 163.6 BPM, 24 bars; FIRST LIGHT in minor, then turned into a major-key call. "
      "LOOPS (the file loops by itself in Godot, no click at the seam)", trim_db=2.0,
      loop=True, lock=True)
 def _(s):
@@ -1926,17 +1989,21 @@ def _(s):
 RH_N, RH_BARS = 27, 20
 RH_LOOP = _loop_len(RH_BARS, RH_N)                           # 36.0 s
 RH_CHORDS = "Am Am F G  Am Am Dm E  F G Em Am  F G E E  Am F Dm E"
-RH_MELODY = """
-E5:.5 F5:.5 E5:.5 A5:1 G5:.5 E5:1 | A4:.5 -:.25 A4:.25 C5:.5 E5:.5 A5:.5 -:.5 E5:1 |
-F5:.5 A5:.5 C6:.5 A5:.5 F5:.5 -:.5 C5:1 | D5:.5 G5:.5 B5:.5 G5:.5 D6:1 B5:1 |
-E5:.5 F5:.5 E5:.5 A5:1 G5:.5 E5:1 | C6:.5 -:.25 C6:.25 B5:.5 A5:.5 E5:.5 -:.5 A4:1 |
-D5:.5 F5:.5 A5:.5 D6:.5 C6:.5 A5:.5 F5:1 | E5:.5 G#5:.5 B5:.5 E6:.5 D6:1 B5:1 |
+# The Switchyard motif on each chord, and after it a hopping answer: a repeated note, a
+# skip down and a rest. The middle sings in longer notes, then the motif comes back.
+RH_HOP = """
+E5:.5 F5:.5 E5:.5 A5:1 G5:.5 E5:1 | C6:.5 -:.25 C6:.25 B5:.5 A5:1 E5:1 -:.5 |"""
+RH_MOTIF_F = "F5:.5 G5:.5 F5:.5 C6:1 A5:.5 F5:1"
+RH_MOTIF_D = "D5:.5 E5:.5 D5:.5 A5:1 F5:.5 D5:1"
+RH_MELODY = RH_HOP + f"""
+{RH_MOTIF_F} | D6:.5 -:.25 D6:.25 C6:.5 B5:1 G5:1 -:.5 |""" + RH_HOP + f"""
+{RH_MOTIF_D} | B5:.5 -:.25 B5:.25 A5:.5 G#5:1 E5:1 -:.5 |
 A5:1 G5:.5 A5:.5 C6:1 A5:1 | B5:1 A5:.5 B5:.5 D6:1 B5:1 |
-G5:.5 E5:.5 B4:.5 E5:.5 G5:.5 B5:.5 E6:1 | C6:1.5 B5:.5 A5:1 E5:1 |
-A5:.5 C6:.5 F6:.5 C6:.5 A5:.5 F5:.5 C5:1 | B5:.5 D6:.5 G6:.5 D6:.5 B5:.5 G5:.5 D5:1 |
-G#5:1 B5:1 E6:1 D6:1 | B5:.5 G#5:.5 E5:.5 D5:.5 B4:1 -:1 |
-E5:.5 F5:.5 E5:.5 A5:1 G5:.5 E5:1 | F5:.5 G5:.5 F5:.5 C6:1 A5:.5 F5:1 |
-D5:.5 E5:.5 F5:.5 A5:1 G5:.5 F5:1 | E5:1 G#5:.5 B5:.5 D6:.5 C6:.5 B5:1
+G5:1 F#5:.5 G5:.5 B5:1 G5:1 | A5:1.5 G5:.5 E5:2 |
+A5:1 G5:.5 A5:.5 C6:1 A5:1 | B5:1 A5:.5 B5:.5 D6:1 B5:1 |
+G#5:1 A5:1 B5:1 D6:1 | B5:.5 A5:.5 G#5:.5 F#5:.5 E5:1 -:1 |
+E5:.5 F5:.5 E5:.5 A5:1 G5:.5 E5:1 | {RH_MOTIF_F} |
+{RH_MOTIF_D} | E5:1 G#5:.5 B5:.5 D6:.5 C6:.5 B5:1
 """
 
 
@@ -1970,21 +2037,24 @@ def _(s):
 
 SL_N, SL_BARS = 40, 16
 SL_LOOP = _loop_len(SL_BARS, SL_N)                           # 42.67 s
-SL_MELODY = """
--:2 F#5:.5 G5:.5 F#5:1 | B5:1.5 A5:.5 F#5:2 |
--:1 G5:.5 F#5:.5 E5:.5 D5:.5 B4:1 | C#5:1.5 A#4:.5 F#4:2 |
--:2 F#5:.5 G5:.5 F#5:1 | D6:1.5 C#6:.5 B5:1 F#5:1 |
-G5:.75 F#5:.25 E5:.5 D5:.5 E5:.5 D5:.5 B4:1 | A#4:1 C#5:1 F#5:2 |
+# The bass creeps through the motif. Over it the lead tiptoes in on the off-beat and leans
+# over the next beat, rises, then answers itself falling. It comes back at the end.
+SL_TIPTOE = """
+-:1.5 D5:.5 E5:.5 F#5:1.5 | B5:1.5 A5:1 F#5:1.5 |
+-:1.5 D5:.5 E5:.5 F#5:1.5 | D5:1.5 C#5:1 B4:1.5 |"""
+SL_MELODY = SL_TIPTOE + """
+-:1.5 D5:.5 E5:.5 F#5:1.5 | B5:1.5 A5:1 F#5:1.5 |
+-:1.5 E5:.5 D5:.5 B4:1.5 | A#4:1 C#5:1 F#5:2 |
 B5:.5 C6:.5 B5:.5 E6:1 D6:.5 B5:1 | G5:1 F#5:.5 E5:.5 B4:2 |
-F#5:.5 G5:.5 F#5:.5 B5:1 A5:.5 F#5:1 | D5:1 C#5:.5 B4:.5 F#4:2 |
--:1 D5:.5 E5:.5 G5:1 B5:1 | A5:1 G5:.5 E5:.5 B4:2 |
-A#5:1 C#6:1 F#5:1 E5:1 | C#5:2 -:2
+F#5:.5 G5:.5 F#5:.5 B5:1 A5:.5 F#5:1 | D5:1 C#5:.5 B4:.5 C#5:2 |
+-:1.5 D5:.5 E5:.5 F#5:1.5 | B5:1.5 A5:1 F#5:1.5 |
+A#5:1 C#6:1 F#5:1 C#5:1 | C#5:2 -:2
 """
 SL_BASS = """
 F#2:1 G2:1 F#2:1 B2:1 | B2:1 A2:1 F#2:2 | G2:1 -:.5 G2:.5 F#2:1 E2:1 | F#2:1 -:1 C#2:1 F#2:1 |
 F#2:1 G2:1 F#2:1 B2:1 | B2:1 A2:1 F#2:2 | G2:1 A2:1 G2:1 E2:1 | F#2:1 E2:1 D2:1 C#2:1 |
 B2:1 C3:1 B2:1 E3:1 | E3:1 D3:1 B2:2 | F#2:1 G2:1 F#2:1 B2:1 | B2:1 A2:1 F#2:2 |
-G2:1 -:1 G2:1 B2:1 | E2:1 -:1 E2:1 G2:1 | F#2:1 -:1 F#2:1 A#2:1 | C#3:1 C3:1 B2:1 A#2:1
+F#2:1 G2:1 F#2:1 B2:1 | B2:1 A2:1 F#2:2 | F#2:1 -:1 F#2:1 A#2:1 | C#3:1 C3:1 B2:1 A#2:1
 """
 
 
@@ -2018,18 +2088,20 @@ def _(s):
 CH_N, CH_BARS = 29, 20
 CH_LOOP = _loop_len(CH_BARS, CH_N)                           # 38.67 s
 CH_CHORDS = "Gm Gm Eb F  Gm Gm Cm D  Eb F Cm D  Eb F Gm Gm  Cm Cm D D"
+# Every call is the Switchyard motif on the bar's chord, and every answer turns it upside
+# down. After the flip at bar 9 the same calls and answers swap voices.
 CH_P1 = """
-D5:.5 Eb5:.5 D5:.5 G5:1 F5:.5 D5:1 | -:4 | Eb5:.5 G5:.5 Bb5:.5 Eb6:1 D6:.5 Bb5:1 | -:4 |
-D5:.5 Eb5:.5 D5:.5 G5:1 F5:.5 D5:1 | -:4 | C6:.5 Bb5:.5 G5:.5 Eb5:1 D5:.5 C5:1 | -:4 |
--:4 | A5:.5 G5:.5 F5:.5 C5:1 D5:.5 F5:1 | -:4 | F#5:.5 E5:.5 D5:.5 A4:1 C5:.5 D5:1 |
-Eb5:.5 G5:.5 Bb5:1 -:2 | F5:.5 A5:.5 C6:1 -:2 | D5:.5 Eb5:.5 D5:.5 G5:1 F5:.5 D5:1 | G5:2 -:2 |
-C5:.5 Eb5:.5 G5:.5 C6:1 Bb5:.5 G5:1 | -:4 | D5:.25 F#5:.25 A5:.25 D6:.25 -:.5 D6:.5 C6:.5 A5:.5 F#5:1 | -:4
+D5:.5 Eb5:.5 D5:.5 G5:1 F5:.5 D5:1 | -:4 | Bb5:.5 C6:.5 Bb5:.5 Eb6:1 D6:.5 Bb5:1 | -:4 |
+D5:.5 Eb5:.5 D5:.5 G5:1 F5:.5 D5:1 | -:4 | G5:.5 Ab5:.5 G5:.5 C6:1 Bb5:.5 G5:1 | -:4 |
+-:4 | C6:.5 Bb5:.5 A5:.5 F5:1 G5:.5 A5:1 | -:4 | A5:.5 G5:.5 F#5:.5 D5:1 E5:.5 F#5:1 |
+-:4 | C6:.5 Bb5:.5 A5:.5 F5:1 G5:.5 A5:1 | D5:.5 Eb5:.5 D5:.5 G5:1 F5:.5 D5:1 | G5:2 -:2 |
+G5:.5 Ab5:.5 G5:.5 C6:1 Bb5:.5 G5:1 | -:4 | D5:.25 F#5:.25 A5:.25 D6:.25 -:.5 D6:.5 C6:.5 A5:.5 F#5:1 | -:4
 """
 CH_P2 = """
--:4 | G5:.5 F5:.5 D5:.5 Bb4:1 C5:.5 D5:1 | -:4 | C6:.5 A5:.5 F5:.5 C5:1 D5:.5 Eb5:1 |
--:4 | G5:.5 A5:.5 Bb5:.5 D6:1 C6:.5 Bb5:1 | -:4 | D5:.5 F#5:.5 A5:.5 D6:1 C6:.5 A5:1 |
+-:4 | G5:.5 F5:.5 D5:.5 Bb4:1 C5:.5 D5:1 | -:4 | C6:.5 Bb5:.5 A5:.5 F5:1 G5:.5 A5:1 |
+-:4 | G5:.5 F5:.5 D5:.5 Bb4:1 C5:.5 D5:1 | -:4 | A5:.5 G5:.5 F#5:.5 D5:1 E5:.5 F#5:1 |
 Bb5:.5 C6:.5 Bb5:.5 Eb6:1 D6:.5 Bb5:1 | -:4 | G5:.5 Ab5:.5 G5:.5 C6:1 Bb5:.5 G5:1 | -:4 |
--:2 C6:.5 Bb5:.5 G5:1 | -:2 D6:.5 C6:.5 A5:1 | Bb4:.5 C5:.5 Bb4:.5 D5:1 C5:.5 Bb4:1 | D5:2 -:2 |
+Bb5:.5 C6:.5 Bb5:.5 Eb6:1 D6:.5 Bb5:1 | -:4 | Bb4:.5 C5:.5 Bb4:.5 D5:1 C5:.5 Bb4:1 | D5:2 -:2 |
 -:4 | C6:.5 Bb5:.5 G5:.5 Eb5:1 D5:.5 C5:1 | -:4 | A5:.25 F#5:.25 D5:.25 A4:.25 -:.5 A4:.5 C5:.5 D5:.5 -:1
 """
 
@@ -2070,24 +2142,22 @@ def _(s):
 RL_N, RL_BARS = 18, 32
 RL_LOOP = _loop_len(RL_BARS, RL_N)                           # 38.4 s
 RL_CHORDS = ("Fm Fm Db Eb  Fm Fm Db C    Bbm Bbm Fm Fm  Db Eb C C    "
-             "Fm Fm Db Eb  Fm Fm Gb C    Db Eb Fm Fm  Db Eb C C")
-RL_MELODY = """
-C5:.5 Db5:.5 C5:.5 F5:1 Eb5:.5 C5:1 | F5:.5 Ab5:.5 C6:.5 Ab5:.5 F5:.5 Ab5:.5 C6:1 |
-Db6:1 C6:.5 Ab5:.5 F5:1 Ab5:1 | G5:1 Bb5:.5 G5:.5 Eb5:1 Bb4:1 |
-C5:.5 Db5:.5 C5:.5 F5:1 Eb5:.5 C5:1 | F5:.5 Ab5:.5 C6:.5 F6:.5 Eb6:.5 C6:.5 Ab5:1 |
-Db6:.5 C6:.5 Ab5:.5 F5:.5 Db6:1 F6:1 | E6:1.5 C6:.5 G5:1 E5:1 |
-F5:.5 Gb5:.5 F5:.5 Bb5:1 Ab5:.5 F5:1 | Db6:1.5 C6:.5 Bb5:1 F5:1 |
-C6:.5 Db6:.5 C6:.5 F6:1 Eb6:.5 C6:1 | Ab5:1.5 G5:.5 F5:1 C5:1 |
-F5:.5 Ab5:.5 Db6:.5 F6:.5 Eb6:1 Db6:1 | G5:.5 Bb5:.5 Eb6:.5 G6:.5 F6:1 Eb6:1 |
-E6:.5 F6:.5 E6:.5 C6:.5 G5:.5 C6:.5 E6:1 | G6:1 E6:.5 C6:.5 G5:.5 E5:.5 C5:1 |
-C5:.5 Db5:.5 C5:.5 F5:1 Eb5:.5 C5:1 | F5:.5 Ab5:.5 C6:.5 Ab5:.5 F5:.5 Ab5:.5 C6:1 |
-Db6:1 C6:.5 Ab5:.5 F5:1 Ab5:1 | G5:1 Bb5:.5 G5:.5 Eb5:1 Bb4:1 |
-C5:.5 Db5:.5 C5:.5 F5:1 Eb5:.5 C5:1 | F5:.5 Ab5:.5 C6:.5 F6:.5 Eb6:.5 C6:.5 Ab5:1 |
-Gb5:.5 Bb5:.5 Db6:.5 Gb6:.5 F6:1 Db6:1 | E6:.5 C6:.5 G5:.5 E5:.5 C5:.5 E5:.5 G5:1 |
-Ab5:1 F5:.5 Ab5:.5 Db6:1 F6:1 | G6:1 F6:.5 Eb6:.5 Bb5:1 G5:1 |
-C6:.5 Db6:.5 C6:.5 F6:1 Eb6:.5 C6:1 | F6:1.5 Eb6:.5 C6:1 Ab5:1 |
-F6:.5 Eb6:.5 Db6:.5 C6:.5 Db6:.5 Eb6:.5 F6:1 | G6:.5 F6:.5 Eb6:.5 D6:.5 Eb6:.5 F6:.5 G6:1 |
-E6:.5 -:.5 E6:.5 -:.5 E6:.5 G6:.5 E6:.5 C6:.5 | G5:.5 E5:.5 C5:.5 E5:.5 G5:.5 Bb5:.5 C6:.25 Bb5:.25 G5:.25 E5:.25
+             "Fm Fm Db Eb  Fm Fm Db C    Db Eb Fm Fm  Db Eb C C")
+# The Switchyard motif, then its answer in FIRST LIGHT's rhythm (short LONG short short LONG
+# short). The motif comes back in every section, and the last section runs to an alarm of
+# repeated top notes.
+RL_HOOK = """
+C5:.5 Db5:.5 C5:.5 F5:1 Eb5:.5 C5:1 | F5:.5 Ab5:1 G5:.5 F5:.5 Eb5:1 C5:.5 |"""
+RL_A = RL_HOOK + """
+Db6:1 C6:.5 Bb5:.5 Ab5:1 F5:1 | G5:1 F5:.5 Eb5:.5 F5:1 G5:1 |""" + RL_HOOK + """
+Db6:.5 C6:.5 Bb5:.5 Ab5:.5 F5:1 Ab5:1 | E6:1.5 D6:.5 C6:1 G5:1 |"""
+RL_MELODY = RL_A + """
+F5:.5 Gb5:.5 F5:.5 Bb5:1 Ab5:.5 F5:1 | Db6:1.5 C6:.5 Bb5:1 F5:1 |""" + RL_HOOK + """
+Ab5:.5 Db6:1 C6:.5 Bb5:.5 Ab5:1 F5:.5 | G5:.5 Bb5:1 Ab5:.5 G5:.5 Eb5:1 Bb4:.5 |
+C6:.5 Bb5:.5 G5:.5 E5:.5 C5:1 E5:1 | G5:.5 -:.5 G5:.5 -:.5 G5:.5 Bb5:.5 C6:1 |""" + RL_A + """
+Ab5:1 F5:.5 Ab5:.5 Db6:1 C6:1 | G5:1 Eb5:.5 G5:.5 Bb5:1 Eb6:1 |""" + RL_HOOK + """
+Db6:.5 C6:.5 Bb5:.5 Ab5:.5 Bb5:.5 C6:.5 Db6:1 | Eb6:.5 Db6:.5 C6:.5 Bb5:.5 C6:.5 D6:.5 Eb6:1 |
+E6:.5 -:.5 E6:.5 -:.5 E6:.5 -:.5 C6:.5 G5:.5 | E5:.5 G5:.5 Bb5:.5 C6:.5 Bb5:.5 G5:.5 E5:.5 C5:.5
 """
 
 
@@ -2118,6 +2188,961 @@ def _(s):
     _every_loop(s, RL_LOOP, one_pass)
 
 
+# ---- World 3, the Aerials: broadcast masts above a drowned city, flyers, gusts, sweep arms
+
+@sfx("flyer_flap", 0.1, "enemies", "A flyer flaps its wings (play now and then while one is on "
+     "screen)", trim_db=-5.0, fade=0.02)
+def _(s):
+    # one soft wingbeat: a breathy puff of hiss that lifts as the wing comes down, with a faint
+    # 25% blip rising a fourth (A5 to D6) inside it
+    s.noi.put(0, 0.08, 9, 6, venv=[3, 7, 6, 4, 2, 1], glide="lin")
+    s.p1.put(0.005, 0.045, N("A5"), N("D6"), venv=[4, 5, 3, 1], duty=25, gcurve=0.6)
+
+
+@sfx("gust_tell", 0.52, "level", "A gust is about to blow: plays for 0.5 s before gust",
+     trim_db=-2.0, fade=0.02)
+def _(s):
+    # the wind drawing breath: long-mode hiss climbing from low to bright and swelling, with a
+    # thin 12.5% whistle sliding up a fifth under it
+    swell = [int(round(1 + 11 * (i / 27) ** 1.5)) for i in range(28)] + [10, 6, 3]
+    s.noi.put(0, 0.52, 12, 2, venv=swell, glide="lin")
+    s.p2.put(0.12, 0.38, N("D5"), N("A5"), venv=[1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+                                                  3, 2, 1, 0], duty=12)
+
+
+@sfx("gust", 0.62, "level", "A gust blows (plays as gust_tell ends)", fade=0.06)
+def _(s):
+    # the whoosh: hiss sweeping up to its brightest a fifth of the way in, then falling away
+    # lower as it passes, with a faint 12.5% whistle falling a fifth
+    s.noi.put(0, 0.12, 8, 3, venv=[6, 9, 11, 13, 14, 14, 14], glide="lin")
+    s.noi.put(0.12, 0.5, 3, 10, venv=[14, 13, 13, 12, 11, 11, 10, 9, 9, 8, 7, 7, 6, 6, 5, 5, 4, 4,
+                                      3, 3, 3, 2, 2, 2, 1, 1, 1, 1, 1, 0], glide="lin")
+    s.p2.put(0.06, 0.45, N("A5"), N("D5"), venv=[2, 3, 3, 3, 3, 3, 3, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1,
+                                                  1, 1, 1, 1, 1, 0], duty=12)
+
+
+ARM_LOOP = 1.0
+
+
+@sfx("arm_whir", ARM_LOOP, "traps",
+     "Sweep arm on screen: a faint electric whir. LOOPS (the file loops by itself in Godot, no "
+     "click at the seam)", trim_db=-7.0, loop=True, lock=True)
+def _(s):
+    # a bar of static turning on its mast, four turns a second. A 12.5% whine on E5 swings a
+    # third of a semitone up and down once a turn and flutters every tick (the electric edge),
+    # a quieter 25% fifth under it, and a metallic crackle that flares as the arm comes round.
+    # A different register, colour and speed from relay_hum's low mains hum.
+    turn = [4, 4, 5, 5, 6, 6, 6, 5, 5, 4, 4, 4, 4, 4, 4]              # 0.25 s, one turn
+    buzz = [1, 1, 2, 3, 3, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+
+    def one_pass(o):
+        s.p1.put(o, ARM_LOOP, N("E5"), venv=turn * 4, duty=12, vib=(4, 0.33), arp=[0, 0.2],
+                 arp_ticks=1)
+        s.p2.put(o, ARM_LOOP, N("A4"), venv=[max(v - 2, 1) for v in turn] * 4, duty=25,
+                 vib=(4, 0.33))
+        s.noi.put(o, ARM_LOOP, 3, venv=buzz * 4, short=True)
+
+    _every_loop(s, ARM_LOOP, one_pass)
+
+
+@sfx("updraft", 0.45, "level", "Player enters an updraft", trim_db=-1.0, fade=0.05)
+def _(s):
+    # an airy swoop: hiss rising from mid to bright, and a soft 25% whistle gliding up an
+    # octave and a fifth (D5 to A6) with a slow waver, echoed faintly on pulse 2
+    s.noi.put(0, 0.43, 9, 2, venv=[3, 5, 7, 8, 9, 9, 8, 7, 6, 5, 5, 4, 4, 3, 3, 3, 2, 2, 2, 1, 1, 1, 1,
+                                   1, 0], glide="lin")
+    s.p1.put(0.02, 0.38, N("D5"), N("A6"), venv=[3, 5, 7, 8, 8, 8, 7, 6, 5, 5, 4, 4, 3, 3, 2, 2, 2, 1,
+                                                  1, 1, 1, 1, 0], duty=25, gcurve=0.6, vib=(6, 0.15))
+    s.echo(s.p1, s.p2, 0.05, 0.4, duty=12)
+
+
+@sfx("voice_spire", 0.045, "voices", "Spire (mast rigger) speaks: one blip every two letters",
+     trim_db=-5.0, fade=0.006)
+def _(s):
+    # brisk and sure: a rigger's whistle on the triangle alone, G4 jumping cleanly up a fourth
+    # to C5 ("hup!"). Mast is the other triangle voice, but an octave and more lower and
+    # sagging. Spire sits in the gap between Brace (D4) and Dot (D5), and it's the only voice
+    # that is a pure, round tone that high.
+    s.tri.put(0, 0.018, N("G4"))
+    s.tri.put(0.018, 0.024, N("C5"))
+
+
+AMB_W3_LOOP = 8.0
+# two guy wires on neighbouring pulse period registers (339 and 340, both E4), under 1 Hz
+# apart, so together they beat about once a second
+WIRE_A, WIRE_B = CPU / (16 * 340), CPU / (16 * 341)
+
+
+@sfx("amb_w3", AMB_W3_LOOP, "ambience",
+     "World 3 (the Aerials) ambience under the music: high wind, guy wires singing, the odd "
+     "distant clank. LOOPS (the file loops by itself in Godot, no click at the seam)",
+     trim_db=-8.0, loop=True, lock=True)
+def _(s):
+    L = AMB_W3_LOOP
+    lt = int(round(L * TICK_HZ))
+    t = np.arange(lt) / TICK_HZ
+
+    def tile(keys):
+        kt, kv = zip(*keys)
+        one = np.round(np.interp(t, kt, kv))
+        return np.tile(one, len(s.p1.vol) // lt + 1)[: len(s.p1.vol)]
+
+    # high wind: bright long-mode hiss (higher than World 1's low breath), three gusts a pass
+    s.noi.freq[:] = tile([(0, 5), (1.0, 4), (1.6, 3), (2.4, 5), (3.6, 4), (4.3, 2), (5.0, 4),
+                          (6.2, 5), (6.9, 3), (7.5, 4), (L, 5)])
+    s.noi.vol[:] = tile([(0, 2), (1.0, 3), (1.6, 5), (2.4, 3), (3.6, 3), (4.3, 6), (5.0, 4),
+                         (6.2, 2), (6.9, 4), (7.5, 3), (L, 2)])
+    # the guy wires: thin 12.5% drones a hair apart, singing louder when a gust leans on them
+    s.p1.freq[:] = WIRE_A
+    s.p1.vol[:] = tile([(0, 1), (1.2, 2), (1.8, 3), (2.8, 2), (3.8, 2), (4.4, 3), (5.4, 2),
+                        (6.4, 1), (7.0, 2), (L, 1)])
+    s.p1.duty[:] = DUTY[12]
+    s.p2.freq[:] = WIRE_B
+    s.p2.vol[:] = tile([(0, 1), (1.4, 2), (2.0, 3), (3.0, 2), (4.0, 2), (4.6, 3), (5.6, 2),
+                        (6.6, 1), (7.2, 2), (L, 1)])
+    s.p2.duty[:] = DUTY[12]
+
+    # the odd distant clank: a metal tick on the noise and a thin ringing pulse up on a mast,
+    # answered once by the city below. Pulse 2 leaves its wire while it rings.
+    def clank(o):
+        s.noi.put(o + 5.1, 0.02, 3, venv=[5, 2], short=True)
+        s.p2.put(o + 5.1, 0.16, N("G#5"), arp=[0, 6], arp_ticks=1, duty=25,
+                 venv=[4, 4, 3, 3, 2, 2, 2, 1, 1, 0])
+        s.p2.put(o + 5.34, 0.1, N("G#5"), arp=[0, 6], arp_ticks=1, duty=25, venv=[2, 1, 1, 1, 0])
+    _every_loop(s, L, clank)
+
+
+# ---- World 3 music. Every track uses the Aerials motif: 1 5 9 8 10, two fifths climbing, a
+# step back down to the octave, then up a third (in F: F C G F A). The Spire drops back to
+# the fifth instead. Either way it spans 16 semitones or less, so it can still be sung. The
+# chords lean on open fifths and added ninths, and the parts use the chord tones 2, 4 and 9.
+
+def _wind(s: Sound, o: float, bpm: float, keys: list[tuple[float, float, float]]) -> None:
+    """Fill the noise voice's silent ticks in one pass with wind: long-mode hiss whose volume
+    and pitch setting follow (bar, volume, pitch) keyframes from the start of the pass. The
+    last key sets how far it runs. Drums keep the noise when they play."""
+    bar = 240 / bpm
+    a, n = int(round(o * TICK_HZ)), int(round(keys[-1][0] * bar * TICK_HZ))
+    b = min(a + n, len(s.noi.vol))
+    if b <= a:
+        return
+    t = np.arange(b - a) / TICK_HZ / bar
+    kb, kv, kp = zip(*keys)
+    vol, pit = np.round(np.interp(t, kb, kv)), np.round(np.interp(t, kb, kp))
+    sl = slice(a, b)
+    m = s.noi.vol[sl] == 0
+    s.noi.freq[sl] = np.where(m, pit, s.noi.freq[sl])
+    s.noi.vol[sl] = np.where(m, vol, s.noi.vol[sl])
+    s.noi.short[sl] = np.where(m, False, s.noi.short[sl])
+
+
+# m_3_1 WAVE FLYERS: flyers bobbing over the pits. F major in 12/8: 85.7 dotted-quarter beats a
+# minute, each split in three, 16 bars. Written with '1/3' lengths, so a bar is still 4 beats.
+
+WF_N, WF_BARS = 42, 16
+WF_LOOP = _loop_len(WF_BARS, WF_N)                           # 44.8 s
+WF_CHORDS = "F Bb F C  F Bb Gm+C F  Dm Bb Gm C  F Bb Gm+C F+C"
+# The Aerials motif flies up and glides back down by step, twice, then lands. The middle
+# swings short-long in pairs, falling a step each bar, and climbs back to the motif.
+WF_HOOK = """
+F4:2/3 C5:1/3 G5:1 F5:2/3 A5:4/3 | Bb5:2/3 A5:1/3 G5:2/3 F5:1/3 D5:2 |
+F4:2/3 C5:1/3 G5:1 F5:2/3 A5:4/3 | G5:2/3 F5:1/3 E5:2/3 D5:1/3 C5:2 |"""
+WF_MELODY = WF_HOOK + """
+F4:2/3 C5:1/3 G5:1 F5:2/3 A5:4/3 | Bb5:2/3 A5:1/3 G5:2/3 F5:1/3 D5:2 |
+Bb5:2/3 A5:1/3 G5:2/3 F5:1/3 E5:2/3 G5:1/3 C5:1 | F5:2 -:2 |
+A5:2/3 G5:4/3 F5:2/3 D5:4/3 | Bb5:2/3 A5:4/3 G5:2/3 D5:4/3 |
+G5:2/3 F5:4/3 E5:2/3 D5:4/3 | E5:2/3 F5:1/3 G5:2/3 A5:1/3 Bb5:1 C6:1 |
+F4:2/3 C5:1/3 G5:1 F5:2/3 A5:4/3 | Bb5:2/3 A5:1/3 G5:2/3 F5:1/3 D5:2 |
+Bb5:2/3 A5:1/3 G5:2/3 F5:1/3 E5:2/3 G5:1/3 C5:1 | F5:2 E5:2/3 D5:1/3 C5:1
+"""
+
+
+@sfx("m_3_1", WF_LOOP, "music",
+     "Level 3-1 WAVE FLYERS music, on the Music bus. Buoyant and lilting, F major in 12/8, "
+     "85.7 dotted-quarter beats a minute, 16 bars; opens with the Aerials motif. LOOPS (the "
+     "file loops by itself in Godot, no click at the seam)", trim_db=2.0, loop=True, lock=True)
+def _(s):
+    bpm, bar = _bpm(WF_N), 4 * 60 / _bpm(WF_N)
+    melody = _tune(WF_MELODY)
+    bob = _comp(WF_CHORDS, "R:1/3 5:1/3 8:1/3 9:1/3 8:1/3 5:1/3 "
+                           "R:1/3 5:1/3 8:1/3 10:1/3 8:1/3 5:1/3", "F3")
+    bass = _comp(WF_CHORDS, "R:2/3 8:1/3 5:2/3 8:1/3 R:2/3 8:1/3 5:2/3 8:1/3", "E2")
+    sway, flap = "k.h..hs.h..h", "k.h..hs.h.fh"
+    drums = ([sway, sway, sway, flap] + [sway, sway, flap, "k.h..hs.ssss"]
+             + [sway, sway, sway, flap] + [sway, flap, sway, "k.h..hs.s.ss"])
+
+    def one_pass(o):
+        for i, duty in enumerate((25, 50)):              # rounder lead for the second half
+            a, b = _bar_index(melody, 8 * i), _bar_index(melody, 8 * i + 8)
+            _part(s, s.p1, o + 8 * i * bar, bpm, melody[a:b], 8, duty=duty,
+                  venv=[10, 10, 10, 10, 9, 9, 9, 9, 9, 9, 8], gate=0.92, vib=(5, 0.08))
+        _part(s, s.p2, o, bpm, bob, WF_BARS, duty=25, venv=[4, 4, 3, 3], gate=0.9)
+        _part(s, s.tri, o, bpm, bass, WF_BARS, gate=1.0)
+        _drums(s, o, bpm, drums, level=0.7, steps=12)
+        _wind(s, o, bpm, [(0, 1, 7), (4, 2, 6), (8, 1, 7), (12, 2, 5), (16, 1, 7)])
+
+    _every_loop(s, WF_LOOP, one_pass)
+
+
+# m_3_2 CARRIER WIND: gusts push you around. A major with a lifted (Lydian) B major chord,
+# 138.5 BPM, 24 bars. Pulse 2 sweeps up and down in sixteenths like gusts, and the wind
+# swells under the drums every four bars.
+
+CW_N, CW_BARS = 26, 24
+CW_LOOP = _loop_len(CW_BARS, CW_N)                           # 41.6 s
+CW_CHORDS = ("A E F#m D  A E B D    F#m D A E  F#m D B E    "
+             "A E F#m D  B D E E")
+# The Aerials motif (A E B A C#) blows up to a held top note and falls back. The middle
+# holds long notes like a gust, and A comes back with the motif moved onto B.
+CW_A = """
+A4:.5 E5:.5 B5:1 A5:.5 C#6:1.5 | D6:.5 C#6:.5 B5:1 G#5:.5 E5:1.5 |
+F#5:.5 G#5:.5 A5:1 C#6:.5 B5:1.5 | B5:1.5 A5:.5 F#5:1 E5:1 |"""
+CW_MELODY = CW_A + """
+A4:.5 E5:.5 B5:1 A5:.5 C#6:1.5 | D6:.5 C#6:.5 B5:1 G#5:.5 E5:1.5 |
+D#6:1 C#6:.5 B5:.5 F#5:1 D#5:1 | C#6:1.5 A5:.5 F#5:1 E5:1 |
+C#6:3 B5:.5 A5:.5 | F#5:2 A5:1 D6:1 |
+C#6:3 B5:.5 A5:.5 | E5:2 -:1 E5:.5 G#5:.5 |
+A5:3 G#5:.5 F#5:.5 | F#5:2 E5:1 A5:1 |
+D#6:2 C#6:1 B5:1 | B5:2 G#5:1 E5:1 |""" + CW_A + """
+B4:.5 F#5:.5 C#6:1 B5:.5 D#6:1.5 | E6:1 D6:.5 C#6:.5 A5:2 |
+G#5:.5 A5:.5 B5:1 D6:.5 C#6:.5 B5:1 | B5:2 G#5:.5 E5:.5 -:1
+"""
+
+
+@sfx("m_3_2", CW_LOOP, "music",
+     "Level 3-2 CARRIER WIND music, on the Music bus. Sweeping, with arpeggios that rise and "
+     "fall like gusts, A major, 138.5 BPM, 24 bars; opens with the Aerials motif. LOOPS (the "
+     "file loops by itself in Godot, no click at the seam)", trim_db=2.4, loop=True, lock=True)
+def _(s):
+    bpm, bar = _bpm(CW_N), 4 * 60 / _bpm(CW_N)
+    melody = _tune(CW_MELODY)
+    sweep = lambda tones: " ".join(f"{t}:.25" for t in tones.split())
+    rise_fall = sweep("_5 R 3 5 8 9 10 12 10 9 8 5 3 R _5 _3")
+    fall_rise = sweep("12 10 9 8 5 3 R _5 _3 _5 R 3 5 8 9 10")
+    rise_hold = sweep("_5 R 3 5 8 9 10") + " 12:2.25"           # every fourth bar the gust holds
+    gusts = ([rise_fall] * 3 + [rise_hold]) * 2 + ([fall_rise] * 3 + [rise_hold]) * 2 \
+        + ([rise_fall] * 3 + [rise_hold]) * 2
+    arps = _comp(CW_CHORDS, gusts, "A3")
+    bass = _comp(CW_CHORDS, "R:1 5:.5 8:1 5:.5 R:.5 5:.5", "E2")
+    groove, lull = "k.h.s..hk.h.s.hh", "k.h.s..hk...g..."
+    drums = ([groove] * 3 + [lull] + [groove] * 3 + ["k.h.s..hk.s.ssss"]
+             + ["c.h.s..hk.h.s.hh"] + [groove] * 2 + [lull] + [groove] * 3 + ["k.h.s..hk.s.gsss"]
+             + ["c.h.s..hk.h.s.hh"] + [groove] * 2 + [lull] + [groove] * 3 + ["k.h.s..hs.s.ssss"])
+    gust_keys = []
+    for g in range(CW_BARS // 4):                        # one gust swelling through every 4 bars
+        gust_keys += [(4 * g, 0, 9), (4 * g + 2.5, 2, 7), (4 * g + 3.6, 4, 4), (4 * g + 3.99, 1, 6)]
+    gust_keys.append((CW_BARS, 0, 9))
+
+    def one_pass(o):
+        for i, duty in enumerate((25, 50, 25)):              # A, B, A again
+            a, b = _bar_index(melody, 8 * i), _bar_index(melody, 8 * i + 8)
+            _part(s, s.p1, o + 8 * i * bar, bpm, melody[a:b], 8, duty=duty,
+                  venv=[10, 10, 10, 10, 9, 9, 9, 9, 9, 9, 9, 8], gate=0.9, vib=(5, 0.08))
+        _part(s, s.p2, o, bpm, arps, CW_BARS, duty=25, venv=[4, 4, 3, 3], gate=0.9)
+        _part(s, s.tri, o, bpm, bass, CW_BARS, gate=1.0)
+        _drums(s, o, bpm, drums, level=0.75)
+        _wind(s, o, bpm, gust_keys)
+
+    _every_loop(s, CW_LOOP, one_pass)
+
+
+# m_3_3 SWEEP ARMS: rotating bars of static on the masts. F# minor, 128.6 BPM, 24 bars.
+# Pulse 2 turns a 12-note ostinato (the Aerials fifths round a ticking C#) against the 16
+# sixteenths of a bar, so its accents come round a quarter-bar later each time, like an arm
+# sweeping. The drums tick and tock, and a burst of static starts each section.
+
+SA_N, SA_BARS = 28, 24
+SA_LOOP = _loop_len(SA_BARS, SA_N)                           # 44.8 s
+SA_CHORDS = ("F#m F#m D E  F#m F#m Bm C#    D E F#m F#m  D E C# C#    "
+             "F#m F#m D E  D E C# C#")
+SA_CYCLE = "F#4 C#5 G#5 C#5 F#5 C#5 G#5 C#5 B4 C#5 G#5 C#5".split()
+# The Aerials motif, then a quick sweep down and a rest. The middle falls in the same
+# long-short pattern each bar, each long note leaning over the beat, and the motif comes back.
+SA_A = """
+F#4:.5 C#5:.5 G#5:1 F#5:.5 A5:1.5 | -:1 B5:.25 A5:.25 G#5:.25 F#5:.25 C#5:1 -:1 |
+A5:.5 -:.25 A5:.25 F#5:.5 D5:.5 E5:.5 F#5:.5 A5:1 | G#5:1 A5:.5 G#5:.5 E5:.5 F#5:.5 G#5:1 |"""
+SA_MELODY = SA_A + """
+F#4:.5 C#5:.5 G#5:1 F#5:.5 A5:1.5 | -:1 B5:.25 A5:.25 G#5:.25 F#5:.25 C#5:1 -:1 |
+B5:.5 -:.25 B5:.25 F#5:.5 D5:.5 E5:.5 F#5:.5 B5:1 | G#5:1 F5:.5 G#5:.5 C#6:1 -:1 |
+F#5:1.5 E5:1 D5:1.5 | G#5:1.5 F#5:1 E5:1.5 |
+A5:1.5 G#5:1 F#5:1.5 | -:2 C#5:.25 F#5:.25 A5:.25 C#6:.25 -:1 |
+F#5:1.5 E5:1 D5:1.5 | G#5:1.5 F#5:1 E5:1.5 |
+G#5:1 F5:.5 D#5:.5 F5:1 G#5:1 | G#5:.5 -:.5 G#5:.5 -:.5 G#5:.25 A5:.25 B5:.25 C#6:.25 -:1 |"""     + SA_A + """
+A5:.5 -:.25 A5:.25 F#5:.5 D5:.5 E5:.5 F#5:.5 A5:1 | G#5:1 A5:.5 G#5:.5 E5:.5 F#5:.5 G#5:1 |
+F5:.5 G#5:.5 C#6:1 B5:.5 G#5:1.5 |
+G#5:.5 -:.5 C#5:.5 -:.5 C#5:.25 -:.25 C#5:.25 -:.25 -:1
+"""
+
+
+@sfx("m_3_3", SA_LOOP, "music",
+     "Level 3-3 SWEEP ARMS music, on the Music bus. Circular and clockwork, a turning ostinato "
+     "over tick-tock drums, F# minor, 128.6 BPM, 24 bars; opens with the Aerials motif. LOOPS "
+     "(the file loops by itself in Godot, no click at the seam)", trim_db=2.5, loop=True,
+     lock=True)
+def _(s):
+    bpm, bar = _bpm(SA_N), 4 * 60 / _bpm(SA_N)
+    melody = _tune(SA_MELODY)
+    turn = [(SA_CYCLE[i % len(SA_CYCLE)], 0.25) for i in range(SA_BARS * 16)]
+    bass = _comp(SA_CHORDS, "R:.5 R:.5 5:.5 R:.5 8:.5 R:.5 5:.5 R:.5", "E2")
+    clock, start = "k.i.s.o.k.i.s.o.", "z.i.s.o.k.i.s.o."
+    drums = ([start] + [clock] * 6 + ["k.i.s.o.k.isisss"]
+             + [start] + [clock] * 6 + ["k.i.s.o.k.i.xxxx"]
+             + [start] + [clock] * 6 + ["k.i.s.o.k.o.o.o."])
+
+    def one_pass(o):
+        for i, duty in enumerate((50, 25, 50)):
+            a, b = _bar_index(melody, 8 * i), _bar_index(melody, 8 * i + 8)
+            _part(s, s.p1, o + 8 * i * bar, bpm, melody[a:b], 8, duty=duty,
+                  venv=[11, 11, 10, 10, 9, 9, 8], gate=0.8)
+        for i, duty in enumerate((25, 50, 25)):               # the ostinato changes colour mid-way
+            _part(s, s.p2, o + 8 * i * bar, bpm, turn[128 * i:128 * i + 128], 8, duty=duty,
+                  venv=[5, 5, 4, 3], gate=0.8)
+        _part(s, s.tri, o, bpm, bass, SA_BARS, gate=1.0)
+        _drums(s, o, bpm, drums, level=0.75)
+
+    _every_loop(s, SA_LOOP, one_pass)
+
+
+# m_3_4 THE SPIRE: the World 3 finale, a long climb up the tallest mast. C major rising to
+# D major at bar 17, 156.5 BPM, 32 bars. Each 8 bars adds more: the motif starts low and
+# thin over wind, climbs, lifts a key, and ends with the motif at double length at the top.
+# The last bar is G, which leads straight back to C at the foot of the mast.
+
+SP_N, SP_BARS = 23, 32
+SP_LOOP = _loop_len(SP_BARS, SP_N)                           # 49.07 s
+SP_CHORDS = ("C G Am F  C G F G    Am F C G  F G Bb A    "
+             "D A Bm G  D A G A    G A D Bm  G A C G")
+# The Aerials motif (C G D C) and a stepping answer, climbing section by section. At bar 17
+# the whole A section comes back a tone higher in D, and the top of the mast holds the motif
+# at double length before the loop drops back to C.
+SP_A = """
+C5:.5 G5:.5 D6:1 C6:.5 G5:1.5 | A5:.5 G5:.5 F5:1 E5:.5 D5:1.5 |
+C5:.5 G5:.5 D6:1 C6:.5 A5:1.5 | A5:.5 G5:.5 F5:1 E5:.5 C5:1.5 |"""
+SP_A_END = """
+A5:.5 G5:.5 A5:1 C6:.5 A5:1.5 | B5:1 A5:.5 G5:.5 D5:1 G5:1 |"""
+SP_D = """
+D5:.5 A5:.5 E6:1 D6:.5 A5:1.5 | B5:.5 A5:.5 G5:1 F#5:.5 E5:1.5 |
+D5:.5 A5:.5 E6:1 D6:.5 B5:1.5 | B5:.5 A5:.5 G5:1 F#5:.5 D5:1.5 |"""
+SP_MELODY = SP_A + """
+C5:.5 G5:.5 D6:1 C6:.5 G5:1.5 | A5:.5 G5:.5 F5:1 E5:.5 D5:1.5 |""" + SP_A_END + """
+E5:.5 A5:.5 B5:.5 C6:.5 E6:2 | D6:1 C6:.5 A5:.5 F5:2 |
+E5:.5 G5:.5 A5:.5 C6:.5 E6:2 | D6:1 C6:.5 B5:.5 G5:2 |
+C6:1.5 B5:.5 A5:1 F5:1 | D6:1.5 C6:.5 B5:1 G5:1 |
+D6:1 C6:.5 Bb5:.5 F5:1 D5:1 | C#6:.5 D6:.5 E6:1 C#6:.5 A5:1.5 |""" + SP_D + """
+D5:.5 A5:.5 E6:1 D6:.5 A5:1.5 | B5:.5 A5:.5 G5:1 F#5:.5 E5:1.5 |
+B5:.5 A5:.5 B5:1 D6:.5 B5:1.5 | C#6:1 B5:.5 A5:.5 E5:1 A5:1 |
+D6:1.5 B5:.5 A5:1 G5:1 | C#6:1.5 B5:.5 A5:1 E5:1 |
+D5:1 A5:1 E6:2 | D6:2 C#6:1 B5:1 |
+B5:1.5 A5:.5 G5:1 A5:1 | E6:1 D6:1 C#6:2 |
+E6:1 D6:.5 C6:.5 G5:1 E5:1 | D6:1.5 C6:.5 B5:1 G5:1
+"""
+
+
+@sfx("m_3_4", SP_LOOP, "music",
+     "Level 3-4 THE SPIRE music, the World 3 finale, on the Music bus. Triumphant and building, "
+     "C major lifting to D major, 156.5 BPM, 32 bars; the Aerials motif climbs from low to the "
+     "top. LOOPS (the file loops by itself in Godot, no click at the seam)", trim_db=2.2,
+     loop=True, lock=True)
+def _(s):
+    bpm, bar = _bpm(SP_N), 4 * 60 / _bpm(SP_N)
+    chords = SP_CHORDS.split()
+    ch = lambda a, b: " ".join(chords[a:b])
+    melody = _tune(SP_MELODY)
+    climb = "_5:.25 R:.25 3:.25 5:.25 8:.25 9:.25 10:.25 12:.25 " * 2
+    p2 = [(0, 8, _comp(ch(0, 8), "R:.5 5:.5 8:.5 9:.5 R:.5 5:.5 8:.5 9:.5", "C4"),
+           dict(duty=25, venv=[5, 4, 3, 2], gate=0.9)),
+          (8, 16, _comp(ch(8, 16), climb.strip(), "C4"), dict(duty=25, venv=[4, 4, 3, 3], gate=0.9)),
+          (16, 24, _comp(ch(16, 24), "3:1.5 5:.5 8:1 5:1", "A3"),
+           dict(duty=50, venv=[5, 6, 6, 6, 5, 5, 5, 5, 4], gate=0.9)),
+          (24, 32, _comp(ch(24, 32), climb.strip(), "A3"), dict(duty=25, venv=[4, 4, 3, 3], gate=0.9))]
+    drive = "R:.5 8:.5 R:.5 8:.5 R:.5 8:.5 5:.5 8:.5"
+    gallop = "R:.5 8:.25 5:.25 " * 3 + "8:.5 R:.25 5:.25"
+    bass = _comp(SP_CHORDS, ["R:2 5:1 8:1"] * 8 + [drive] * 8 + [gallop] * 16, "E2")
+    run, fly = "k.h.s.h.k.hks.h.", "k.h.s.h.k.hks.hf"
+    push = "k.hks.h.kkh.s.hh"
+    drums = (["k.......k......."] * 4 + ["k...h...k...h..."] * 3 + ["k...h...k.s.s.ss"]
+             + [run, run, fly, run, run, fly, run, "s.s.s.sss.ssssss"]
+             + ["c...s.h.kkh.s.hh"] + [push] * 6 + ["k.hks.h.s.ssssss"]
+             + ["c..ks.h.kkh.s.hh"] + [push] * 6 + ["s.s.s.s.ssssssss"])
+
+    def one_pass(o):
+        for i, duty in enumerate((25, 25, 50, 50)):
+            a, b = _bar_index(melody, 8 * i), _bar_index(melody, 8 * i + 8)
+            _part(s, s.p1, o + 8 * i * bar, bpm, melody[a:b], 8, duty=duty, venv=LEAD_ENV,
+                  gate=0.9, vib=(5, 0.1 if i == 3 else 0.08))
+        for a, b, notes, look in p2:
+            _part(s, s.p2, o + a * bar, bpm, notes, b - a, **look)
+        _part(s, s.tri, o, bpm, bass, SP_BARS, gate=1.0)
+        _drums(s, o, bpm, drums[:8], level=0.65)              # the foot of the mast, softer
+        _drums(s, o + 8 * bar, bpm, drums[8:], level=0.8)
+        _wind(s, o, bpm, [(0, 1, 9), (4, 2, 7), (7.5, 3, 5), (8, 1, 6), (16, 1, 6)])
+
+    _every_loop(s, SP_LOOP, one_pass)
+
+
+# ---- title screen and menus
+
+# title_theme: D major, 83.7 BPM, 14 bars, after a 2-bar intro that is its own file
+# (title_intro). Someone still calling down a dead line: a thin 12.5% arpeggio rolls on, the
+# triangle walks underneath, and a sparse lead plays FIRST LIGHT's hook at half speed (A D D E
+# F# D, the 5 1 1 2 3 1 of m_1_1's D G G A B G, moved into D, in the same leaning rhythm):
+# twice in D, then once in B minor, and its answer closes the pass. Twice a pass a faint
+# two-note call (A5 then D6, the blip from amb_w1) goes out into the rests and nothing
+# answers it.
+# The intro ends on the same A chord and bass walk as the loop's last bar, so the join from
+# intro to loop is the same as the join from the loop's end back to its start.
+
+TITLE_N, TITLE_BARS, TITLE_INTRO_BARS = 43, 14, 2
+TITLE_LOOP = _loop_len(TITLE_BARS, TITLE_N)                  # 40.13 s
+TITLE_INTRO = _loop_len(TITLE_INTRO_BARS, TITLE_N)           # 5.73 s
+TITLE_CHORDS = "D Bm Em A  D Bm G A  Bm Bm G A  Em A"
+TITLE_MELODY = """
+A4:1 D5:2 D5:1 | E5:1 F#5:2 D5:1 | E5:1 F#5:2 E5:1 | C#5:1 A4:3 |
+A4:1 D5:2 D5:1 | E5:1 F#5:2 D5:1 | B5:1.5 A5:.5 G5:1 D5:1 | E5:3 -:1 |
+F#4:1 B4:2 B4:1 | C#5:1 D5:2 B4:1 | -:1 B4:1 D5:1 G5:1 | F#5:1.5 E5:.5 E5:2 |
+E5:1 F#5:2 E5:1 | C#5:1 A4:1.5 -:1.5
+"""
+TITLE_LEAD_ENV = [7, 9, 10, 10] + [9] * 6 + [8] * 10 + [7] * 14 + [6] * 20 + [5]
+
+
+@sfx("title_theme", TITLE_LOOP, "music",
+     "Title screen music, on the Music bus. Calm and hopeful, a little lonely. D major, 83.7 BPM, "
+     "14 bars. Play title_intro first: this file follows it with no gap. Keeps playing through "
+     "Settings and Extras. LOOPS (the whole file loops by itself in Godot, no click at the seam)",
+     trim_db=3.0, loop=True, lock=True,
+     intro=("title_intro", TITLE_INTRO,
+            "Title screen music intro (2 bars, plays once with the logo), on the Music bus. "
+            "Play title_theme the moment it ends: the intro runs straight into it"))
+def _(s):
+    bpm = _bpm(TITLE_N)
+    bar, beat = 240 / bpm, 60 / bpm
+    roll = "R:.5 5:.5 8:.5 10:.5 8:.5 5:.5 3:.5 5:.5"
+    walk, last = "R:1.5 5:.5 8:1 5:1", "R:1 5:1 8:1 C#3:1"      # last: up into D at the top
+    melody = _tune(TITLE_MELODY)
+    arps = _comp(TITLE_CHORDS, roll, "F#3")
+    bass = _comp(TITLE_CHORDS, [walk] * (TITLE_BARS - 1) + [last], "D2")
+    quiet = "................"
+    drums = [quiet] * 7 + ["..............x."] + ["k.......k......."] * 5 + ["k.......k.....x."]
+
+    def call(t):
+        s.p1.put(t, 0.05, N("A5"), venv=[5, 5, 4, 2], duty=12)
+        s.p1.put(t + 0.06, 0.12, N("D6"), venv=[5, 5, 4, 4, 3, 2, 1], duty=12)
+
+    # the intro: the line crackles awake, the arpeggio starts alone on D, the bass joins on A
+    _part(s, s.p2, 0, bpm, _comp("D A", roll, "F#3"), 2, duty=12, venv=[5, 4, 4, 3, 3, 3, 2],
+          gate=0.85)
+    _part(s, s.tri, bar, bpm, _comp("A", last, "D2"), 1, gate=0.9)
+    _drums(s, 0, bpm, ["x..............."], level=0.6)
+
+    def one_pass(o):
+        _part(s, s.p1, o, bpm, melody[:_bar_index(melody, 8)], 8, duty=25, venv=TITLE_LEAD_ENV,
+              gate=0.92, vib=(5, 0.1))
+        _part(s, s.p1, o + 8 * bar, bpm, melody[_bar_index(melody, 8):], 6, duty=50,
+              venv=TITLE_LEAD_ENV, gate=0.92, vib=(5, 0.1))
+        call(o + 7 * bar + 3 * beat)
+        call(o + 13 * bar + 2.5 * beat)
+        _part(s, s.p2, o, bpm, arps, TITLE_BARS, duty=12, venv=[5, 4, 4, 3, 3, 3, 2], gate=0.85)
+        _part(s, s.tri, o, bpm, bass, TITLE_BARS, gate=0.9)
+        _drums(s, o, bpm, drums, level=0.55)
+
+    o = TITLE_INTRO
+    while o < s.dur:
+        one_pass(o)
+        o += TITLE_LOOP
+
+
+def _menu_move(s, note: str) -> None:
+    s.p1.put(0, 0.045, N(note), venv=[12, 8, 4], duty=12)
+
+
+for _i, _n in enumerate(["D6", "E6", "F#6", "A6", "B6"], 1):
+    # menu_move's blip on the D major scale, one note per row; row 4 is menu_move's own A6
+    sfx(f"menu_move_{_i}", 0.05, "ui", f"Title menu cursor lands on row {_i} (row 1 is the "
+        f"lowest note, each row down the menu is higher)", trim_db=-8.0)(
+        lambda s, n=_n: _menu_move(s, n))
+
+
+@sfx("menu_deny", 0.15, "ui", "Menu choice isn't available (like shop_deny, but shorter)",
+     trim_db=-5.5, fade=0.015)
+def _(s):
+    # shop_deny's "uh-uh" at half the length: two low buzzes, the second a semitone lower
+    for t, root in [(0.0, N("D3")), (0.075, N("C#3"))]:
+        s.p1.put(t, 0.06, root, venv=[13, 12, 9, 0], duty=50, arp=[0, 1], arp_ticks=1)
+        s.p2.put(t, 0.06, st(root, 1), venv=[7, 6, 4, 0], duty=25)
+        s.tri.put(t, 0.05, st(root, -12))
+
+
+@sfx("menu_tick", 0.03, "ui", "A settings slider moves one step (raise the pitch with the "
+     "value, at most one every 60 ms)", trim_db=-9.5, fade=0.008)
+def _(s):
+    s.noi.put(0, 0.01, 2, venv=[6, 0], short=True)
+    s.p1.put(0, 0.025, N("D6"), venv=[11, 6], duty=25)
+
+
+@sfx("title_start", 0.8, "ui", "New game or continue chosen on the title: the Spark leaves "
+     "(plays over the 400 ms music fade)", trim_db=-2.5, fade=0.12)
+def _(s):
+    # D F# A up to a bright held D6, the Spark zipping off along the wire underneath
+    for i, n in enumerate(["D5", "F#5", "A5"]):
+        s.p1.put(i * 0.06, 0.06, N(n), venv=[13, 12, 11, 11], duty=25)
+    s.p1.put(0.18, 0.6, N("D6"), venv=dec(13, 36, 1.8), duty=25, vib=(7, 0.12))
+    s.echo(s.p1, s.p2, 0.05, 0.4, duty=12)
+    s.tri.put(0, 0.18, N("D3"))
+    s.tri.put(0.18, 0.24, N("D4"))
+    s.noi.put(0, 0.36, 9, 2, venv=[2, 3, 4, 5, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1, 1, 1, 1, 1, 0],
+              glide="lin")
+
+
+# ---- the Arc: the Spark throws a short arc of static forward. It kills enemies (spiked
+# walkers from the side too) and breaks cracked walls.
+
+@sfx("arc_swing", 0.12, "player", "Player throws the Arc (plays on every throw, hit or miss)",
+     trim_db=-2.0, fade=0.02)
+def _(s):
+    # a snap of short-mode crackle over a quick falling 12.5% zap. Kept light: it plays a lot
+    s.noi.put(0, 0.1, 3, 6, venv=[11, 6, 9, 4, 5, 2, 1], short=True, glide="lin", arp=[0, 2],
+              arp_ticks=1)
+    s.p1.put(0, 0.09, N("A6"), N("D5"), venv=[11, 10, 7, 5, 3, 1], duty=12, gcurve=0.5,
+             arp=[0, 12], arp_ticks=2)
+    s.p2.put(0.01, 0.08, N("D6"), N("D5"), venv=[4, 4, 3, 2, 1], duty=25, gcurve=0.5)
+
+
+@sfx("arc_hit", 0.15, "player", "The Arc hits an enemy (play with arc_swing)", fade=0.03)
+def _(s):
+    # a bright crackle, then a hard crack of hiss with a thump under a falling 50% zap
+    s.noi.put(0, 0.025, 2, venv=[15, 12], short=True)
+    s.noi.put(0.025, 0.12, 2, 8, venv=[15, 12, 9, 6, 4, 2, 1], glide="lin")
+    s.tri.put(0, 0.1, N("D3"), N("D1"), gcurve=0.5)
+    s.p1.put(0, 0.11, N("D6"), N("D4"), venv=[14, 13, 10, 7, 4, 2, 1], duty=50, gcurve=0.6,
+             arp=[0, 12], arp_ticks=1)
+    s.p2.put(0.02, 0.1, N("A5"), N("A4"), venv=[7, 6, 4, 3, 1], duty=25, gcurve=0.6)
+
+
+@sfx("wall_crack", 0.15, "blocks", "A cracked wall is hit but doesn't break yet (walls that take "
+     "more than one hit)", trim_db=-1.0, fade=0.03)
+def _(s):
+    # a dry stone crack, a small second split just after it, and a dull knock under both
+    s.noi.put(0, 0.05, 4, 7, venv=[15, 9, 4], glide="lin")
+    s.noi.put(0.05, 0.09, 6, 9, venv=[10, 6, 3, 2, 1], glide="lin")
+    s.tri.put(0, 0.05, N("A2"), N("D2"))
+    s.p1.put(0, 0.03, N("A3"), venv=[9, 5], duty=50)
+
+
+@sfx("wall_break", 0.44, "blocks", "A cracked wall shatters (the Arc's last hit on it)",
+     fade=0.04)
+def _(s):
+    # brick_break's family, but stone: lower, longer crumble that tumbles in lumps, a heavier
+    # falling triangle that drops twice, and a low thud in place of brick_break's bright ping
+    s.noi.put(0, 0.07, 3, 6, venv=[15, 15, 12, 9, 7], glide="lin")
+    s.noi.put(0.07, 0.11, 7, 10, venv=[12, 9, 11, 7, 8, 5, 4], glide="lin")
+    s.noi.put(0.18, 0.11, 9, 11, venv=[9, 6, 8, 5, 6, 3, 2], glide="lin", arp=[0, 2], arp_ticks=2)
+    s.noi.put(0.29, 0.13, 10, 13, venv=[6, 4, 5, 3, 3, 2, 1, 1], glide="lin")
+    s.tri.put(0, 0.17, N("D3"), N("D1"), gcurve=0.5)
+    s.tri.put(0.2, 0.12, N("A2"), N("D1"), gcurve=0.5)
+    s.p1.put(0, 0.05, N("A3"), N("D3"), venv=[12, 8, 4], duty=50)
+
+
+@sfx("arc_learn", 1.85, "jingles", "Player learns the Arc", fade=0.1)
+def _(s):
+    # a crackle of static, then up the D major chord, up the A chord, and a ringing D7
+    s.noi.put(0, 0.08, 2, 5, venv=[10, 6, 9, 4, 5], short=True, glide="lin")
+    bpm = 300
+    s.seq(s.p1, 0, bpm, [("D5", 0.5), ("F#5", 0.5), ("A5", 0.5), ("D6", 1), ("C#6", 0.5),
+                         ("E6", 0.5), ("A6", 1), ("B6", 0.5), ("C#7", 0.5), ("D7", 4)],
+          duty=50, venv=[13, 12, 11, 10], last_decay=0.72, vib=(7, 0.12))
+    s.echo(s.p1, s.p2, 0.07, 0.4, duty=25)
+    s.seq(s.tri, 0, bpm, [("D4", 2.5), ("A3", 2), ("A4", 1), ("D4", 2)], gate=0.95,
+          last_decay=0.45)
+    # the Arc fizzing faintly round the held note
+    s.noi.put(1.1, 0.5, 1, venv=[3, 1, 2, 1, 2, 1, 1, 1, 1, 0], short=True)
+
+
+# ---- the story intro (docs/story/intro-shots.md, section 4): five music cues and eight effects.
+# The music runs at 80 BPM (3600 / 45), so a bar is exactly 3.0 s and a 6-second card is two
+# bars. It quotes FIRST LIGHT in D (A D D E F# D, as title_theme does), the two-note call from
+# amb_w1 and title_theme, and village_theme's chords and bass, which it hands over to.
+
+INTRO_N = 45
+INTRO_BPM = _bpm(INTRO_N)                                    # 80 BPM
+INTRO_BAR, INTRO_BEAT = 240 / INTRO_BPM, 60 / INTRO_BPM      # 3.0 s, 0.75 s
+INTRO_ROLL = "R:.5 5:.5 8:.5 10:.5 8:.5 5:.5 3:.5 5:.5"      # title_theme's rolling arpeggio
+INTRO_SING = [7, 9, 9, 9, 8, 8, 8, 8, 7, 7, 7, 7, 7, 6, 6, 6, 6, 6, 5]
+INTRO_ARP_ENV = [5, 5, 4, 4, 3, 3, 3, 2, 2, 2, 1]
+
+
+def _call(v: Voice, t: float, level: float = 1.0, duty: int = 12) -> None:
+    """The far caller's two-note call, A5 then D6, shaped as title_theme plays it."""
+    v.put(t, 0.05, N("A5"), venv=[5, 5, 4, 2], level=level, duty=duty)
+    v.put(t + 0.06, 0.12, N("D6"), venv=[5, 5, 4, 4, 3, 2, 1], level=level, duty=duty)
+
+
+# intro_line, cards 1 and 2: the line when it was alive. D major, 4 bars. The arpeggio rolls
+# alone, pulse 1 sings the motif high like a music box, pulse 2 passes it on an octave down a
+# beat late (after amb_w1's blip), and the triangle answers with its first three notes.
+
+INTRO_LINE_LOOP = _loop_len(4, INTRO_N)                      # 12.0 s
+INTRO_LINE_VOICE = "A5:.5 D6:1 D6:.5 E6:.5 F#6:1 D6:.5"
+INTRO_LINE_RELAY = "-:1 A4:.5 D5:1 D5:.5 E5:.5 F#5:.5 | D5:1 -:3"
+INTRO_LINE_TWINKLE = "G4:.5 D5:.5 G5:.5 B5:.5 G5:.5 D5:.5 E5:.5 C#5:.5"
+INTRO_LINE_BASS = """
+D2:1.5 A1:.5 D2:2 | D2:1.5 A1:.5 D2:1 A1:1 | B1:1.5 F#2:.5 B1:1 F#2:1 | G2:1 A2:.5 D3:.5 D3:1 A2:1
+"""
+
+
+@sfx("intro_line", INTRO_LINE_LOOP, "music",
+     "Story intro, cards 1 and 2, on the Music bus. Warm and a little old, like a music box. "
+     "D major, 80 BPM, 4 bars, FIRST LIGHT passed from voice to voice. LOOPS (the file loops by "
+     "itself in Godot, no click at the seam)", trim_db=2.6, loop=True, lock=True)
+def _(s):
+    bpm, bar = INTRO_BPM, INTRO_BAR
+    roll = _comp("D D", INTRO_ROLL, "F#3")
+    twinkle = (_comp("Bm", "-:1 5:.5 8:.5 10:.5 8:.5 5:.5 3:.5", "F#4")
+               + _tune(INTRO_LINE_TWINKLE))
+
+    def one_pass(o):
+        _part(s, s.p2, o, bpm, roll, 2, duty=12, venv=INTRO_ARP_ENV, gate=0.85)
+        _part(s, s.p1, o + bar, bpm, _tune(INTRO_LINE_VOICE), 1, duty=50, venv=INTRO_SING,
+              gate=0.92, vib=(5, 0.08))
+        _call(s.p1, o + 2 * bar, duty=25)                  # amb_w1's blip, in the rest
+        _part(s, s.p1, o + 2 * bar, bpm, twinkle, 2, duty=12, venv=INTRO_ARP_ENV, gate=0.85)
+        _part(s, s.p2, o + 2 * bar, bpm, _tune(INTRO_LINE_RELAY), 2, duty=25,
+              venv=[v - 2 for v in INTRO_SING], gate=0.92, vib=(5, 0.08))
+        _part(s, s.tri, o, bpm, _tune(INTRO_LINE_BASS), 4, gate=0.97)
+        _drums(s, o, bpm, ["..h...h...h...h."] * 4, level=0.5)
+
+    _every_loop(s, INTRO_LINE_LOOP, one_pass)
+
+
+# intro_noise, cards 3 and 4: the noise comes down the line. D minor, 4 bars. The motif in minor,
+# then static crackles in and pulse 2 sags a quarter-tone flat, then the motif skips on its first
+# two notes while the whole line drops out, then a triangle pedal on A under swelling hiss.
+# Card 4 cuts it dead at 7.25 s (global 19.25). The first drop-out runs from 7.125 s to 7.5 s,
+# so at the cut every voice is already silent.
+
+INTRO_NOISE_LOOP = _loop_len(4, INTRO_N)                     # 12.0 s
+INTRO_NOISE_CHORDS = "Dm Bb Dm A"
+INTRO_NOISE_VOICE = """
+A4:.5 D5:.5 D5:.5 E5:.5 F5:1 D5:1 | F5:1.5 E5:.5 D5:2 |
+A4:1/3 D5:1/3 A4:1/3 D5:1/3 A4:1/3 -:1/3 A4:1/3 D5:1/3 A4:1/3 D5:1/3 A4:1/3 D5:1/3 |
+-:1 F5:1.5 E5:.5 C#5:1
+"""
+INTRO_NOISE_BASS = """
+D2:1.5 A1:.5 D2:1 A1:1 | Bb1:1.5 F2:.5 Bb1:1 F2:1 |
+D2:2/3 D2:1/3 D2:2/3 D2:1/3 D2:2/3 D2:1/3 D2:2/3 D2:1/3 |
+A1:.5 A1:.5 A1:.5 A1:.5 A1:.5 A1:.5 A1:.5 A1:.5
+"""
+INTRO_NOISE_SKIPS = [(1.125, 1.5), (2.5, 2.75)]              # drop-outs, seconds into bar 3
+
+
+@sfx("intro_noise", INTRO_NOISE_LOOP, "music",
+     "Story intro, cards 3 and 4, on the Music bus. Uneasy. D minor, 80 BPM, 4 bars. The code "
+     "cuts it dead (20 ms fade) at 7.25 s, when the line is cut, and every voice is silent from "
+     "7.125 s to 7.5 s. LOOPS (the file loops by itself in Godot, no click at the seam)",
+     trim_db=3.2, loop=True, lock=True)
+def _(s):
+    bpm, bar = INTRO_BPM, INTRO_BAR
+    melody = _tune(INTRO_NOISE_VOICE)
+    b3, b4 = _bar_index(melody, 2), _bar_index(melody, 3)
+    trip = "R:1/3 3:1/3 5:1/3 8:1/3 5:1/3 3:1/3 R:1/3 3:1/3 5:1/3 8:1/3 5:1/3 3:1/3"
+    arps = _comp(INTRO_NOISE_CHORDS, [INTRO_ROLL, INTRO_ROLL, trip, INTRO_ROLL], "F#3")
+    six = bar / 16
+
+    def crackle(t, v, p):
+        s.noi.put(t, 4 * FRAME / TICK_HZ, p, venv=[v, max(v // 3, 1), max(2 * v // 3, 1),
+                                                   max(v // 4, 1)], short=True)
+
+    def one_pass(o):
+        _part(s, s.p1, o, bpm, melody[:b3], 2, duty=50, venv=INTRO_SING, gate=0.92,
+              vib=(5, 0.08))
+        _part(s, s.p1, o + 2 * bar, bpm, melody[b3:b4], 1, duty=50, venv=[8, 7, 6], gate=0.55)
+        _part(s, s.p1, o + 3 * bar, bpm, melody[b4:], 1, duty=50, venv=INTRO_SING, gate=0.92,
+              vib=(5, 0.08))
+        _part(s, s.p2, o, bpm, arps, 4, duty=25, venv=INTRO_ARP_ENV, gate=0.85)
+        _part(s, s.tri, o, bpm, _tune(INTRO_NOISE_BASS), 4, gate=0.92)
+        # noise: bar 1 is intro_line's soft hi-hat, bar 2 static crackling in louder and louder,
+        # bar 3 thick crackle, bar 4 hiss swelling twice around the crackle
+        _drums(s, o, bpm, ["..h...h...h...h."], level=0.5)
+        for i in (1, 3, 4, 6, 7, 9, 10, 11, 13, 14, 15):
+            crackle(o + bar + i * six, round(2 + 6 * i / 15), (3, 2, 4, 1)[i % 4])
+        for i in range(12):
+            crackle(o + 2 * bar + i * bar / 12, (7, 6, 8, 6)[i % 4], (2, 3, 1, 4)[i % 4])
+        for i in (0, 6, 11):
+            crackle(o + 3 * bar + i * six, 6, 3)
+        _wind(s, o + 3 * bar, bpm, [(0, 1, 9), (0.35, 7, 4), (0.5, 3, 7), (0.85, 8, 3),
+                                    (1.0, 2, 8)])
+        # from bar 2 on, pulse 2 sags a quarter-tone flat and back every two beats
+        a = int(round((o + bar) * TICK_HZ))
+        b = min(a + int(round(3 * bar * TICK_HZ)), len(s.p2.freq))
+        t = np.arange(b - a) / TICK_HZ
+        s.p2.freq[a:b] *= 2 ** ((-0.25 + 0.25 * np.cos(2 * math.pi * t / (2 * INTRO_BEAT))) / 12)
+        # the line skips: every voice drops out together
+        for t0, t1 in INTRO_NOISE_SKIPS:
+            a, b = (int(round((o + 2 * bar + x) * TICK_HZ)) for x in (t0, t1))
+            for v in (s.p1, s.p2, s.tri, s.noi):
+                v.vol[a:b] = 0
+
+    _every_loop(s, INTRO_NOISE_LOOP, one_pass)
+
+
+# intro_still, card 6: the Spark lying at the end of the cut wire. D minor, 2 bars. A slow
+# heartbeat on the triangle, a very quiet high A breathing on a 12.5% pulse, and pulse 2 on one
+# note a bar, F then E.
+
+INTRO_STILL_LOOP = _loop_len(2, INTRO_N)                     # 6.0 s
+
+
+@sfx("intro_still", INTRO_STILL_LOOP, "music",
+     "Story intro, card 6, on the Music bus. Tender and small. D minor, 80 BPM, 2 bars. Fades out "
+     "as card 7 starts. LOOPS (the file loops by itself in Godot, no click at the seam)",
+     trim_db=4.0, loop=True, lock=True)
+def _(s):
+    beat, bar = INTRO_BEAT, INTRO_BAR
+    frames = int(round(INTRO_STILL_LOOP * 60))
+    breath = [int(round(2.5 - 0.5 * math.cos(4 * math.pi * i / frames))) for i in range(frames)]
+    # pulse 2 swells in after the first heartbeat, holds, and gives way a little to the second
+    held = ([3, 4, 5, 5, 6, 6, 7, 7] + [8] * 80 + [7] + [6] * 15 + [7] + [8] * 50
+            + [7, 7, 6, 6, 5, 5, 4, 4, 3, 3])
+
+    def one_pass(o):
+        s.p1.put(o, INTRO_STILL_LOOP, N("A5"), venv=breath, duty=12, vib=(2.5, 0.12))
+        for i, note in enumerate(("F4", "E4")):
+            s.p2.put(o + i * bar, bar - 0.02, N(note), venv=held, duty=50)
+        for k in range(4):                                  # beats 1 and 3: lub, dub
+            t = o + 2 * k * beat
+            s.tri.put(t, 0.09, N("D2"), N("A1"))
+            s.tri.put(t + beat / 4, 0.05, N("D2"))
+
+    _every_loop(s, INTRO_STILL_LOOP, one_pass)
+
+
+# intro_home, cards 8 to 10, with intro_wake (the flare) as its one-off intro. D major, 6 bars.
+# Bars 1 and 2 are the motif at half speed as title_theme plays it. Bars 3 and 4 are
+# village_theme's third and fourth bars, with its broken chords and walking bass. In bar 5
+# title_theme's call goes out and, for the first time, is answered two beats later as the chord
+# turns to A. Bar 6 stays on A, unresolved, and walks up to D the way village_theme's last bar
+# does. intro_wake: a 0.2 s crackle, a D major downbeat, a quick run up to a held high D, and a
+# last beat identical to intro_home's last beat, so the join sounds like the loop's own seam.
+
+INTRO_HOME_LOOP = _loop_len(6, INTRO_N)                      # 18.0 s
+INTRO_WAKE = 0.2 + INTRO_BAR                                 # 3.2 s: the pickup, then one bar
+INTRO_HOME_CHORDS = "D Bm G A G+A A"
+INTRO_HOME_MELODY = """
+A4:1 D5:2 D5:1 | E5:1 F#5:2 D5:1 |
+B4:.5 D5:1 G5:1 F#5:.5 E5:1 | E5:1.5 F#5:.5 E5:1 -:1 | -:4 | E5:3 -:1
+"""
+
+
+@sfx("intro_home", INTRO_HOME_LOOP, "music",
+     "Story intro, cards 8 (second half) to 10, on the Music bus. Relief and company. D major, "
+     "80 BPM, 6 bars, ending on A for village_theme to resolve. Play intro_wake first: this file "
+     "follows it with no gap. LOOPS (the whole file loops by itself in Godot, no click at the "
+     "seam)", trim_db=2.8, loop=True, lock=True,
+     intro=("intro_wake", INTRO_WAKE,
+            "Story intro, card 8, the Spark flares awake, on the Music bus. Plays once: a 0.2 s "
+            "crackle, then the downbeat. Play intro_home the moment it ends: it runs straight "
+            "into it"))
+def _(s):
+    bpm, bar, beat = INTRO_BPM, INTRO_BAR, INTRO_BEAT
+    melody = _tune(INTRO_HOME_MELODY)
+    b3 = _bar_index(melody, 2)
+    rolls = _comp("D Bm", INTRO_ROLL, "F#3")
+    walk = _comp("D Bm", "R:1.5 5:.5 8:1 5:1", "D2")
+    lead_env = [8, 10, 11, 11, 10, 10, 10, 9, 9, 9, 9, 8, 8, 8, 8, 7, 7, 7, 7, 6, 6, 6, 6, 5]
+    broken: list[tuple[str | None, float]] = []
+    bass: list[tuple[str | None, float]] = []
+    later = INTRO_HOME_CHORDS.split()[2:]
+    for i, chord in enumerate(later):                      # village_theme's parts, bars 3 to 6
+        halves = chord.split("+")
+        for h in halves:
+            lo, mid, hi = VILLAGE_ARP[h]
+            broken += [(n, 0.5) for n in [lo, hi, mid, hi] * (2 // len(halves))]
+            root, fifth = VILLAGE_BASS[h]
+            if len(halves) == 2:
+                bass += [(root, 1.5), (fifth, 0.5)]
+            elif i == len(later) - 1:                      # walks up into D, as village_theme does
+                bass += [(root, 1.5), (fifth, 0.5), (root, 1), ("C#3", 1)]
+            else:
+                bass += [(root, 1.5), (fifth, 0.5), (root, 1), (fifth, 1)]
+
+    def kit(o, eighths=range(8), sparse=False):
+        """village_theme's soft drums for one bar from o. sparse: the thud on beats 1 and 3 only."""
+        for i in eighths:
+            t, on_beat, b = o + i * beat / 2, i % 2 == 0, i // 2
+            if on_beat and (b == 0 or (sparse and b == 2)):
+                s.noi.put(t, 0.1, 12, venv=[7, 5, 3, 1])           # soft low thud
+            elif sparse:
+                continue
+            elif on_beat and b in (1, 3):
+                s.noi.put(t, 0.1, 4, venv=[4, 3, 2, 1])            # brush
+            else:
+                s.noi.put(t, 0.03, 0 if not on_beat else 1, venv=[2, 1])   # shaker tick
+
+    # intro_wake. 1: the line crackles awake for 0.2 s
+    g = 0.2
+    s.noi.put(0, g, 4, 1, venv=[3, 5, 4, 7, 6, 9, 8, 11, 10, 12, 11, 13], glide="lin", short=True,
+              arp=[0, 2, 1], arp_ticks=1)
+    # 2: the downbeat, both pulses at 50% on D major, the triangle leaping from D2 to D3
+    s.seq(s.p1, g, bpm, [("F#5", 0.5)], duty=50, venv=[9, 9, 8, 8], gate=0.95)
+    s.seq(s.p2, g, bpm, [("A4", 0.5)], duty=50, venv=[7, 7, 6, 6], gate=0.95)
+    s.noi.put(g, 0.6, 2, venv=dec(4, 36, 0.6))
+    _part(s, s.tri, g, bpm, _tune("D2:1/2 D3:3/2 A2:1 C#3:1"), 1, gate=1.0)
+    # 3: a quick run up D, F#, A to a held high D, pulse 2 under it, the chord turning to A
+    s.seq(s.p1, g + beat / 2, bpm, [("D5", 1 / 6), ("F#5", 1 / 6), ("A5", 1 / 6), ("D6", 2)],
+          duty=50, venv=[10, 10, 10, 10, 9, 9, 9, 9, 9, 8, 8, 8, 8, 7], gate=0.95, vib=(5, 0.12))
+    s.seq(s.p2, g + beat, bpm, [("F#5", 1), ("E5", 1)], duty=25, venv=[6, 6, 5, 5, 5, 4],
+          gate=0.9)
+    # 4: the last beat is intro_home's own last beat, its pickup back into bar 1
+    s.seq(s.p2, g + 3 * beat, bpm, [("C#4", 0.5), ("E4", 0.5)], duty=25, venv=[6, 5, 4, 4, 3, 3],
+          gate=0.9)
+    kit(g, eighths=(6, 7))
+
+    def one_pass(o):
+        _part(s, s.p1, o, bpm, melody[:b3], 2, duty=25, venv=TITLE_LEAD_ENV, level=0.9,
+              gate=0.92, vib=(5, 0.1))
+        _part(s, s.p1, o + 2 * bar, bpm, melody[b3:], 4, duty=50, venv=lead_env, gate=0.95,
+              vib=(5, 0.1))
+        _call(s.p1, o + 4 * bar)                           # the call goes out...
+        _call(s.p1, o + 4 * bar + 2 * beat, level=0.6)     # ...and this time it is answered
+        _part(s, s.p2, o, bpm, rolls, 2, duty=12, venv=[5, 4, 4, 3, 3, 3, 2], gate=0.85)
+        _part(s, s.p2, o + 2 * bar, bpm, broken, 4, duty=25, venv=[6, 5, 4, 4, 3, 3], gate=0.9)
+        _part(s, s.tri, o, bpm, walk, 2, gate=0.9)
+        _part(s, s.tri, o + 2 * bar, bpm, bass, 4, gate=1.0)
+        _drums(s, o, bpm, ["k.......k......."] * 2, level=0.45)
+        for k in range(2, 6):
+            kit(o + k * bar, sparse=(k == 4))
+
+    o = INTRO_WAKE
+    while o < s.dur:
+        one_pass(o)
+        o += INTRO_HOME_LOOP
+
+
+@sfx("line_pulse", 0.45, "intro", "Story intro card 2: a voice passes down the wire (at 1.5 s, "
+     "and again at 3.3 s two semitones up)", trim_db=-1.0, fade=0.03)
+def _(s):
+    # a tiny tick as the pulse arrives, a 12.5% pulse gliding quickly up D5 to A5 and ringing
+    # away, with a quiet echo on pulse 2
+    s.noi.put(0, 0.02, 1, venv=[5, 1], short=True)
+    s.p1.put(0, 0.09, N("D5"), N("A5"), venv=[10, 12, 12, 12, 12, 12], duty=12, gcurve=0.6)
+    s.p1.put(0.09, 0.34, N("A5"), venv=[12, 11, 10, 9, 8, 7, 6, 6, 5, 5, 4, 4, 3, 3, 3, 2, 2, 2, 1,
+                                        1, 1, 0], duty=12, vib=(8, 0.1))
+    s.echo(s.p1, s.p2, 0.06, 0.4, duty=25)
+
+
+INTRO_CRAWL_LOOP = 1.0
+
+
+@sfx("static_crawl", INTRO_CRAWL_LOOP, "intro",
+     "Story intro cards 3 and 4: the noise crawling along the wire (pan it with the static). "
+     "LOOPS (the file loops by itself in Godot, no click at the seam)", trim_db=-3.0, loop=True,
+     lock=True)
+def _(s):
+    # a metallic buzz on short-mode noise, its pitch jumping 30 times a second and its volume
+    # flickering every frame, with an irregular 12.5% tick under it. Fixed patterns, one per pass.
+    lt = int(round(INTRO_CRAWL_LOOP * TICK_HZ))
+    rs = np.random.RandomState(47)
+    pit = rs.choice([1, 2, 3, 4, 5, 6], lt // 8).repeat(8)
+    vol = rs.choice([6, 8, 9, 10, 11, 12], lt // FRAME).repeat(FRAME)
+    reps = len(s.noi.vol) // lt + 1
+    s.noi.freq[:] = np.tile(pit, reps)[: len(s.noi.vol)]
+    s.noi.vol[:] = np.tile(vol, reps)[: len(s.noi.vol)]
+    s.noi.short[:] = True
+
+    def ticks(o):
+        for t, n, v in [(0.03, "D4", 8), (0.16, "A3", 6), (0.21, "C#4", 7), (0.4, "D4", 8),
+                        (0.51, "G#3", 6), (0.57, "A3", 7), (0.76, "D4", 8), (0.9, "F4", 6)]:
+            s.p1.put(o + t, 3 / TICK_HZ, N(n), venv=[v], duty=12)
+    _every_loop(s, INTRO_CRAWL_LOOP, ticks)
+
+
+@sfx("lamp_off", 0.3, "intro", "Story intro cards 3 and 4: a station light dies (quieter and "
+     "lower for distant lights)", trim_db=-1.0, fade=0.03)
+def _(s):
+    # lamp_on turned round: a warm 50% note falling a fifth (A4 to D4) as it flickers and dies,
+    # then two small crackles and out
+    s.p1.put(0, 0.2, N("A4"), N("D4"), venv=[12, 12, 12, 11, 11, 10, 9, 8, 7, 5, 0, 6, 0, 3],
+             duty=50, gcurve=1.5, vib=(8, 0.08))
+    s.p2.put(0, 0.15, N("E5"), N("A4"), venv=[5, 5, 4, 4, 3, 3, 2, 2, 1], duty=25, gcurve=1.5)
+    s.tri.put(0, 0.08, N("A3"), N("D3"))
+    s.noi.put(0.2, 0.02, 5, venv=[8, 2])
+    s.noi.put(0.25, 0.02, 6, venv=[5, 1])
+
+
+@sfx("wire_snap", 0.7, "intro", "Story intro card 4: the switch opens and the line breaks "
+     "(lever_pull plays 0.35 s before it)", fade=0.05)
+def _(s):
+    # a heavy clack: a metal click, a falling triangle and low noise
+    s.noi.put(0, 0.012, 1, venv=[15], short=True)
+    s.noi.put(0.012, 0.05, 11, 13, venv=[15, 14, 12], glide="lin")
+    s.tri.put(0, 0.14, N("D3"), N("D1"), gcurve=0.5)
+    # a bright arc crackle as the contacts part
+    s.noi.put(0.06, 0.16, 1, 3, venv=[14, 9, 13, 7, 12, 6, 10, 5, 8, 4], short=True, glide="lin",
+              arp=[0, 2, 1, 3], arp_ticks=1)
+    # the line whipping away on a fast falling pulse
+    s.p1.put(0.02, 0.12, N("D7"), N("D4"), venv=[14, 13, 11, 9, 7, 5, 3], duty=12, gcurve=0.4)
+    s.p2.put(0.04, 0.1, N("A6"), N("A3"), venv=[7, 6, 5, 4, 3, 2], duty=25, gcurve=0.4)
+    # a short ring-down: the cut wire twanging and sagging a semitone, a rumble under it
+    s.p1.put(0.16, 0.5, N("D5"), N("C#5"), venv=dec(10, 30, 0.7), duty=25, arp=[0, 6],
+             arp_ticks=1)
+    s.p2.put(0.16, 0.46, st(N("D5"), 0.3), st(N("C#5"), 0.3), venv=dec(4, 28, 0.7), duty=12)
+    s.noi.put(0.22, 0.45, 10, 14, venv=dec(6, 27, 0.8), glide="lin")
+
+
+@sfx("static_die", 0.5, "intro", "Story intro card 4: the noise fizzles out at the gap",
+     trim_db=-2.0, fade=0.02)
+def _(s):
+    # crackle that thins and slows: each burst shorter, quieter, lower and further from the
+    # last, down to single ticks, with a thin fizz falling away under the first few
+    for i, (t, d, v) in enumerate([(0.0, 0.07, 12), (0.09, 0.05, 10), (0.17, 0.04, 8),
+                                   (0.25, 0.025, 7), (0.33, 0.015, 5), (0.41, 0.01, 4),
+                                   (0.47, 0.008, 3)]):
+        s.noi.put(t, d, 1 + i // 2, venv=[v, v // 2, 3 * v // 4, v // 3], short=True,
+                  arp=[0, 2, 1], arp_ticks=1)
+    s.p1.put(0, 0.3, N("A6"), N("D5"), venv=[5, 3, 4, 2, 3, 1, 2, 1, 1, 0], duty=12, arp=[0, 5],
+             arp_ticks=1, gcurve=0.7)
+
+
+@sfx("line_ring", 0.9, "intro", "Story intro card 7: the dead line rings once (plays three "
+     "times, one per ring)", fade=0.05)
+def _(s):
+    # an old phone bell heard down a long dead wire: two 50% pulses trilling 20 times a second
+    # between A5 and D6 (pulse 2 a hair sharp, so the pair wobbles), a soft triangle thump as it
+    # starts, faint line hiss, then the two bells ringing on and fading
+    ring = [13, 13, 12, 12, 12, 12, 11, 11, 11, 11, 11, 11, 10, 10, 10, 10, 10, 10, 10, 10, 9, 9,
+            9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9]
+    s.p1.put(0, 0.6, N("A5"), arp=[0, 5], arp_ticks=6, venv=ring, duty=50, vib=(6, 0.12))
+    s.p2.put(0, 0.6, st(N("D6"), 0.08), arp=[0, -5], arp_ticks=6, venv=[v // 2 for v in ring],
+             duty=50, vib=(6, 0.12))
+    s.p1.put(0.6, 0.3, N("D6"), venv=dec(9, 18, 0.8), duty=50, vib=(6, 0.12))
+    s.p2.put(0.6, 0.28, st(N("A5"), 0.08), venv=dec(4, 17, 0.8), duty=50, vib=(6, 0.12))
+    s.tri.put(0, 0.04, N("D3"), N("A2"))
+    s.noi.put(0, 0.85, 2, venv=[2] * 36 + [1] * 15 + [0])
+
+
+@sfx("spark_flare", 0.6, "intro", "Story intro card 8: the Spark flares awake (plays on "
+     "intro_wake's downbeat)", fade=0.06)
+def _(s):
+    # a crackle of static swelling fast into a bright blip that rises D6 to D7 and rings above
+    # the music's held D6, the Arc-like fizz playing round it (the family of arc_learn)
+    s.noi.put(0, 0.1, 5, 1, venv=[4, 7, 6, 10, 9, 13, 15], glide="lin", short=True,
+              arp=[0, 2, 1], arp_ticks=1)
+    s.p1.put(0.08, 0.08, N("D6"), N("D7"), venv=[12, 13, 14, 14, 14], duty=25, gcurve=0.5)
+    s.p1.put(0.16, 0.42, N("D7"), venv=dec(13, 25, 1.5), duty=25, vib=(8, 0.12))
+    s.echo(s.p1, s.p2, 0.05, 0.4, duty=12)
+    s.tri.put(0.08, 0.1, N("D4"), N("D5"), gcurve=0.5)
+    s.noi.put(0.16, 0.36, 1, venv=[4, 2, 3, 1, 2, 1, 2, 1, 1, 1, 1, 0], short=True)
+
+
+@sfx("caller_blip", 0.35, "intro", "Story intro cards 8 and 10: the far light answers (the "
+     "two-note call from title_theme and amb_w1, with a softer echo)")
+def _(s):
+    # title_theme's call, A5 then D6 on a 12.5% pulse, and a softer copy replying on pulse 2
+    s.p1.put(0, 0.05, N("A5"), venv=[12, 12, 10, 5], duty=12)
+    s.p1.put(0.06, 0.12, N("D6"), venv=[12, 12, 10, 10, 7, 5, 2], duty=12)
+    s.p2.put(0.18, 0.05, N("A5"), venv=[5, 5, 4, 2], duty=12)
+    s.p2.put(0.24, 0.09, N("D6"), venv=[5, 5, 4, 4, 3, 2, 1], duty=12)
+
+
 # ---------------------------------------------------------------- build
 
 def build(names: list[str] | None = None) -> list[dict]:
@@ -2128,9 +3153,27 @@ def build(names: list[str] | None = None) -> list[dict]:
         old = {e["name"]: e for e in json.loads(manifest_path.read_text())["sounds"]}
     entries = []
     for name, spec in SOUNDS.items():
+        intro = spec["intro"]
         if names and name not in names:
-            if name in old:
-                entries.append(old[name])
+            for n in ([intro[0]] if intro else []) + [name]:
+                if n in old:
+                    entries.append(old[n])
+            continue
+        if intro:
+            iname, ilen, itrigger = intro
+            s = Sound(ilen + 2 * spec["dur"] + LOOP_XFADE + LOOP_SEARCH + 0.02)
+            spec["fn"](s)
+            lock_phase(s, spec["dur"], start=ilen)
+            ipcm, istats, pcm, stats = finish_intro_loop(render(s), ilen, spec["dur"],
+                                                         spec["trim_db"])
+            write_wav(OUT / f"{iname}.wav", ipcm)
+            entries.append({"name": iname, "file": f"{iname}.wav", "category": spec["category"],
+                            **istats, "trim_db": spec["trim_db"], "trigger": itrigger,
+                            "then_play": name})
+            write_wav(OUT / f"{name}.wav", pcm, loop=True)
+            entries.append({"name": name, "file": f"{name}.wav", "category": spec["category"],
+                            **stats, "trim_db": spec["trim_db"], "trigger": spec["trigger"],
+                            "loop": True, "loop_start_s": 0.0, "intro": iname})
             continue
         if spec["loop"]:
             s = Sound(2 * spec["dur"] + LOOP_XFADE + LOOP_SEARCH + 0.02)
@@ -2159,6 +3202,10 @@ def build(names: list[str] | None = None) -> list[dict]:
 
 def main(argv: list[str]) -> int:
     names = argv[1:] or None
+    # an intro file is built with its loop: asking for either one rebuilds both
+    intros = {spec["intro"][0]: n for n, spec in SOUNDS.items() if spec["intro"]}
+    if names:
+        names = [intros.get(n, n) for n in names]
     unknown = [n for n in names or [] if n not in SOUNDS]
     if unknown:
         print("unknown sound(s):", ", ".join(unknown))

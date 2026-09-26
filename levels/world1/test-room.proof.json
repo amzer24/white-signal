@@ -1,7 +1,7 @@
 {
  "finished": true,
  "route_seconds": 26.4,
- "nodes": 6946,
+ "nodes": 6844,
  "shards": {
   "257,7": true
  },
@@ -15,6 +15,11 @@
   "reachable": 5,
   "missing": []
  },
- "solve_seconds": 1416.8,
+ "cracks": {
+  "total": 0,
+  "reachable": 0,
+  "missing": []
+ },
+ "solve_seconds": 730.5,
  "line": "330 tiles (5280px, 11 screens)  .  FINISHABLE  .  fastest proven route 26.4s  .  big shards reachable 1/1  .  small shards reachable 16/16  .  blocks hittable 5/5  .  17 shards  .  owns: every World 1 item"
 }

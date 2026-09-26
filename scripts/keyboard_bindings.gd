@@ -1,6 +1,6 @@
 extends RefCounted
 ## Staged keyboard preferences. Applying bindings retains non-keyboard events.
-const ACTIONS := ["move_left","move_right","jump","dash","interact"]
+const ACTIONS := ["move_left","move_right","jump","dash","interact","attack"]
 const RESERVED := [KEY_ESCAPE,KEY_ENTER,KEY_TAB,KEY_F11,KEY_M,KEY_H,KEY_P,KEY_Q,KEY_R,KEY_F,KEY_DOWN]
 var path := "user://ws_keyboard.cfg"
 var bindings: Dictionary = {}

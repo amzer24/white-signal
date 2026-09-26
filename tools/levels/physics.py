@@ -29,12 +29,19 @@ WALL_GRACE = 0.12
 HALF_W = 6.0
 HALF_H = 7.0
 STOMP_BOUNCE = 230.0
+STOMP_GRACE = 6      # frames after a stomp when pressing jump still bounces high
+STOMP_DEPTH = 14.0   # a falling Spark this deep into an enemy's top still stomps it (hoppers rise to meet you)
 SPRING_POWER = 500.0
 # After a wall kick, input is locked away from the wall for this long, as in
 # Celeste. Without it one wall can be climbed by kicking and steering back.
 KICK_LOCK = 0.16
 KICK_X = 1.0           # kick speed away from the wall, times MAX_RUN (player.gd: 1.15)
 AIR_FRICTION = 500.0   # px/s/s slowdown in the air with no direction held (not during a kick lock)
+# World 3 wind: side wind pushes up to WIND_MAX, an updraft lifts up to RISE_MAX
+WIND_SIDE = 900.0
+WIND_MAX = 190.0
+WIND_UP = 1600.0
+RISE_MAX = 210.0
 
 
 @dataclass(frozen=True)
@@ -138,6 +145,16 @@ def step(b: Body, dir_: int, jump: bool, dash: bool, world, down: bool = False) 
 
     if not b.floor and b.on_wall and vy > 0.0 and dash_t <= 0.0 and dir_ != 0 and dir_ == b.wall_dir:
         vy = min(vy, WALL_SLIDE)
+
+    # wind (a dash cuts straight through it)
+    ax, ay = world.wind_at(b.x, b.y)
+    if dash_t <= 0.0:
+        if ax > 0.0 and vx < WIND_MAX:
+            vx = min(WIND_MAX, vx + ax * DT)
+        elif ax < 0.0 and vx > -WIND_MAX:
+            vx = max(-WIND_MAX, vx + ax * DT)
+        if ay < 0.0 and vy > -RISE_MAX:
+            vy = max(-RISE_MAX, vy + ay * DT)
 
     x, y, floor, on_wall, wall_dir, wall_top, vx, vy = world.move(b.x, b.y + drop_y, vx, vy)
 

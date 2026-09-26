@@ -7,11 +7,12 @@ extends Node2D
 const Level := preload("res://scripts/world1/w1_level.gd")
 const Sim := preload("res://scripts/world1/w1_sim.gd")
 const Sheets := preload("res://scripts/world1/sheets.gd")
+const ScreenFit := preload("res://scripts/screen_fit.gd")
 const J := preload("res://scripts/world1/juice.gd")
 const T := 16.0
 const ROWS := 17
 
-const ORDER := ["test-room", "1-1", "1-2", "1-3", "1-4", "2-1", "2-2", "2-3", "2-4"]
+const ORDER := ["test-room", "1-1", "1-2", "1-3", "1-4", "2-1", "2-2", "2-3", "2-4", "3-1", "3-2", "3-3", "3-4"]
 const MUSIC := {
 	"test-room": "w1-first-light", "1-1": "w1-first-light", "1-1-bonus": "w1-first-light",
 	"1-2": "w1-loose-ground", "1-3": "w1-presses", "1-4": "w1-gate",
@@ -24,6 +25,7 @@ const MUSIC8 := {
 	"test-room": "m_training", "1-1": "m_1_1", "1-1-bonus": "m_1_1_bonus",
 	"1-2": "m_1_2", "1-3": "m_1_3", "1-4": "m_1_4",
 	"2-1": "m_2_1", "2-2": "m_2_2", "2-3": "m_2_3", "2-4": "m_2_4",
+	"3-1": "m_3_1", "3-2": "m_3_2", "3-3": "m_3_3", "3-4": "m_3_4",
 }
 const START_LIVES := 5
 const SFX_TRIM := -5.0   # effects sat too loud over the 8-bit music
@@ -33,19 +35,20 @@ const TINTS := {
 	"test": [Color("#0b0b0b"), Color("#3a3a3a"), Color("#8a8a8a"), Color("#f2f2f2")],
 	"1": [Color("#0a0c12"), Color("#343c4d"), Color("#8190a8"), Color("#eef2f8")],   # cold first light
 	"2": [Color("#0f0a05"), Color("#4a3418"), Color("#b8863a"), Color("#fcebc4")],   # sodium lamps
+	"3": [Color("#0c0a12"), Color("#3a3150"), Color("#9b8bb4"), Color("#f5effb")],   # violet dawn
 	"village": [Color("#0d0907"), Color("#473226"), Color("#b08866"), Color("#f7e8d2")],   # warm windows
 }
-const AMBIENCE := {"1": "amb_w1", "2": "amb_w2", "village": "amb_village"}
+const AMBIENCE := {"1": "amb_w1", "2": "amb_w2", "3": "amb_w3", "village": "amb_village"}
 const STORY_PATH := "res://levels/story/npcs.json"
 ## Tally's shop. Prices are in shards. The compass and lantern are kept for good.
 const SHOP := [
-	{"id": "life", "name": "EXTRA LIFE", "price": 40, "icon": 0, "note": "ONE MORE TRY."},
+	{"id": "life", "name": "EXTRA LIFE", "price": 40, "icon": 0, "note": "GIVES YOU ONE MORE LIFE."},
 	{"id": "charge", "name": "CHARGED START", "price": 25, "icon": 1,
-		"note": "YOUR NEXT LEVEL STARTS WITH CHARGE ALREADY ON."},
+		"note": "START YOUR NEXT LEVEL WITH CHARGE, SO YOU CAN SURVIVE ONE HIT."},
 	{"id": "compass", "name": "SHARD COMPASS", "price": 80, "icon": 2,
-		"note": "POINTS TO THE NEAREST BIG SHARD YOU HAVEN'T FOUND. KEEPS WORKING."},
+		"note": "POINTS TO THE NEAREST BIG SHARD YOU HAVEN'T FOUND. YOURS TO KEEP."},
 	{"id": "lantern", "name": "LANTERN", "price": 60, "icon": 3,
-		"note": "YOUR LIGHT REACHES MUCH FURTHER IN THE DARK. KEEPS WORKING."},
+		"note": "YOUR LIGHT REACHES MUCH FURTHER IN THE DARK. YOURS TO KEEP."},
 ]
 const CAM_LEAD := 32.0         # px the camera looks ahead of a running Spark
 const CAM_LEAD_SPEED := 40.0   # px per second the look-ahead drifts
@@ -57,6 +60,10 @@ var S: Sim
 var level_id := "test-room"
 var lives := START_LIVES
 var shards := 0
+var earned := 0            # shards collected this game, spent or not: every 100 is a free life
+var life_note_t := -99.0   # when the last 100-shard life was given, for the banner
+var handoff := -1.0        # seconds since the intro handed over, while the Spark wakes by Old Mast
+var lantern_talk := false  # Old Mast holds his lantern through that first talk
 var big := {}             # level id -> {"c,r": true}
 var best := {}            # level id -> seconds
 var time_left := 300.0
@@ -76,6 +83,8 @@ var ghosts: Array = []    # [pos, start clock, sx, sy]
 var anims := {}           # key -> start clock (springs, rings, plates...)
 var spawn_at := Vector2i(-1, -1)
 var return_to := {}       # {"level": id, "cell": Vector2i} when inside a bonus room
+var bonus_keep := {}      # bonus room id -> what was taken there, until this life ends
+var pipe_travel := false  # load_level is moving through a pipe, not starting afresh
 var clear_from_y := 0.0
 var clear_bonus := ""
 var clear_paid := false
@@ -84,6 +93,8 @@ var sfx_players: Array = []
 var music: AudioStreamPlayer
 var music_fade: Tween
 var relay_hum: AudioStreamPlayer
+var arm_whir: AudioStreamPlayer   # World 3 sweep arms on screen
+var in_updraft := false
 var ground_sheet := "ground"   # World 2 swaps in its own ground and blocks
 var block_sheet := "block"
 var post: ColorRect
@@ -97,6 +108,8 @@ var filter_on := true
 var saved_t := -9.0        # clock when the game last saved, for the HUD note
 ## How the title screen started this scene: "continue" or "new".
 static var start_mode := "continue"
+static var intro_handoff := false   # set by the story intro: wake up next to Old Mast
+static var progress_override := ""  # tests that reach the game through a scene change use their own save
 var fxmat: ShaderMaterial   # the atmosphere pass
 var lamps_lit := {}         # lamp cell -> clock it lit
 var flash_t := -9.0         # clock of the last lightning strike
@@ -114,7 +127,14 @@ var down_prev := false
 var up_prev := false
 var hold_jump := false      # ignore a jump still held from closing a bubble
 var board_open := false     # the level list was opened from the switchboard
+var stick_held := {}        # pad axis -> pushed past halfway, so one push is one menu step
+var level_names := {}       # level id -> its name: header, for the level list
 var dither: ImageTexture   # 2x2 checker of DARK, for far silhouettes
+var fx_rect: ColorRect
+const NPC_LIFT := Color(1.4, 1.4, 1.4)        # villagers a step brighter than the grey world around them
+const INTERIOR_DIM := Color(0.45, 0.45, 0.45)   # house walls sit back so the people in front read clearly
+var vw := 480.0           # view width: 480 on 16:9, up to 720 on wide screens
+var hx := 0.0             # left edge of the centred 480 px column for the HUD and menus
 
 
 func _ready() -> void:
@@ -152,6 +172,16 @@ func _ready() -> void:
 	var st_data = JSON.parse_string(FileAccess.get_file_as_string(STORY_PATH))
 	if st_data is Dictionary:
 		story = st_data
+	arm_whir = AudioStreamPlayer.new()
+	arm_whir.bus = "SFX"
+	arm_whir.volume_db = -14.0 + SFX_TRIM
+	if sfx.has("arm_whir"):
+		var wh: AudioStream = sfx["arm_whir"]
+		if wh is AudioStreamWAV and wh.loop_mode == AudioStreamWAV.LOOP_DISABLED:
+			wh.loop_mode = AudioStreamWAV.LOOP_FORWARD
+			wh.loop_end = int(wh.get_length() * wh.mix_rate)
+		arm_whir.stream = wh
+	add_child(arm_whir)
 	music = AudioStreamPlayer.new()
 	music.bus = "Music"
 	music.volume_db = -6.0
@@ -159,7 +189,7 @@ func _ready() -> void:
 	var fx_layer := CanvasLayer.new()
 	fx_layer.layer = 9
 	add_child(fx_layer)
-	var fx_rect := ColorRect.new()
+	fx_rect = ColorRect.new()
 	fx_rect.size = Vector2(480, 270)
 	fx_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	fxmat = ShaderMaterial.new()
@@ -183,15 +213,31 @@ func _ready() -> void:
 	mat.shader = load("res://shaders/world1/signal_crt.gdshader")
 	post.material = mat
 	layer.add_child(post)
+	get_tree().root.size_changed.connect(_fit_screen)
+	_fit_screen()
+	if progress_override != "":
+		progress_path = progress_override
 	_load_progress()
 	post.visible = filter_on
 	if start_mode == "continue" and not save.is_empty() and FileAccess.file_exists(Level.path_for(str(save.level))):
 		lives = int(save.get("lives", START_LIVES))
 		shards = int(save.get("shards", 0))
+		earned = int(save.get("earned", shards))
 		load_level(str(save.level))
 	else:
+		# a new game: the story and Tally's items start again. Big shards and best times stay.
 		save = {}
-		load_level("village")  # a new game starts in Last Relay
+		if start_mode == "new":
+			flags = []
+			items = {}
+			charge_next = false
+		if intro_handoff:
+			# straight from the story intro: the Spark lies by Old Mast and he speaks first
+			intro_handoff = false
+			load_level("village", Vector2i(7, 13), false)
+			handoff = 0.0
+		else:
+			load_level("village")  # a new game starts in Last Relay
 	start_mode = "continue"
 
 
@@ -199,12 +245,19 @@ func _ready() -> void:
 
 func load_level(id: String, cell := Vector2i(-1, -1), card := true) -> void:
 	level_id = id
+	board_open = false
+	if not pipe_travel:
+		bonus_keep.clear()
 	L = Level.load_file(id)
-	var w2 := _world() == "2"
-	ground_sheet = "ground_w2" if w2 else "ground"
-	block_sheet = "block_w2" if w2 else "block"
+	# Worlds 2 and 3 swap in their own ground and blocks
+	var wn := _world()
+	ground_sheet = "ground_w%s" % wn if wn in ["2", "3"] and _has_sheet("ground_w%s" % wn) else "ground"
+	block_sheet = "block_w%s" % wn if wn in ["2", "3"] and _has_sheet("block_w%s" % wn) else "block"
 	if relay_hum:
 		relay_hum.stop()
+	if arm_whir:
+		arm_whir.stop()
+	in_updraft = false
 	if ORDER.has(id) or id == "village":
 		_write_save(id)  # autosave at the start of every level
 	lamps_lit.clear()
@@ -289,6 +342,14 @@ func _world() -> String:
 
 
 func _set_state(s: String) -> void:
+	if state == "pause" and s != "pause":
+		hold_jump = true   # a jump pressed to leave the menu is not a jump
+	if s != "play":
+		# the looping machine sounds only check themselves during play
+		if relay_hum and relay_hum.playing:
+			relay_hum.stop()
+		if arm_whir and arm_whir.playing:
+			arm_whir.stop()
 	state = s
 	state_t = 0.0
 
@@ -297,7 +358,13 @@ func _set_state(s: String) -> void:
 
 func _physics_process(delta: float) -> void:
 	clock += delta
+	if ScreenFit.stale(get_tree().root):
+		_fit_screen()
 	state_t += delta
+	if handoff >= 0.0 and state != "pause":
+		_handoff_frame(delta)
+	if lantern_talk and state != "talk":
+		lantern_talk = false
 	shake = maxf(0.0, shake - delta * 18.0)
 	match state:
 		"card":
@@ -319,12 +386,16 @@ func _physics_process(delta: float) -> void:
 					_set_state("gameover")
 				else:
 					time_left = _level_time()
+					warned = false
+					bonus_keep.clear()   # a new life finds the bonus room full again
 					_reset_sim(true)
+					_restart_music()
 					_set_state("card")
 		"gameover":
 			if state_t > 3.4:
 				lives = START_LIVES
 				shards = 0
+				earned = 0
 				load_level("test-room" if level_id == "test-room" else "village")
 		"clear":
 			_clear_frame()
@@ -333,7 +404,9 @@ func _physics_process(delta: float) -> void:
 			if state_t > 0.6:
 				_enter_pipe()
 		"done":
-			if state_t > 5.0:
+			if _world() == "1" and state_t - delta <= 1.6 and state_t > 1.6:
+				_play("arc_learn")
+			if state_t > (7.0 if _world() == "1" else 5.0):
 				load_level("village")  # a world cleared: back to Last Relay
 	if state == "card":
 		cam_x = _cam_target(true)
@@ -344,7 +417,26 @@ func _physics_process(delta: float) -> void:
 	queue_redraw()
 
 
+## After the intro: black, a circle opens on the Spark lying in the grass by
+## Old Mast, it gets up, and his first talk opens by itself.
+func _handoff_frame(delta: float) -> void:
+	var before := handoff
+	handoff += delta
+	if before < 1.1 and handoff >= 1.1:
+		_play("land_soft", 0.0, -6.0)
+		_fx("dust", Vector2(S.x, S.y + 7.0))
+	if handoff >= 1.4:
+		handoff = -1.0
+		for n in here:
+			if str(n.id) == "mast":
+				lantern_talk = true
+				_start_talk(n)
+				break
+
+
 func _play_frame(delta: float) -> void:
+	if handoff >= 0.0:
+		return   # nothing moves until Old Mast has spoken
 	if hitstop > 0:
 		hitstop -= 1
 		return
@@ -361,10 +453,14 @@ func _play_frame(delta: float) -> void:
 		jump = false
 	var dash := Input.is_action_just_pressed("dash")
 	var down := Input.is_key_pressed(KEY_DOWN) or Input.is_key_pressed(KEY_S) \
-		or Input.is_joy_button_pressed(0, JOY_BUTTON_DPAD_DOWN) or Input.get_joy_axis(0, JOY_AXIS_LEFT_Y) > 0.6
+		or Input.is_joy_button_pressed(_pad(), JOY_BUTTON_DPAD_DOWN) or Input.get_joy_axis(_pad(), JOY_AXIS_LEFT_Y) > 0.6
+	S.can_arc = _has_arc()
+	S.arc_press = Input.is_action_just_pressed("attack")
 	var prev_t: int = S.t
 	S.advance(dir, jump, dash, down)
 	S.update_walkers()
+	while not S.bumps.is_empty() and S.t - int(S.bumps[0][1]) > 12:
+		S.bumps.pop_front()   # the hop is over; the list is read for every block on screen
 	if S.dash_t > 0.0 and S.t % 2 == 0:
 		ghosts.append([Vector2(S.x, S.y + 7.0), clock, S.sx_anim, S.sy_anim])
 	for e in S.events:
@@ -386,6 +482,7 @@ func _play_frame(delta: float) -> void:
 		_fade_music()
 		_set_state("clear")
 	elif S.dead != "":
+		_fade_music()
 		_set_state("dead")
 
 
@@ -409,6 +506,8 @@ func _clear_frame() -> void:
 			clear_bonus = "MAST BONUS . %d SHARDS" % n
 		if not best.has(level_id) or run_time < float(best[level_id]):
 			best[level_id] = run_time
+		if not flags.has("clear_" + level_id):
+			flags.append("clear_" + level_id)   # this game's progress: New Game clears it, best times stay
 		_save_progress()
 	elif state_t < 3.2:
 		S.x += 1.2
@@ -420,6 +519,8 @@ func _clear_frame() -> void:
 			var flag := "w%s_clear" % _world()
 			if not flags.has(flag):
 				flags.append(flag)
+			if _world() == "1":
+				items["arc"] = true   # World 1's reward: the Arc
 			_save_progress()
 			_play("world_clear")
 			_set_state("done")
@@ -430,15 +531,23 @@ func _clear_frame() -> void:
 
 
 func _enter_pipe() -> void:
+	var charged: bool = S.charged   # Charge goes through the pipe with you
+	pipe_travel = true
 	if level_id.ends_with("-bonus"):
+		# what was taken here stays taken if you come back down the pipe this life
+		bonus_keep[level_id] = {"taken": S.taken.duplicate(), "tiles": S.tiles.duplicate(), "killed": S.killed.keys()}
 		if not return_to.is_empty():
 			var back: Dictionary = return_to
 			return_to = {}
 			load_level(back.level, back.cell, false)
+			_restore_level(back)
+			spawn_at = Vector2i(-1, -1)   # the pipe exit is not a checkpoint
 		else:
 			# no remembered entry point: use the exit the bonus room's pipe names
 			var bp: Dictionary = L.pipes[0] if L.pipes.size() > 0 else {}
 			load_level(str(bp.get("to", "1-1")), Vector2i(int(bp.get("to_c", 2)), int(bp.get("to_r", 13))), false)
+		S.charged = S.charged or charged
+		pipe_travel = false
 		return
 	var target := ""
 	var back_cell := Vector2i(-1, -1)
@@ -449,10 +558,35 @@ func _enter_pipe() -> void:
 			var bc := int(p.c) + 3
 			back_cell = Vector2i(bc, L.floor_below(bc, int(p.r)) - 1)
 	if target == "":
+		pipe_travel = false
 		_set_state("play")
 		return
-	return_to = {"level": level_id, "cell": back_cell}
+	return_to = {"level": level_id, "cell": back_cell, "taken": S.taken.duplicate(), "tiles": S.tiles.duplicate(),
+		"killed": S.killed.keys(), "lit": S.lit, "time_left": time_left, "run_time": run_time}
 	load_level(target, Vector2i(-1, -1), false)
+	if bonus_keep.has(target):
+		var kept: Dictionary = bonus_keep[target]
+		S.taken = kept.taken.duplicate()
+		S.tiles = kept.tiles.duplicate()
+		for n in kept.killed:
+			S.killed[n] = -100000
+	S.charged = S.charged or charged
+	pipe_travel = false
+
+
+## Back out of a bonus room: the level is as you left it, with the shards you
+## took gone, used blocks still used, beaten enemies still gone and the clock
+## where it was.
+func _restore_level(back: Dictionary) -> void:
+	if not back.has("taken"):
+		return
+	S.taken = back.taken
+	S.tiles = back.tiles
+	for n in back.killed:
+		S.killed[n] = -100000
+	S.lit = back.lit
+	time_left = back.time_left
+	run_time = back.run_time
 
 
 # ================================================================ events
@@ -480,6 +614,19 @@ func _on_event(e: Dictionary) -> void:
 		"walker_squish":
 			_play("walker_squish")
 			_fx("stomp", pos)
+		"arc":
+			_play("arc_swing")
+			anims["arc"] = clock
+		"arc_hit":
+			_play("arc_hit")
+			_fx("arc_hit", pos)
+			hitstop = maxi(hitstop, 3)
+			shake = maxf(shake, 1.5)
+		"wall_break":
+			_play("wall_break")
+			_fx("crack_break", pos)
+			_fx("debris", pos)
+			shake = maxf(shake, 3.0)
 		"walker_drop":
 			_play_at("walker_squish", pos)
 		"spiky_knock":
@@ -604,8 +751,18 @@ func _machine_sounds(prev_t: int) -> void:
 			_play("spike_warn", 0.0, -8.0)
 		if a2 < 0.6 and b2 >= 0.6:
 			_play("spike_pop", 0.0, -4.0)
+	_wind_sounds(prev_t)
+	var arms_seen := false
+	for a in L.arms:
+		arms_seen = arms_seen or _on_screen(float(a.cx))
+	if arms_seen and state == "play" and not arm_whir.playing and arm_whir.stream != null:
+		arm_whir.play()
+	elif (not arms_seen or state != "play") and arm_whir.playing:
+		arm_whir.stop()
 	for n in L.walkers.size():
 		var w: Dictionary = L.walkers[n]
+		if str(w.kind) == "flyer" and not S.killed.has(n) and (S.t + n * 17) % 45 == 0 and _on_screen(S.walker_pos(n).x):
+			_play("flyer_flap", 0.0, -10.0)
 		if str(w.kind) == "hopper" and not S.killed.has(n) and S.t % 96 == 0 and _on_screen(S.walker_pos(n).x):
 			_play("hopper_hop", 0.0, -6.0)
 		if str(w.kind) == "hopper" and not S.killed.has(n) and S.t % 96 == 29 and _on_screen(S.walker_pos(n).x):
@@ -622,11 +779,15 @@ func _machine_sounds(prev_t: int) -> void:
 
 
 func _add_shards(n: int) -> void:
+	# Shards are Tally's currency, so they are never taken away: every 100
+	# collected gives a free life on top.
+	var before := earned
 	shards += n
-	while shards >= 100:
-		shards -= 100
+	earned += n
+	for k in range(before / 100, earned / 100):
 		lives += 1
 		_play("extra_life")
+		life_note_t = clock
 
 
 func _play(name: String, delay := 0.0, db := 0.0) -> void:
@@ -648,6 +809,17 @@ func _play(name: String, delay := 0.0, db := 0.0) -> void:
 
 ## Fades the level music out so a jingle (level clear, world clear, game over)
 ## plays on its own. The next level starts its music again.
+## After a death the level music starts again from the top.
+func _restart_music() -> void:
+	if music_fade:
+		music_fade.kill()
+		music_fade = null
+	if music.stream == null:
+		return
+	music.volume_db = -9.0 if music.stream is AudioStreamWAV else -6.0
+	music.play()
+
+
 func _fade_music() -> void:
 	if music_fade:
 		music_fade.kill()
@@ -662,7 +834,7 @@ func _play_at(name: String, pos: Vector2) -> void:
 
 
 func _on_screen(wx: float) -> bool:
-	return wx > cam_x - 48.0 and wx < cam_x + 528.0
+	return wx > cam_x - 48.0 and wx < cam_x + vw + 48.0
 
 
 func _fx(kind: String, pos: Vector2, extra := "") -> void:
@@ -675,6 +847,12 @@ func _fx(kind: String, pos: Vector2, extra := "") -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.echo:
 		return
+	if event is InputEventJoypadMotion:
+		# a stick sends a stream of events: only the push past halfway counts
+		var was: bool = stick_held.get(event.axis, false)
+		stick_held[event.axis] = absf(event.axis_value) >= 0.5
+		if was or not stick_held[event.axis]:
+			return
 	if not event.is_pressed():
 		return
 	var start: bool = event is InputEventJoypadButton and event.button_index == JOY_BUTTON_START
@@ -701,6 +879,7 @@ func _restart_life() -> void:
 	S.charged = false
 	S.hurt("fell")
 	_on_event({"k": "death", "x": S.x, "y": S.y})
+	_fade_music()
 	_set_state("dead")
 
 
@@ -737,13 +916,14 @@ func _pause_input(event: InputEvent, start: bool) -> void:
 	var key := -1
 	if event is InputEventKey:
 		key = event.keycode
-	var up := event.is_action("ui_up") or key == KEY_W
-	var down := event.is_action("ui_down") or key == KEY_S
-	var left := event.is_action("ui_left") or key == KEY_A
-	var right := event.is_action("ui_right") or key == KEY_D
+	# is_action_pressed, not is_action: a stick axis matches both of its directions
+	var up := event.is_action_pressed("ui_up") or key == KEY_W
+	var down := event.is_action_pressed("ui_down") or key == KEY_S
+	var left := event.is_action_pressed("ui_left") or key == KEY_A
+	var right := event.is_action_pressed("ui_right") or key == KEY_D
 	var ok := event.is_action("ui_accept") or event.is_action("jump")
 	var back := event.is_action("ui_cancel") or start or key in [KEY_ESCAPE, KEY_P, KEY_BACKSPACE]
-	if key >= KEY_0 and key <= KEY_8:  # testing shortcut: jump to any level
+	if key >= KEY_0 and key <= KEY_9 and OS.is_debug_build():  # testing shortcut: jump to any level
 		load_level(ORDER[key - KEY_0])
 		return
 	var rows := _pause_rows()
@@ -793,7 +973,7 @@ func _pause_choose(row: String) -> void:
 					_play("save_done")
 					pause_page = "saved"
 					get_tree().create_timer(0.45).timeout.connect(
-						func(): get_tree().change_scene_to_file("res://scenes/main.tscn"))
+						func(): get_tree().change_scene_to_file("res://scenes/title.tscn"))
 		"levels":
 			if row == "BACK" and board_open:
 				board_open = false
@@ -862,7 +1042,7 @@ func _bar(v: float) -> String:
 
 
 func _draw_pause() -> void:
-	draw_rect(Rect2(0, 17, 480, 253), Color(DrawUtil.BG, 0.9))
+	draw_rect(Rect2(-hx, 17, vw, 253), Color(DrawUtil.BG, 0.9))
 	if pause_page == "saved":
 		_center("SAVED", 120, DrawUtil.WHITE, 2)
 		return
@@ -889,7 +1069,7 @@ func _draw_pause() -> void:
 			DrawUtil.text(self, Vector2(240 - DrawUtil.text_width(text) / 2.0, y), text, col)
 	var foot := "ARROWS CHOOSE . ENTER OR SPACE SELECT . ESC BACK"
 	if pause_page == "settings":
-		foot = "LEFT AND RIGHT CHANGE . ESC BACK . SAVED AUTOMATICALLY"
+		foot = "LEFT AND RIGHT CHANGE . ESC BACK . SETTINGS SAVE AUTOMATICALLY"
 	_center(foot, 236, DrawUtil.DARK)
 	if pause_page == "main":
 		var where := "WORLD %s . %s" % [str(L.meta.get("world", "1")), str(L.name)]
@@ -922,11 +1102,11 @@ func _level_label(id: String) -> String:
 ## Where the next session continues from. Written at the start of every level
 ## (after a clear, a game over or a level pick) and by SAVE AND QUIT.
 func _write_save(at_level: String) -> void:
-	save = {"level": at_level, "lives": lives, "shards": shards}
+	save = {"level": at_level, "lives": lives, "shards": shards, "earned": earned}
 	if not unlocked.has(at_level):
 		unlocked.append(at_level)
-	_save_progress()
-	saved_t = clock
+	if _save_progress():
+		saved_t = clock   # the HUD only says saved when it was
 
 
 # ================================================================ camera
@@ -934,7 +1114,27 @@ func _write_save(at_level: String) -> void:
 func _cam_target(snap: bool) -> float:
 	if snap:
 		cam_lead = 0.0
-	return clampf(S.x - 240.0 + cam_lead, 0.0, maxf(0.0, L.width * T - 480.0))
+	var span: float = L.width * T
+	if span <= vw:
+		return floorf((span - vw) / 2.0)   # a room narrower than the screen sits in the middle
+	return clampf(S.x - vw / 2.0 + cam_lead, 0.0, span - vw)
+
+
+## Wide screens (scripts/screen_fit.gd): the view widens to fill the window, and
+## the HUD, menus and cards stay in a 480 px column in the middle.
+func _fit_screen() -> void:
+	var win := get_tree().root
+	ScreenFit.fit(win)
+	vw = float(win.content_scale_size.x)
+	hx = floorf((vw - 480.0) / 2.0)
+	fx_rect.size = Vector2(vw, 270)
+	post.size = Vector2(vw, 270)
+	fxmat.set_shader_parameter("view", Vector2(vw, 270))
+	(post.material as ShaderMaterial).set_shader_parameter("logical", Vector2(vw, 270))
+
+
+func _exit_tree() -> void:
+	ScreenFit.reset(get_tree().root)   # the older scenes draw at a fixed 480 px
 
 
 ## The camera looks ahead only while you keep running one way, and the look-ahead
@@ -979,19 +1179,23 @@ func _draw() -> void:
 	if shake > 0.0 and AppSettings.camera_shake:
 		var h := DrawUtil.hash2(int(clock * 60.0), 7)
 		off = Vector2(float(h % 5) - 2.0, float((h >> 4) % 5) - 2.0) * minf(1.0, shake / 3.0)
-	draw_rect(Rect2(0, 0, 480, 270), DrawUtil.BG)
+	draw_rect(Rect2(0, 0, vw, 270), DrawUtil.BG)
 	_draw_sky(cam)
 	var camy := floorf(cam_y)
 	draw_set_transform(Vector2(-cam, -camy) + off.round())
 	var c0 := int(cam / T) - 3
-	var c1 := c0 + 34
+	var c1 := c0 + int(vw / T) + 4
 	var r0 := maxi(0, int(camy / T) - 3)
 	if state == "pipe":
 		_draw_player()  # behind the tiles, so the Spark sinks into the pipe
 	_draw_interior()
-	for r in range(r0, mini(L.rows, r0 + 22)):
+	var r1 := mini(L.rows, r0 + 22)
+	for r in range(r0, r1):
 		for c in range(maxi(c0, 0), mini(c1, L.width)):
 			_draw_tile(c, r)
+	# the mast stands six tiles above its base, so it can show while its base is below the rows drawn
+	if L.goal.y >= r1 and L.goal.y < r1 + 7 and L.goal.x >= c0 and L.goal.x < c1:
+		_draw_tile(L.goal.x, L.goal.y)
 	_draw_objects()
 	_draw_people()
 	_draw_hints()
@@ -1000,24 +1204,31 @@ func _draw() -> void:
 	_draw_fx()
 	_draw_weather()
 	draw_set_transform(Vector2.ZERO)
+	draw_rect(Rect2(0, 0, vw, 16), DrawUtil.BG)
+	draw_rect(Rect2(0, 16, vw, 1), DrawUtil.DARK)
+	draw_set_transform(Vector2(hx, 0))
 	_draw_hud()
+	draw_set_transform(Vector2.ZERO)
 	_draw_compass()
 	_draw_bubble()
+	draw_set_transform(Vector2(hx, 0))
 	_draw_shop()
 	_draw_overlay()
+	draw_set_transform(Vector2.ZERO)
+	_draw_handoff_iris()
 
 
 func _draw_sky(cam: float) -> void:
 	if str(L.meta.get("interior", "")) != "":
 		return  # indoors: the room is drawn with the tiles
 	var off := floorf(cam * 0.1)
-	for i in 90:
+	for i in int(90.0 * vw / 480.0):
 		var h := DrawUtil.hash2(i, 77)
-		var x := fposmod(float(h % 4800) - off, 480.0)
+		var x := fposmod(float(h % 4800) - off, vw)
 		var y := float((h >> 8) % 200) + 20.0
 		draw_rect(Rect2(x, y, 1, 1), DrawUtil.GRAY if h % 11 == 0 else DrawUtil.DARK)
 	# the dead broadcast sun, barely moving
-	var sun := Vector2(360.0 - cam * 0.04, 150.0)
+	var sun := Vector2(hx + 360.0 - cam * 0.04, 150.0)
 	for yy in range(-44, 45, 2):
 		var w := sqrt(maxf(0.0, 44.0 * 44.0 - yy * yy))
 		if (int(yy + 44) / 2) % 5 == 4:
@@ -1031,10 +1242,23 @@ func _draw_sky(cam: float) -> void:
 		var vs: Vector2 = sh.size("backdrop_village")
 		var vo := cam * 0.2
 		var vfirst := int(floor(vo / vs.x))
-		for slot in range(vfirst, vfirst + 7):
+		for slot in range(vfirst, vfirst + int(vw / vs.x) + 2):
 			var piece := DrawUtil.hash2(slot, 523) % 4
 			sh.draw_frame(self, "backdrop_village", "pieces", piece,
 				Vector2(floorf(slot * vs.x - vo), 232.0 - vs.y + hz), false, Color(1, 1, 1, 0.7))
+		return
+	if _world() == "3" and _has_sheet("backdrop_w3"):
+		# World 3: far masts, a dish and cloud banks, joined edge to edge
+		var bs: Vector2 = sh.size("backdrop_w3")
+		var bo := cam * 0.2
+		var bfirst := int(floor(bo / bs.x))
+		for slot in range(bfirst, bfirst + int(vw / bs.x) + 2):
+			# never the same piece twice in a row (the pieces join in any other order)
+			var bp := DrawUtil.hash2(slot, 733) % 4
+			if bp == DrawUtil.hash2(slot - 1, 733) % 4:
+				bp = (bp + 1) % 4
+			sh.draw_frame(self, "backdrop_w3", "pieces", bp,
+				Vector2(floorf(slot * bs.x - bo), 232.0 - bs.y + hz), false, Color(1, 1, 1, 0.7))
 		return
 	if ground_sheet == "ground_w2":
 		# World 2: relay towers, pylons and gantries from the backdrop sheet
@@ -1044,7 +1268,7 @@ func _draw_sky(cam: float) -> void:
 		var po := cam * 0.2
 		var first := int(floor(po / fs.x))
 		var prev := -1
-		for slot in range(first, first + 7):
+		for slot in range(first, first + int(vw / fs.x) + 2):
 			var piece := 1
 			var hb := DrawUtil.hash2(slot, 911)
 			if posmod(slot, 7) in [0, 3] or hb % 11 == 0:
@@ -1064,7 +1288,7 @@ func _draw_sky(cam: float) -> void:
 			draw_rect(Rect2(floorf(bx) + 8.0, 224.0 - bh + 6.0 + hz, 1, 1), DrawUtil.GRAY)
 	if L.goal.x >= 0 and level_id == "1-4":
 		var wx: float = L.goal.x * T + 8.0
-		var sx := (wx - (cam + 240.0)) * 0.2 + 240.0
+		var sx := (wx - (cam + vw / 2.0)) * 0.2 + vw / 2.0
 		sh.draw_anim(self, "gate_transmitter", "awake" if state == "clear" else "dormant", clock,
 			Vector2(sx - 64.0, 0.0), false, Color(1, 1, 1, 0.7))
 
@@ -1111,6 +1335,9 @@ func _draw_tile(c: int, r: int) -> void:
 		"B":
 			if st != "broken":
 				sh.draw_frame(self, "brick", "idle", 0, p - Vector2(0, _bump_hop(key)))
+		"%":
+			if st != "broken":
+				_draw_crack(c, r, p)
 		"L":
 			var ls: String = S.loose_state(key, S.t)
 			if ls == "still":
@@ -1253,6 +1480,13 @@ func _draw_tile(c: int, r: int) -> void:
 		"E":
 			if key == Vector2i(int(L.relay.c), int(L.relay.r)):
 				_draw_relay(p)
+		"A":
+			if _has_sheet("sweep_arm"):
+				sh.draw_anim(self, "sweep_arm", "pivot", t, p)
+			else:
+				draw_rect(Rect2(p + Vector2(2, 2), Vector2(12, 12)), DrawUtil.GRAY)
+		"<", ">", "u":
+			_draw_wind(ch, c, r, p)
 
 
 # ================================================================ atmosphere
@@ -1330,23 +1564,73 @@ func _draw_weather() -> void:
 		var fy: float = L.rows * T - 40.0
 		if fy < cam.y + 270.0:
 			var fo := fposmod(clock * 6.0, 32.0)
-			for i in 17:
+			for i in int(vw / 32.0) + 2:
 				var fx0 := floorf(cam.x / 32.0) * 32.0 + i * 32.0 - fo
 				sh.draw_frame(self, "fog", "band", i % 4, Vector2(fx0, fy), false, Color(1, 1, 1, 0.8))
 				sh.draw_frame(self, "fog", "band", (i + 2) % 4, Vector2(fx0 + 16.0, fy + 14.0), false, Color(1, 1, 1, 0.6))
 	if kind == "":
 		return
-	var n := 70 if kind == "rain" else 40
+	var n := int((70.0 if kind == "rain" else 40.0) * vw / 480.0)
 	for i in n:
 		var h := DrawUtil.hash2(i, 431)
 		var speed := 260.0 + float(h % 90) if kind == "rain" else 12.0 + float(h % 20)
-		var x := fposmod(float(h % 997) * 7.3 - clock * (speed * 0.5 if kind == "rain" else 8.0), 496.0) - 8.0  # rain slants 1 across per 2 down
+		var x := fposmod(float(h % 997) * 7.3 - clock * (speed * 0.5 if kind == "rain" else 8.0), vw + 16.0) - 8.0  # rain slants 1 across per 2 down
 		var y := fposmod(float((h >> 5) % 997) * 3.1 + clock * speed, 286.0) - 16.0
 		var anim := "rain" if kind == "rain" else "static"
 		if kind == "static" and (h + int(clock * 8.0)) % 5 == 0:
 			continue
 		sh.draw_frame(self, "weather", anim, h % 4, cam + Vector2(floorf(x), floorf(y)), false,
 			Color(1, 1, 1, 0.55 if kind == "rain" else 0.8))
+
+
+# ================================================================ World 3 wind
+
+## Streaks in wind tiles: blowing while the wind is on, bunching up in the half
+## second before a gust, nothing in the lull.
+func _draw_wind(ch: String, c: int, r: int, p: Vector2) -> void:
+	var h := DrawUtil.hash2(c, r * 3 + 1)
+	if h % 3 != 0:
+		return
+	var on: bool = L.gust_on(S.t)
+	if not on:
+		if _gust_tell():
+			if _has_sheet("wind"):
+				sh.draw_anim(self, "wind", "gust_tell", fposmod(clock, 0.45), p, ch == ">", Color(1, 1, 1, 0.6))
+		return
+	if not _has_sheet("wind"):
+		var o := fposmod(clock * 90.0 + h, 16.0)
+		if ch == "u":
+			draw_rect(Rect2(p + Vector2(float(h % 12) + 2, 16.0 - o), Vector2(1, 4)), DrawUtil.GRAY)
+		else:
+			draw_rect(Rect2(p + Vector2(o if ch == ">" else 16.0 - o, float(h % 12) + 2), Vector2(5, 1)), DrawUtil.GRAY)
+		return
+	sh.draw_anim(self, "wind", "up" if ch == "u" else "side", clock + float(h % 7) * 0.05, p, ch == ">", Color(1, 1, 1, 0.7))
+
+
+## True in the half second before a gust starts.
+func _gust_tell() -> bool:
+	if L.gust.x <= 0.0:
+		return false
+	return fposmod(S.t / 60.0, L.gust.x) >= L.gust.x - 0.5
+
+
+func _wind_sounds(prev_t: int) -> void:
+	if L.gust.x > 0.0 and state == "play" and _level_has_wind():
+		var a := fposmod(prev_t / 60.0, L.gust.x)
+		var b := fposmod(S.t / 60.0, L.gust.x)
+		if a < L.gust.x - 0.5 and b >= L.gust.x - 0.5:
+			_play("gust_tell", 0.0, -6.0)
+		if b < a:
+			_play("gust", 0.0, -6.0)
+	var ch: String = L.at(int(floor(S.x / T)), int(floor(S.y / T)))
+	var up: bool = ch == "u" and L.gust_on(S.t)
+	if up and not in_updraft:
+		_play("updraft", 0.0, -6.0)
+	in_updraft = up
+
+
+func _level_has_wind() -> bool:
+	return not (L.find("<").is_empty() and L.find(">").is_empty() and L.find("u").is_empty())
 
 
 func _draw_relay(p: Vector2) -> void:
@@ -1528,14 +1812,30 @@ func _draw_objects() -> void:
 			else:
 				anim2 = "rise"
 		sh.draw_anim(self, "dropper", anim2, at, Vector2(float(d.x), float(dy[0])))
+	# sweep arms: a bar of static balls turning round the hub
+	for a in L.arms:
+		if not _on_screen(float(a.cx)):
+			continue
+		for d in L.arm_dots(a, S.t):
+			if _has_sheet("sweep_arm"):
+				sh.draw_anim(self, "sweep_arm", "dot", t + float(a.i) * 0.1, (d - Vector2(8, 8)).floor())
+			else:
+				draw_rect(Rect2((d - Vector2(3, 3)).floor(), Vector2(6, 6)), DrawUtil.WHITE)
 	# walkers and hoppers
 	for n3 in L.walkers.size():
 		var w: Dictionary = L.walkers[n3]
 		var kind: String = w.kind
+		if kind == "flyer" and not _has_sheet("flyer"):
+			kind = "walker"   # until the flyer art is in
 		if S.walker_fall.has(n3):
 			var fp: Vector2 = S.walker_pos(n3)
+			var wf: Array = S.walker_fall[n3]
+			if wf.size() > 3:
+				if S.t - int(wf[3]) < 24:   # knocked out where it landed
+					_cut_anim(kind, "knocked" if kind == "spiky" else "stomped", 0.3, Vector2(fp.x - 8, fp.y - 16))
+				continue
 			if fp.y < L.rows * T + 24.0:
-				sh.draw_anim(self, kind, "stomped" if kind == "walker" else "fall", 0.1, Vector2(fp.x - 8, fp.y - 16))
+				sh.draw_anim(self, kind, "stomped" if kind in ["walker", "flyer"] else "fall", 0.1, Vector2(fp.x - 8, fp.y - 16))
 			continue
 		if S.killed.has(n3):
 			var ka := (S.t - int(S.killed[n3])) / 60.0
@@ -1556,9 +1856,11 @@ func _draw_objects() -> void:
 				ha = "jump" if s4 < 0.22 else "fall"
 			elif s4 > 1.3:
 				ha = "crouch"
-			sh.draw_anim(self, "hopper", ha, t, Vector2(wp.x - 8, wp.y - 16), right)
+			_cut_anim("hopper", ha, t, Vector2(wp.x - 8, wp.y - 16), right)
+		elif kind == "flyer":
+			_cut_anim("flyer", "fly", t + n3 * 0.13, Vector2(wp.x - 8, wp.y - 16), right)
 		else:
-			sh.draw_anim(self, kind, "walk", t, Vector2(wp.x - 8, wp.y - 16), right)
+			_cut_anim(kind, "walk", t, Vector2(wp.x - 8, wp.y - 16), right)
 	# warden
 	if L.warden.x >= 0:
 		var wd: Vector2 = S.warden_pos(S.t)
@@ -1578,9 +1880,16 @@ func _draw_hints() -> void:
 		var p := Vector2(float(h.c) * T, float(h.r) * T)
 		if not _on_screen(p.x):
 			continue
-		var w := DrawUtil.text_width(h.text)
+		var txt := _plain(str(h.text))
+		var marks := _marks(str(h.text))
+		var w := DrawUtil.text_width(txt)
 		draw_rect(Rect2(p.x - 2, p.y - 2, w + 4, 9), Color(DrawUtil.BG, 0.8))
-		DrawUtil.text(self, p, h.text, DrawUtil.GRAY)
+		DrawUtil.text(self, p, txt, DrawUtil.GRAY)
+		# key words stand out: bright and underlined
+		for k in txt.length():
+			if k < marks.size() and marks[k] and txt[k] != " ":
+				DrawUtil.text(self, p + Vector2(k * 4, 0), txt[k], DrawUtil.WHITE)
+		_underline(p, txt, marks, 0, txt.length(), DrawUtil.WHITE)
 
 
 func _draw_player() -> void:
@@ -1606,7 +1915,53 @@ func _draw_player() -> void:
 		pose = "run"
 	if state == "clear" and state_t < 1.0:
 		pose = "slide"
+	if handoff >= 0.0 and handoff < 1.1:
+		J.spark(self, feet, 1, 1.2, 0.6, "lie", 0.0, -1)   # lying in the grass, eyes shut
+		return
 	J.spark(self, feet, S.face, S.sx_anim, S.sy_anim, pose, S.anim_t, 1 if S.dash_ready else 0)
+	_draw_arc()
+
+
+## The Arc while its hit box is out: a crackle of static in front of the Spark.
+func _draw_arc() -> void:
+	var age := _age("arc")
+	if age >= 0.2 or S.dead != "":
+		return   # the hit box is out for 0.12 s; the last frame, breaking up, shows to 0.2 s
+	var box: Rect2 = S.arc_box()
+	if _has_sheet("arc"):
+		var feet_y: float = S.y + Sim.HALF_H + 0.5
+		var at := Vector2(S.x + 4.0 if S.arc_face > 0 else S.x - 28.0, feet_y - 16.0)
+		sh.draw_anim(self, "arc", "swing", age, at.floor(), S.arc_face < 0)
+		return
+	if S.arc_t <= 0.0:
+		return
+	var pts := PackedVector2Array()
+	for k in 6:
+		var u := float(k) / 5.0
+		var px := box.position.x + (u if S.arc_face > 0 else 1.0 - u) * box.size.x
+		var h := DrawUtil.hash2(k, int(clock * 30.0))
+		pts.append(Vector2(floorf(px), floorf(S.y - 4.0 + float(h % 9) - 4.0)))
+	draw_polyline(pts, DrawUtil.WHITE, 1.0)
+
+
+## A cracked wall (%): the world's ground with cracks, which the Arc breaks.
+func _draw_crack(c: int, r: int, p: Vector2) -> void:
+	var wn := _world()
+	if _has_sheet("crack"):
+		var open_l: bool = not Level.SOLID.contains(L.at(c - 1, r))
+		var open_r: bool = not Level.SOLID.contains(L.at(c + 1, r))
+		var col := 3 if open_l and open_r else (0 if open_l else (2 if open_r else 1))
+		sh.draw_frame(self, "crack", "w" + (wn if wn in ["2", "3"] else "1"), col, p)
+		return
+	draw_rect(Rect2(p, Vector2(16, 16)), DrawUtil.GRAY)
+	draw_rect(Rect2(p, Vector2(16, 16)), DrawUtil.DARK, false, 1.0)
+	draw_polyline(PackedVector2Array([p + Vector2(4, 2), p + Vector2(8, 7), p + Vector2(5, 11), p + Vector2(9, 14)]), DrawUtil.BG, 1.0)
+	draw_line(p + Vector2(8, 7), p + Vector2(13, 5), DrawUtil.BG, 1.0)
+
+
+## The Arc is learned by clearing World 1, and always there from World 2 on.
+func _has_arc() -> bool:
+	return items.get("arc", false) or flags.has("w1_clear") or _world() in ["2", "3"]
 
 
 func _draw_fx() -> void:
@@ -1632,6 +1987,16 @@ func _draw_fx() -> void:
 					var dp := pos + dv * age + Vector2(0, 460.0 * age * age)
 					sh.draw_anim(self, "brick_debris", "spin", age + i * 0.05, dp - Vector2(4, 4), i % 2 == 1)
 				life = 0.9
+			"arc_hit":
+				if _has_sheet("arc_hit"):
+					sh.draw_anim(self, "arc_hit", "hit", age, pos - Vector2(8, 8))
+				else:
+					sh.draw_anim(self, "fx_burst", "stomp", age, pos - Vector2(16, 16))
+				life = 0.15
+			"crack_break":
+				if _has_sheet("crack"):
+					sh.draw_anim(self, "crack", "break", age, pos - Vector2(8, 8))
+				life = 0.28
 			"sparkle":
 				sh.draw_anim(self, "fx_sparkle", "twinkle", age, pos - Vector2(4, 4))
 				life = 0.3
@@ -1656,6 +2021,8 @@ func _draw_hud() -> void:
 	DrawUtil.text(self, Vector2(20, y), "X%02d" % lives, DrawUtil.WHITE)
 	if S.charged:
 		sh.draw_frame(self, "pickups", "charge", 0, Vector2(40, 0))
+	if _has_arc() and _has_sheet("arc_icon") and not _is_hub():
+		sh.draw_frame(self, "arc_icon", "hud", 0 if S.arc_cd <= 0.0 else 1, Vector2(54, 3))
 	sh.draw_frame(self, "shard", "spin", 0, Vector2(70, 0))
 	DrawUtil.text(self, Vector2(86, y), "%02d" % shards, DrawUtil.WHITE)
 	var title := "WORLD %s" % (L.meta.get("world", "1") if level_id != "test-room" else "1 TRAINING YARD")
@@ -1664,6 +2031,13 @@ func _draw_hud() -> void:
 	elif _is_hub():
 		title = "LAST RELAY"
 	DrawUtil.text(self, Vector2(240 - DrawUtil.text_width(title) / 2.0, y), title, DrawUtil.GRAY)
+	if clock - life_note_t < 3.0 and state != "pause":
+		var n := earned / 100 * 100
+		var note := "%d SHARDS . YOU EARNED AN EXTRA LIFE AND KEEP YOUR SHARDS" % n
+		var nw := DrawUtil.text_width(note) + 10
+		draw_rect(Rect2(240 - nw / 2.0, 22, nw, 13), Color(DrawUtil.BG, 0.85))
+		DrawUtil.text(self, Vector2(240 - DrawUtil.text_width(note) / 2.0, 25), note,
+			DrawUtil.WHITE if int(clock * 6.0) % 2 == 0 or clock - life_note_t > 1.0 else DrawUtil.GRAY)
 	if _is_hub():
 		if clock - saved_t < 1.6 and state != "pause":
 			DrawUtil.text_shadow(self, Vector2(440, 22), "SAVED", DrawUtil.GRAY)
@@ -1684,14 +2058,30 @@ func _center(text: String, y: float, col: Color, scale := 1) -> void:
 	DrawUtil.text_shadow(self, Vector2(240 - DrawUtil.text_width(text, scale) / 2.0, y), text, col, scale)
 
 
+## The intro's closing circle in reverse: black, then a circle opening on the Spark.
+func _draw_handoff_iris() -> void:
+	if handoff < 0.0 or handoff >= 0.9:
+		return
+	if handoff < 0.3:
+		draw_rect(Rect2(0, 0, vw, 270), DrawUtil.BG)
+		return
+	var u := (handoff - 0.3) / 0.6
+	if AppSettings.reduced_flashes:
+		draw_rect(Rect2(0, 0, vw, 270), Color(DrawUtil.BG, 1.0 - u))
+		return
+	var r := 520.0 * (1.0 - (1.0 - u) * (1.0 - u))
+	var c := Vector2(S.x - floorf(cam_x), S.y + 1.0 - floorf(cam_y))
+	draw_arc(c, r + 500.0, 0.0, TAU, 96, DrawUtil.BG, 1000.0)
+
+
 func _draw_overlay() -> void:
 	match state:
 		"card":
 			var a := clampf(1.6 - state_t, 0.0, 1.0) if state_t > 0.9 else 1.0
-			draw_rect(Rect2(0, 17, 480, 253), Color(DrawUtil.BG, a))
+			draw_rect(Rect2(-hx, 17, vw, 253), Color(DrawUtil.BG, a))
 			if a > 0.5:
 				var head := "TRAINING YARD" if level_id == "test-room" else "WORLD " + str(L.meta.get("world", ""))
-				var sub := "EVERY WORLD 1 ITEM, ONE STATION EACH" if level_id == "test-room" else str(L.name)
+				var sub := "TRY OUT EVERY WORLD 1 MOVE AND TRAP, ONE AT A TIME" if level_id == "test-room" else str(L.name)
 				if _is_hub():
 					head = "LAST RELAY"
 					sub = "THE LAST STATION ON THE LINE THAT STILL HUMS"
@@ -1705,9 +2095,9 @@ func _draw_overlay() -> void:
 			_draw_pause()
 		"dead":
 			if state_t > 0.5:
-				draw_rect(Rect2(0, 17, 480, 253), Color(DrawUtil.BG, clampf((state_t - 0.5) * 2.0, 0.0, 1.0)))
+				draw_rect(Rect2(-hx, 17, vw, 253), Color(DrawUtil.BG, clampf((state_t - 0.5) * 2.0, 0.0, 1.0)))
 		"gameover":
-			draw_rect(Rect2(0, 17, 480, 253), DrawUtil.BG)
+			draw_rect(Rect2(-hx, 17, vw, 253), DrawUtil.BG)
 			_center("SIGNAL LOST", 110, DrawUtil.WHITE, 2)
 			_center("GAME OVER", 140, DrawUtil.GRAY)
 		"clear":
@@ -1716,13 +2106,18 @@ func _draw_overlay() -> void:
 				_center(clear_bonus, 86, DrawUtil.GRAY)
 				_center("TIME %s" % DrawUtil.fmt_time(run_time), 100, DrawUtil.DARK)
 		"done":
-			draw_rect(Rect2(0, 17, 480, 253), Color(DrawUtil.BG, 0.9))
+			draw_rect(Rect2(-hx, 17, vw, 253), Color(DrawUtil.BG, 0.9))
 			var w := _world()
 			_center("WORLD %s CLEAR" % w, 96, DrawUtil.WHITE, 2)
 			if w == "1":
-				_center("THE GATE IS LIT . THE CALL MOVES DOWN THE LINE", 128, DrawUtil.GRAY)
+				_center("YOU LIT THE GATE, AND THE CALL GROWS LOUDER", 128, DrawUtil.GRAY)
+				if state_t > 1.6:
+					_center("YOU LEARNED THE ARC", 160, DrawUtil.WHITE, 2)
+					_center("PRESS %s TO THROW IT . IT KNOCKS OUT ANY ENEMY AND BREAKS CRACKED WALLS" % GameInput.action_label("attack"), 186, DrawUtil.GRAY)
+			elif w == "2":
+				_center("THE RELAY CAN REST . NOW THE LINE CLIMBS INTO THE AERIALS", 128, DrawUtil.GRAY)
 			else:
-				_center("THE RELAY IS DOWN . WORLD 3 IS NOT BUILT YET", 128, DrawUtil.GRAY)
+				_center("YOU LIT THE SPIRE . WORLD 4, DEAD AIR, IS COMING SOON", 128, DrawUtil.GRAY)
 
 
 # ================================================================ village and people
@@ -1786,7 +2181,7 @@ func _use(u: Dictionary) -> void:
 			if to == "":
 				var msg := "LOCKED."
 				if int(d.get("house", -1)) == 0:
-					msg = "OLD MAST'S HOUSE. THROUGH THE CRACKED WINDOW, A REPAIR SITS HALF FINISHED ON THE BENCH."
+					msg = "OLD MAST'S HOUSE. THROUGH THE CRACKED WINDOW, YOU CAN SEE A HALF-FINISHED REPAIR ON HIS BENCH."
 				_start_talk({"id": "", "c": d.c, "r": d.r}, [msg])
 				return
 			_play("door_open")
@@ -1808,7 +2203,7 @@ func _use(u: Dictionary) -> void:
 ## The first level you haven't cleared yet, in order. The training yard is optional.
 func _next_level() -> String:
 	for id in ORDER:
-		if id != "test-room" and not best.has(id):
+		if id != "test-room" and not flags.has("clear_" + id):
 			return id
 	return ORDER[ORDER.size() - 1]
 
@@ -1830,7 +2225,7 @@ func _start_talk(n: Dictionary, fixed: Array = []) -> void:
 
 
 func _talk_frame(delta: float) -> void:
-	var line := str(talk.lines[talk.i])
+	var line := _plain(str(talk.lines[talk.i]))
 	var before := int(talk.shown)
 	talk.shown = minf(float(line.length()), float(talk.shown) + delta * 40.0)
 	# one voice blip every two letters, each a little higher or lower
@@ -1906,10 +2301,15 @@ func _owned(id: String) -> bool:
 	return (id == "charge" and charge_next) or bool(items.get(id, false))
 
 
+## The pad in use, for reading Down and Up directly.
+func _pad() -> int:
+	return maxi(GameInput.active_device, 0)
+
+
 ## Down, on the frame it goes down (the level code reads Down as held).
 func _down_pressed() -> bool:
 	var d := Input.is_key_pressed(KEY_DOWN) or Input.is_key_pressed(KEY_S) \
-		or Input.is_joy_button_pressed(0, JOY_BUTTON_DPAD_DOWN) or Input.get_joy_axis(0, JOY_AXIS_LEFT_Y) > 0.6
+		or Input.is_joy_button_pressed(_pad(), JOY_BUTTON_DPAD_DOWN) or Input.get_joy_axis(_pad(), JOY_AXIS_LEFT_Y) > 0.6
 	var pressed := d and not down_prev
 	down_prev = d
 	return pressed
@@ -1917,7 +2317,7 @@ func _down_pressed() -> bool:
 
 func _up_pressed() -> bool:
 	var u := Input.is_key_pressed(KEY_UP) or Input.is_key_pressed(KEY_W) \
-		or Input.is_joy_button_pressed(0, JOY_BUTTON_DPAD_UP) or Input.get_joy_axis(0, JOY_AXIS_LEFT_Y) < -0.6
+		or Input.is_joy_button_pressed(_pad(), JOY_BUTTON_DPAD_UP) or Input.get_joy_axis(_pad(), JOY_AXIS_LEFT_Y) < -0.6
 	var pressed := u and not up_prev
 	up_prev = u
 	return pressed
@@ -1954,15 +2354,27 @@ func _draw_people() -> void:
 			draw_rect(Rect2(np + Vector2(4, -6), Vector2(8, 22)), DrawUtil.GRAY)
 			continue
 		var talking: bool = state == "talk" and talk.n.get("i", -1) == n.i \
-			and talk.shown < str(talk.lines[talk.i]).length()
+			and talk.shown < _plain(str(talk.lines[talk.i])).length()
 		var anim := str(n.id) + ("_talk" if talking else "_idle")
-		sh.draw_anim(self, "npc", anim, clock + n.c * 0.3, np - Vector2(0, 8), S.x > np.x + 8.0)
+		if str(n.id) == "mast" and (handoff >= 0.0 or lantern_talk) and _has_sheet("intro_npc"):
+			_cut_anim("intro_npc", "mast_lantern_look" if handoff >= 0.0 else "mast_lantern_stand", clock, np - Vector2(0, 8), S.x > np.x + 8.0, NPC_LIFT)
+			continue
+		_cut_anim("npc", anim, clock + n.c * 0.3, np - Vector2(0, 8), S.x > np.x + 8.0, NPC_LIFT)
 	if state == "play" and not _usable().is_empty():
 		var at := Vector2(S.x - 8, S.y - 32 + roundf(sin(clock * 5.0)))
 		if _has_sheet("bubble"):
 			sh.draw_anim(self, "bubble", "prompt", clock, at.floor())
 		else:
 			DrawUtil.text_shadow(self, at.floor(), "V", DrawUtil.WHITE)
+
+
+## Characters get a one-pixel dark outline so they stand out from any wall or
+## backdrop behind them.
+func _cut_anim(sheet: String, anim: String, at: float, pos: Vector2, flip := false, mod := Color.WHITE) -> void:
+	var f := sh.frame_at(sheet, anim, at)
+	for o in [Vector2(-1, 0), Vector2(1, 0), Vector2(0, -1), Vector2(0, 1)]:
+		sh.draw_frame(self, sheet, anim, f, pos + o, flip, Color.BLACK)
+	sh.draw_frame(self, sheet, anim, f, pos, flip, mod)
 
 
 func _draw_interior() -> void:
@@ -1980,7 +2392,7 @@ func _draw_interior() -> void:
 				f = 4
 			elif r == 9 and c % 13 == 10:
 				f = 9
-			sh.draw_frame(self, "interior", "tiles", f, Vector2(c * T, r * T))
+			sh.draw_frame(self, "interior", "tiles", f, Vector2(c * T, r * T), false, INTERIOR_DIM)
 
 
 func _draw_bubble() -> void:
@@ -1988,7 +2400,9 @@ func _draw_bubble() -> void:
 	if state != "talk":
 		return
 	var n: Dictionary = talk.n
-	var full := str(talk.lines[talk.i])
+	var raw := str(talk.lines[talk.i])
+	var full := _plain(raw)
+	var marks := _marks(raw)
 	var rows := _wrap(full, 40)
 	var w := 0
 	for r in rows:
@@ -1997,7 +2411,7 @@ func _draw_bubble() -> void:
 	var h := int(ceil((rows.size() * 9 + 12) / 8.0)) * 8
 	var who: Dictionary = story.get(str(n.get("id", "")), {})
 	var anchor := Vector2(n.c * T + 8, n.r * T - 12) - Vector2(floorf(cam_x), floorf(cam_y))
-	var x := clampf(anchor.x - w / 2.0, 6.0, 474.0 - w)
+	var x := clampf(anchor.x - w / 2.0, 6.0, vw - 6.0 - w)
 	var y := clampf(anchor.y - h - 8.0, 30.0, 262.0 - h)
 	var box := Rect2(floorf(x), floorf(y), w, h)
 	if _has_sheet("bubble"):
@@ -2014,11 +2428,15 @@ func _draw_bubble() -> void:
 		DrawUtil.text_shadow(self, box.position + Vector2(6, -9), name, DrawUtil.GRAY)
 	# type the line out, wrapped where the full line wraps so words don't jump
 	var left := int(talk.shown)
+	var start := 0
 	for i in rows.size():
 		if left <= 0:
 			break
-		DrawUtil.text(self, box.position + Vector2(7, 7 + i * 9), str(rows[i]).substr(0, left), DrawUtil.WHITE)
+		var at := box.position + Vector2(7, 7 + i * 9)
+		DrawUtil.text(self, at, str(rows[i]).substr(0, left), DrawUtil.WHITE)
+		_underline(at, str(rows[i]), marks, start, left, DrawUtil.GRAY)
 		left -= str(rows[i]).length() + 1
+		start += str(rows[i]).length() + 1
 	if talk.shown >= full.length() and int(clock * 3.0) % 2 == 0:
 		DrawUtil.diamond(self, box.end - Vector2(9, 6), DrawUtil.WHITE)
 
@@ -2038,6 +2456,31 @@ func _nine(box: Rect2) -> void:
 	sh.draw_frame(self, "bubble", "parts", 2, Vector2(e.x, p.y))
 	sh.draw_frame(self, "bubble", "parts", 6, Vector2(p.x, e.y))
 	sh.draw_frame(self, "bubble", "parts", 8, e)
+
+
+## Key words in dialogue and hints are written *LIKE THIS* in the text files.
+## The asterisks aren't shown: the words are drawn underlined instead.
+static func _plain(s: String) -> String:
+	return s.replace("*", "")
+
+
+## One true/false per character of the plain text: is it a key word?
+static func _marks(s: String) -> Array:
+	var out: Array = []
+	var on := false
+	for ch in s:
+		if ch == "*":
+			on = not on
+			continue
+		out.append(on)
+	return out
+
+
+## Underlines the key-word characters of one row (4 px per character).
+func _underline(at: Vector2, row: String, marks: Array, start: int, count: int, col: Color) -> void:
+	for k in mini(count, row.length()):
+		if start + k < marks.size() and marks[start + k]:
+			draw_rect(Rect2(at.x + k * 4, at.y + 6, 4 if k + 1 < row.length() and start + k + 1 < marks.size() and marks[start + k + 1] else 3, 1), col)
 
 
 func _wrap(s: String, width: int) -> Array:
@@ -2105,7 +2548,7 @@ func _draw_compass() -> void:
 	if best_d >= 1e9 or int(clock * 3.0) % 3 == 0:
 		return
 	var sp := target - Vector2(floorf(cam_x), floorf(cam_y))
-	var edge := Vector2(clampf(sp.x, 10.0, 470.0), clampf(sp.y, 26.0, 260.0))
+	var edge := Vector2(clampf(sp.x, 10.0, vw - 10.0), clampf(sp.y, 26.0, 260.0))
 	if edge.distance_to(sp) < 1.0:
 		return  # already on screen
 	DrawUtil.diamond(self, edge.floor(), DrawUtil.WHITE)
@@ -2114,26 +2557,48 @@ func _draw_compass() -> void:
 # ================================================================ progress
 
 func _load_progress() -> void:
-	if not FileAccess.file_exists(progress_path):
+	var path := progress_path
+	if not FileAccess.file_exists(path) and FileAccess.file_exists(path + ".tmp"):
+		path += ".tmp"   # a save was cut off between writing and swapping in
+	if not FileAccess.file_exists(path):
 		return
-	var data = JSON.parse_string(FileAccess.get_file_as_string(progress_path))
-	if data is Dictionary:
-		big = data.get("big", {})
-		best = data.get("best", {})
-		save = data.get("save", {})
-		unlocked = data.get("unlocked", ["test-room"])
-		# levels finished before level select existed count as reached
+	var data = JSON.parse_string(FileAccess.get_file_as_string(path))
+	if not data is Dictionary:
+		# keep the unreadable file: the next autosave would otherwise replace it for good
+		DirAccess.copy_absolute(path, progress_path + ".bad")
+		return
+	big = _typed(data.get("big"), {})
+	best = _typed(data.get("best"), {})
+	save = _typed(data.get("save"), {})
+	unlocked = _typed(data.get("unlocked"), ["test-room"])
+	# levels finished before level select existed count as reached
+	for id in best:
+		if not unlocked.has(id):
+			unlocked.append(id)
+	filter_on = _typed(data.get("filter"), true)
+	flags = _typed(data.get("flags"), [])
+	items = _typed(data.get("items"), {})
+	charge_next = _typed(data.get("charge_next"), false)
+	# saves from before this game's clears were kept (version 1): best times stand in
+	if float(_typed(data.get("v"), 1.0)) < 2.0 and not save.is_empty():
 		for id in best:
-			if not unlocked.has(id):
-				unlocked.append(id)
-		filter_on = bool(data.get("filter", true))
-		flags = data.get("flags", [])
-		items = data.get("items", {})
-		charge_next = bool(data.get("charge_next", false))
+			if not flags.has("clear_" + str(id)):
+				flags.append("clear_" + str(id))
 
 
-func _save_progress() -> void:
-	var f := FileAccess.open(progress_path, FileAccess.WRITE)
-	if f:
-		f.store_string(JSON.stringify({"big": big, "best": best, "save": save, "unlocked": unlocked,
-			"filter": filter_on, "flags": flags, "items": items, "charge_next": charge_next}))
+## A saved value, or `fallback` when it is missing or the wrong type.
+func _typed(v, fallback):
+	return v if typeof(v) == typeof(fallback) else fallback
+
+
+## Writes a copy, then swaps it in, so a save cut off halfway never replaces a
+## good one. False when the save could not be written.
+func _save_progress() -> bool:
+	var tmp := progress_path + ".tmp"
+	var f := FileAccess.open(tmp, FileAccess.WRITE)
+	if f == null:
+		return false
+	f.store_string(JSON.stringify({"big": big, "best": best, "save": save, "unlocked": unlocked,
+		"filter": filter_on, "flags": flags, "items": items, "charge_next": charge_next, "v": 2}))
+	f.close()
+	return DirAccess.rename_absolute(tmp, progress_path) == OK

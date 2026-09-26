@@ -349,5 +349,5 @@ T#4 phase=0.45
 T#5 phase=0.6
 T#6 phase=0.75
 m#3 dy=-8 dx=0 period=5
-hint#1 c=152 r=26 text=RIDE_IT_UP
+hint#1 c=152 r=26 text=RIDE_THE_GIRDER_UP
 route#1 via=186,20

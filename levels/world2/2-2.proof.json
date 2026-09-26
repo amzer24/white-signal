@@ -1,14 +1,14 @@
 {
  "finished": true,
  "route_seconds": 14.9,
- "nodes": 156098,
+ "nodes": 163355,
  "shards": {
   "74,28": true,
   "109,22": true
  },
  "small_shards": {
-  "total": 15,
-  "reachable": 15,
+  "total": 18,
+  "reachable": 18,
   "missing": []
  },
  "blocks": {
@@ -16,6 +16,11 @@
   "reachable": 22,
   "missing": []
  },
- "solve_seconds": 1464.1,
- "line": "180 tiles (2880px, 6 screens)  .  FINISHABLE  .  fastest proven route 14.9s  .  big shards reachable 2/2  .  small shards reachable 15/15  .  blocks hittable 22/22  .  34 shards  .  owns: spiked walkers"
+ "cracks": {
+  "total": 1,
+  "reachable": 1,
+  "missing": []
+ },
+ "solve_seconds": 1413.0,
+ "line": "180 tiles (2880px, 6 screens)  .  FINISHABLE  .  fastest proven route 14.9s  .  big shards reachable 2/2  .  small shards reachable 18/18  .  blocks hittable 22/22  .  cracked walls breakable 1/1  .  37 shards  .  owns: spiked walkers"
 }

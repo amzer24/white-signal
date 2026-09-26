@@ -2215,7 +2215,9 @@
    "dot_idle",
    "dot_talk",
    "hum_idle",
-   "hum_talk"
+   "hum_talk",
+   "spire_idle",
+   "spire_talk"
   ],
   "anims": {
    "mast_idle": {
@@ -2342,6 +2344,28 @@
    },
    "hum_talk": {
     "row": 11,
+    "frames": 2,
+    "dur": [
+     0.12,
+     0.12
+    ],
+    "loop": true,
+    "note": ""
+   },
+   "spire_idle": {
+    "row": 12,
+    "frames": 4,
+    "dur": [
+     0.2,
+     0.2,
+     0.2,
+     0.2
+    ],
+    "loop": true,
+    "note": "Spire, the mast rigger: climbing harness, coiled rope over the back shoulder, goggles pushed up. Added for World 3"
+   },
+   "spire_talk": {
+    "row": 13,
     "frames": 2,
     "dur": [
      0.12,
@@ -2559,6 +2583,1083 @@
     ],
     "loop": true,
     "note": "0 pitched houses, 1 domed relay hall, 2 tall aerial, 3 terrace with water tank"
+   }
+  }
+ },
+ "ground_w3": {
+  "file": "ground_w3.png",
+  "fw": 16,
+  "fh": 16,
+  "about": "Aerials ground `#`: a riveted mast-platform deck on top, lattice steel with X cross-bracing below. Same layout as `ground`. Variants: deck grating, rope tie-off eye, a snapped brace, a junction box.",
+  "order": [
+   "top",
+   "mid",
+   "deep",
+   "bottom",
+   "alt"
+  ],
+  "anims": {
+   "top": {
+    "row": 0,
+    "frames": 4,
+    "dur": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "loop": true,
+    "note": "top-left, top, top-right, one-wide column top"
+   },
+   "mid": {
+    "row": 1,
+    "frames": 4,
+    "dur": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "loop": true,
+    "note": "second row down: left, fill, right, column"
+   },
+   "deep": {
+    "row": 2,
+    "frames": 4,
+    "dur": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "loop": true,
+    "note": "third row and below"
+   },
+   "bottom": {
+    "row": 3,
+    "frames": 4,
+    "dur": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "loop": true,
+    "note": "underside for ceilings and floating ground. The last one is a single tile"
+   },
+   "alt": {
+    "row": 4,
+    "frames": 4,
+    "dur": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "loop": true,
+    "note": "drop-in swaps for variety, pick by hash of world tile x,y"
+   }
+  }
+ },
+ "block_w3": {
+  "file": "block_w3.png",
+  "fw": 16,
+  "fh": 16,
+  "about": "Aerials block `=`: riveted mast-panel crates. Same layout as `block`. Use a live pip rarely.",
+  "order": [
+   "lip",
+   "stacked"
+  ],
+  "anims": {
+   "lip": {
+    "row": 0,
+    "frames": 4,
+    "dur": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "loop": true,
+    "note": "top of a stack: plain, vent, live pip, stencil"
+   },
+   "stacked": {
+    "row": 1,
+    "frames": 4,
+    "dur": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "loop": true,
+    "note": "a block with another block above it"
+   }
+  }
+ },
+ "backdrop_w3": {
+  "file": "backdrop_w3.png",
+  "fw": 96,
+  "fh": 128,
+  "about": "Aerials far silhouettes, like `backdrop_w2`: far layer, parallax 0.2x, 70% opacity, every bottom on one horizon line. Lay the pieces edge to edge, one every 96 px, with no gaps: every piece carries the same cable and the same cloud-bank line at its edges, so they join in any order. Mast tips are drawn lit. Never put the same piece twice in a row.",
+  "order": [
+   "pieces"
+  ],
+  "anims": {
+   "pieces": {
+    "row": 0,
+    "frames": 4,
+    "dur": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "loop": true,
+    "note": "0 broadcast masts, 1 dish on a gantry, 2 rooftops in the cloud bank, 3 pylon line"
+   }
+  }
+ },
+ "flyer": {
+  "file": "flyer.png",
+  "fw": 16,
+  "fh": 16,
+  "about": "Wave flyer: the walker blob with two small wings. It flies a sine wave on its patrol and can be stomped. Same frame size and rows as `walker`, with `fly` in place of `walk`.",
+  "order": [
+   "fly",
+   "turn",
+   "stomped"
+  ],
+  "anims": {
+   "fly": {
+    "row": 0,
+    "frames": 4,
+    "dur": [
+     0.1,
+     0.1,
+     0.1,
+     0.1
+    ],
+    "loop": true,
+    "note": "faces left, flip for right. Wings up, level, down, level. The body bobs with the beat"
+   },
+   "turn": {
+    "row": 1,
+    "frames": 2,
+    "dur": [
+     0.06,
+     0.06
+    ],
+    "loop": true,
+    "note": "2 frames at the end of its patrol before it turns: squash, eye wide, body flickers"
+   },
+   "stomped": {
+    "row": 2,
+    "frames": 1,
+    "dur": [
+     0
+    ],
+    "loop": true,
+    "note": "hold 0.3 s, then fx burst. Drop it to the floor first if it was stomped in the air"
+   }
+  }
+ },
+ "sweep_arm": {
+  "file": "sweep_arm.png",
+  "fw": 16,
+  "fh": 16,
+  "about": "Sweep arm: a fire bar made of static. A chain of dots turns about the hub. The dots have a dark core and a crackling white rim, so they never read as the solid-white Spark.",
+  "order": [
+   "pivot",
+   "dot"
+  ],
+  "anims": {
+   "pivot": {
+    "row": 0,
+    "frames": 2,
+    "dur": [
+     0.25,
+     0.25
+    ],
+    "loop": true,
+    "note": "riveted hub. The arm turns about frame pixel (8, 8)"
+   },
+   "dot": {
+    "row": 1,
+    "frames": 2,
+    "dur": [
+     0.08,
+     0.08
+    ],
+    "loop": true,
+    "note": "one static ball on the arm: 8x8 art centred in the frame. Draw at ball centre - (8, 8), one every 8 px out from the hub centre"
+   }
+  }
+ },
+ "wind": {
+  "file": "wind.png",
+  "fw": 16,
+  "fh": 16,
+  "about": "Wind-zone particles. Thin grey streaks with a few white heads, so they read as air, not as static walkers.",
+  "order": [
+   "side",
+   "up",
+   "gust_tell"
+  ],
+  "anims": {
+   "side": {
+    "row": 0,
+    "frames": 4,
+    "dur": [
+     0.07,
+     0.07,
+     0.07,
+     0.07
+    ],
+    "loop": true,
+    "note": "streaks blowing left: flip for rightward wind. Each frame moves them 4 px, and frames tile"
+   },
+   "up": {
+    "row": 1,
+    "frames": 4,
+    "dur": [
+     0.07,
+     0.07,
+     0.07,
+     0.07
+    ],
+    "loop": true,
+    "note": "rising streaks. Each frame moves them 4 px up, and frames tile"
+   },
+   "gust_tell": {
+    "row": 2,
+    "frames": 3,
+    "dur": [
+     0.15,
+     0.15,
+     0.15
+    ],
+    "loop": false,
+    "note": "the streaks draw back and bunch up. Play for the 0.45 s before a gust, flipped like `side`"
+   }
+  }
+ },
+ "wind_vane": {
+  "file": "wind_vane.png",
+  "fw": 16,
+  "fh": 32,
+  "about": "Wind vane prop: a windsock on a short riveted pole. It marks a wind zone. Anchor top-left at (cell x, cell y - 16), so the base plate sits on the cell floor. Faces left like every sprite: the sock points the way the wind blows.",
+  "order": [
+   "spin",
+   "still"
+  ],
+  "anims": {
+   "spin": {
+    "row": 0,
+    "frames": 4,
+    "dur": [
+     0.08,
+     0.08,
+     0.08,
+     0.08
+    ],
+    "loop": true,
+    "note": "wind blowing: the sock streams left and ripples, lamp lit. Mirror for rightward wind"
+   },
+   "still": {
+    "row": 1,
+    "frames": 1,
+    "dur": [
+     0
+    ],
+    "loop": true,
+    "note": "no wind: the sock hangs limp, lamp dark"
+   }
+  }
+ },
+ "title_logo": {
+  "file": "title_logo.png",
+  "fw": 240,
+  "fh": 44,
+  "about": "Title wordmark WHITE SIGNAL on one line, letters 28 px tall on frame rows 12 to 39. All three rows share one origin: top-left = ((view width - 240) / 2, 26), so the letters sit at screen y 38 to 65. The antenna on the I of SIGNAL fills rows 0 to 11. Reveal left to right by drawing glow and lit with a source rect from frame x 0 to (Spark x - frame x). Letters run from frame x 4 to 235.",
+  "order": [
+   "unlit",
+   "lit",
+   "glow"
+  ],
+  "anims": {
+   "unlit": {
+    "row": 0,
+    "frames": 1,
+    "dur": [
+     0
+    ],
+    "loop": true,
+    "note": "before the Spark passes: dark grey rims, dead antenna"
+   },
+   "lit": {
+    "row": 1,
+    "frames": 1,
+    "dur": [
+     0
+    ],
+    "loop": true,
+    "note": "after it passes. Same origin as unlit: draw it over unlit, clipped from frame x 0 to the Spark. The antenna's wave arcs are in title_logo_antenna"
+   },
+   "glow": {
+    "row": 2,
+    "frames": 1,
+    "dur": [
+     0
+    ],
+    "loop": true,
+    "note": "soft halo only. Draw it under lit, revealed with the same clip"
+   }
+  }
+ },
+ "title_logo_antenna": {
+  "file": "title_logo_antenna.png",
+  "fw": 24,
+  "fh": 12,
+  "about": "The logo antenna transmitting: its spark and two wave arcs, so the lit logo carries no arcs of its own. Draw it over the lit logo once the reveal is done, top-left = logo top-left + (132, 0). The spark pixels are opaque, so each frame repaints the lit spark underneath.",
+  "order": [
+   "pulse",
+   "steady"
+  ],
+  "anims": {
+   "pulse": {
+    "row": 0,
+    "frames": 5,
+    "dur": [
+     0.32,
+     0.32,
+     0.32,
+     0.64,
+     0.07
+    ],
+    "loop": true,
+    "note": "the spark flares with the inner arc, the outer arc follows as the inner fades, then a short dark gap and a rise. 1.67 s, half the caller's blink loop: play it from 3.0 s on the title clock so every other flare lands on the caller's blink"
+   },
+   "steady": {
+    "row": 1,
+    "frames": 1,
+    "dur": [
+     0
+    ],
+    "loop": true,
+    "note": "with reduced flashes: the spark lit and both arcs on, held"
+   }
+  }
+ },
+ "title_scene": {
+  "file": "title_scene.png",
+  "fw": 320,
+  "fh": 64,
+  "about": "Title night scene strips, 320x64, sky transparent over a black sky. Placement at 480x270 (the same y on wide screens): far top at y 160, mid top at y 188. Fill from the far strip's bottom (y 224) down with dark grey, draw mid over it, then fill from the mid strip's bottom (y 252) down with black. The far land starts at its row 50 (y 210), so the wire at y 190 runs against open sky. Both strips wrap every 320 px: draw at x = 320 k - (scroll mod 320). The caller's mast tip is far-strip pixel (206, 6).",
+  "order": [
+   "far",
+   "mid"
+  ],
+  "anims": {
+   "far": {
+    "row": 0,
+    "frames": 1,
+    "dur": [
+     0
+    ],
+    "loop": true,
+    "note": "dead masts on the horizon, land from row 50. Parallax 2 px/s"
+   },
+   "mid": {
+    "row": 1,
+    "frames": 1,
+    "dur": [
+     0
+    ],
+    "loop": true,
+    "note": "black hills with a dark grey rim, fences, a dead tree and a shed. Parallax 5 px/s"
+   }
+  }
+ },
+ "title_pole": {
+  "file": "title_pole.png",
+  "fw": 24,
+  "fh": 64,
+  "about": "Telegraph pole for the title wire. Top-left = (pole x, wire y - 4): with the wire at y 190 the foot lands on y 249. The wire is drawn in code as a 1 px mid-grey line: straight across each pole from the left insulator (frame pixel 3, 4) to the right one (20, 4), then from one pole's right insulator to the next pole's left insulator, sagging as y = wire y + 6 * 4u(1 - u) for u from 0 to 1. Space poles 160 px apart and scroll them with the near layer (10 px/s). The Spark stands on that same curve.",
+  "order": [
+   "pole"
+  ],
+  "anims": {
+   "pole": {
+    "row": 0,
+    "frames": 2,
+    "dur": [
+     0,
+     0
+    ],
+    "loop": true,
+    "note": "0 plain, 1 with a transformer can. Use 1 about every fourth pole"
+   }
+  }
+ },
+ "title_caller": {
+  "file": "title_caller.png",
+  "fw": 8,
+  "fh": 8,
+  "about": "The caller, the tiny answering light on the horizon. 7x7 art, centre at frame pixel (3, 3). Draw it on the caller mast tip: frame top-left = far strip origin + (203, 3).",
+  "order": [
+   "blink",
+   "blink_gray"
+  ],
+  "anims": {
+   "blink": {
+    "row": 0,
+    "frames": 4,
+    "dur": [
+     3.0,
+     0.08,
+     0.16,
+     0.1
+    ],
+    "loop": true,
+    "note": "off, rising, on, fading. One blink every 3.3 s"
+   },
+   "blink_gray": {
+    "row": 1,
+    "frames": 4,
+    "dur": [
+     3.0,
+     0.08,
+     0.16,
+     0.1
+    ],
+    "loop": true,
+    "note": "the same blink with the white centre turned GRAY, for the intro cards where only the Spark is white (cards 8 and 10)"
+   }
+  }
+ },
+ "arc": {
+  "file": "arc.png",
+  "fw": 24,
+  "fh": 16,
+  "about": "The Arc, the Spark's attack: a short throw of static about 20 px forward. Faces RIGHT (the exception to the face-left rule): mirror it when the Spark faces left. Frame x 1 is the Spark's front column and row 15 its bottom row, so the knot at the hand overlaps the body by 1 px. With the standard 12 px body (J.spark, body x from floor(feet x - 6)): facing right, top-left = (feet x + 4, feet y - 16). Facing left, draw it mirrored at (feet x - 28, feet y - 16). A fair hitbox is frame x 2 to 23, y 1 to 13, live on frames 1 and 2.",
+  "order": [
+   "swing"
+  ],
+  "anims": {
+   "swing": {
+    "row": 0,
+    "frames": 4,
+    "dur": [
+     0.02,
+     0.04,
+     0.06,
+     0.08
+    ],
+    "loop": false,
+    "note": "wind-up, sweep, full reach, break-up. Frames 1 and 2 cover 0.02 to 0.12 s, the hit window. Keep drawing to 0.2 s so the break-up shows"
+   }
+  }
+ },
+ "arc_hit": {
+  "file": "arc_hit.png",
+  "fw": 16,
+  "fh": 16,
+  "about": "Arc hit burst. Centre on the contact point: top-left = contact - (8, 8). Jagged rays, so it reads as static, not as the round stomp burst.",
+  "order": [
+   "hit"
+  ],
+  "anims": {
+   "hit": {
+    "row": 0,
+    "frames": 3,
+    "dur": [
+     0.03,
+     0.05,
+     0.07
+    ],
+    "loop": false,
+    "note": "where the Arc connects. Centre on the contact point"
+   }
+  }
+ },
+ "crack": {
+  "file": "crack.png",
+  "fw": 16,
+  "fh": 16,
+  "about": "Cracked wall the Arc breaks. Each is the deep tile of that world's ground with a crack over it, so it sits flush in a wall. Pick the row by world and the column by open sides, like ground. There is no top-lip version: keep a normal ground tile on top of a cracked stack.",
+  "order": [
+   "w1",
+   "w2",
+   "w3",
+   "break"
+  ],
+  "anims": {
+   "w1": {
+    "row": 0,
+    "frames": 4,
+    "dur": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "loop": true,
+    "note": "World 1 ground: left, fill, right, column (the same columns as ground)"
+   },
+   "w2": {
+    "row": 1,
+    "frames": 4,
+    "dur": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "loop": true,
+    "note": "World 2 ground_w2: left, fill, right, column"
+   },
+   "w3": {
+    "row": 2,
+    "frames": 4,
+    "dur": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "loop": true,
+    "note": "World 3 ground_w3: left, fill, right, column"
+   },
+   "break": {
+    "row": 3,
+    "frames": 4,
+    "dur": [
+     0.04,
+     0.06,
+     0.08,
+     0.1
+    ],
+    "loop": false,
+    "note": "the Arc breaks it: flare, split, burst, dust. Same for every world. Spawn 4 brick_debris chunks on frame 1 if you want pieces flying clear of the tile"
+   }
+  }
+ },
+ "arc_icon": {
+  "file": "arc_icon.png",
+  "fw": 16,
+  "fh": 16,
+  "about": "Arc HUD icon and pickup. The glyph faces right like the Arc: a knot of static and the zigzag it throws. It lies flat, so it never reads as the upright CHARGE bolt.",
+  "order": [
+   "hud",
+   "pickup"
+  ],
+  "anims": {
+   "hud": {
+    "row": 0,
+    "frames": 2,
+    "dur": [
+     0,
+     0
+    ],
+    "loop": true,
+    "note": "0 ready, 1 not ready. 10x10 art at the frame top-left: draw the frame at (x, 3) in the 16 px HUD bar"
+   },
+   "pickup": {
+    "row": 1,
+    "frames": 4,
+    "dur": [
+     0.1,
+     0.1,
+     0.1,
+     0.1
+    ],
+    "loop": true,
+    "note": "pickup for the tutorial: the glyph in a ringed cell. A spark runs round the rim and the tip flickers. Bob +-1 px in code"
+   }
+  }
+ },
+ "intro_npc": {
+  "file": "intro_npc.png",
+  "fw": 16,
+  "fh": 24,
+  "about": "Intro people. Anchor like npc: top-left (cell x, cell y - 8), feet on the floor (feet centre = frame x 8, row 23). Face left, mirror for right. Old Mast is drawn on his npc body, so he lines up with mast_idle. His eyes and antenna lamp are GRAY here and his lantern is GRAY glass in a DARK cage, because from card 5 on only the Spark is white. The code hangs the lantern light on the lantern centre given in each row.",
+  "order": [
+   "listener_sit",
+   "mast_lantern_walk",
+   "mast_lantern_stand",
+   "mast_lantern_look"
+  ],
+  "anims": {
+   "listener_sit": {
+    "row": 0,
+    "frames": 2,
+    "dur": [
+     0,
+     0
+    ],
+    "loop": true,
+    "note": "a generic listener sitting on the ground, knees up, small headphones, white dot eyes. 0 looks ahead, 1 tilts the head up at a passing pulse. Card 2"
+   },
+   "mast_lantern_walk": {
+    "row": 1,
+    "frames": 4,
+    "dur": [
+     0.2,
+     0.2,
+     0.2,
+     0.2
+    ],
+    "loop": true,
+    "note": "Old Mast walking slowly, the lantern held forward in his front hand and the cane in his back hand. lantern centre (1, 16) on every frame. Card 9"
+   },
+   "mast_lantern_stand": {
+    "row": 2,
+    "frames": 2,
+    "dur": [
+     0.4,
+     0.4
+    ],
+    "loop": true,
+    "note": "standing, the lantern held out at chest height, swaying 1 px. lantern centre (1, 16), (1, 17) on frames 0, 1. Card 9 and the hand-off"
+   },
+   "mast_lantern_look": {
+    "row": 3,
+    "frames": 2,
+    "dur": [
+     0.5,
+     0.5
+    ],
+    "loop": true,
+    "note": "bent over, looking down, the lantern low near the ground. lantern centre (1, 20) on every frame. Hand-off"
+   }
+  }
+ },
+ "intro_poles": {
+  "file": "intro_poles.png",
+  "fw": 48,
+  "fh": 64,
+  "about": "Intro poles, the same pole as title_pole moved 12 px right in a wider frame. Top-left = (pole x - 12, wire y - 4). The switch contacts and the insulators sit at frame (15, 4) and (32, 4), and the foot is on row 63 (screen y 249 with the wire at 190). The switch blade opens between the contacts, so leave the wire gap from frame x 15 to 32 (screen 203 to 220 for the pole at x 200). The crew faces RIGHT, toward the pole, so draw these rows unmirrored. Only the switch rows have white (the crew's eyes, the blade, the insulator glints), for cards 3 and 4.",
+  "order": [
+   "switch_ready",
+   "switch_pull",
+   "switch_after",
+   "dead"
+  ],
+  "anims": {
+   "switch_ready": {
+    "row": 0,
+    "frames": 2,
+    "dur": [
+     0.5,
+     0.5
+    ],
+    "loop": true,
+    "note": "a pole with an isolation switch at the top (blade closed across the contacts), an operating rod down the pole to a notched handle, and a crew listener in a work coat and hard hat with one hand on it"
+   },
+   "switch_pull": {
+    "row": 1,
+    "frames": 5,
+    "dur": [
+     0.1,
+     0.1,
+     0.15,
+     0.1,
+     0.25
+    ],
+    "loop": false,
+    "note": "grip, lean, heave (the blade leaves the jaw), down (blade open, the jaw scorched DARK), hold. The crew is still holding the handle down on the last frame"
+   },
+   "switch_after": {
+    "row": 2,
+    "frames": 2,
+    "dur": [
+     0.6,
+     0.6
+    ],
+    "loop": true,
+    "note": "the switch open, the crew with the head bowed and the hands off the handle"
+   },
+   "dead": {
+    "row": 3,
+    "frames": 3,
+    "dur": [
+     0,
+     0,
+     0
+    ],
+    "loop": true,
+    "note": "no crew, no wire, no white. 0 leans left about 12 degrees, wire seats at frame (4, 6) and (21, 2). 1 leans right, wire seats at frame (26, 2) and (43, 6). 2 a snapped stump about 24 px tall with its broken top in the grass. Hand-drawn, not rotated in code"
+   }
+  }
+ },
+ "intro_static": {
+  "file": "intro_static.png",
+  "fw": 32,
+  "fh": 16,
+  "about": "The noise that came down the line. Centre it on the wire: top-left = (x - 16, wire y - 8). White and DARK stripes and teeth, like the walkers, so it never reads as the Spark or the Arc.",
+  "order": [
+   "crawl",
+   "stall",
+   "die"
+  ],
+  "anims": {
+   "crawl": {
+    "row": 0,
+    "frames": 4,
+    "dur": [
+     0.06,
+     0.06,
+     0.06,
+     0.06
+    ],
+    "loop": true,
+    "note": "the noise: a jagged striped scribble with one eye, riding the wire and leaning left the way it moves"
+   },
+   "stall": {
+    "row": 1,
+    "frames": 3,
+    "dur": [
+     0.08,
+     0.08,
+     0.08
+    ],
+    "loop": true,
+    "note": "piled up against a gap, climbing over itself, sparks spitting forward. The pile's front face is frame x 14, the gap edge when the static stops at x 222"
+   },
+   "die": {
+    "row": 2,
+    "frames": 4,
+    "dur": [
+     0.1,
+     0.1,
+     0.1,
+     0.1
+    ],
+    "loop": false,
+    "note": "breaks into chunks, then flecks that go GRAY, then DARK, then gone. Stop drawing after it ends"
+   }
+  }
+ },
+ "spark_close": {
+  "file": "spark_close.png",
+  "fw": 48,
+  "fh": 48,
+  "about": "The Spark close up, twice the size of the in-game block (body 24x28 standing), the same design as J.spark: white body, black outline, black visor with a GRAY pupil, the nub on the back of the head, the GRAY trailing flicker and the antenna dot. 48x48 frames so the flicker and the rays fit. Anchor bottom-centre: feet at frame (24, 47), so top-left = (feet x - 24, feet y - 47). Faces left: mirror it to face right.",
+  "order": [
+   "curled",
+   "stir",
+   "flare",
+   "sit"
+  ],
+  "anims": {
+   "curled": {
+    "row": 0,
+    "frames": 2,
+    "dur": [
+     1.2,
+     1.2
+    ],
+    "loop": true,
+    "note": "squashed low (24x14), curled, visor closed to a 1 px line. Mostly GRAY with a small WHITE core that grows 1 px on frame 1. No antenna dot yet"
+   },
+   "stir": {
+    "row": 1,
+    "frames": 3,
+    "dur": [
+     0,
+     0,
+     0
+    ],
+    "loop": true,
+    "note": "held one at a time, one per ring: 0 a twitch, the core bigger. 1 half the body white, raised. 2 the eye half open, the body white. The antenna dot comes on GRAY on 1 and 2"
+   },
+   "flare": {
+    "row": 2,
+    "frames": 4,
+    "dur": [
+     0.06,
+     0.06,
+     0.1,
+     0.12
+    ],
+    "loop": false,
+    "note": "white rays burst round the body as it pops upright, then shrink back into a sitting Spark. The antenna dot is WHITE from here on"
+   },
+   "sit": {
+    "row": 3,
+    "frames": 2,
+    "dur": [
+     0.5,
+     0.5
+    ],
+    "loop": true,
+    "note": "sitting up, alert, facing the wire, the trailing flicker moving"
+   }
+  }
+ },
+ "intro_wire_close": {
+  "file": "intro_wire_close.png",
+  "fw": 32,
+  "fh": 32,
+  "about": "The close-up set pieces at twice game scale. The cable centre is frame row 16 on wire, wire_end and wire_lit, so with the tiles at y 200 the cable centre is screen y 216.",
+  "order": [
+   "grass",
+   "wire",
+   "wire_end",
+   "wire_lit",
+   "ring",
+   "ring_pop"
+  ],
+  "anims": {
+   "grass": {
+    "row": 0,
+    "frames": 4,
+    "dur": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "loop": true,
+    "note": "grass tufts, DARK blades with a black shadow edge and a few GRAY tips, bottoms on row 31. Tile edge to edge in any order"
+   },
+   "wire": {
+    "row": 1,
+    "frames": 2,
+    "dur": [
+     0,
+     0
+    ],
+    "loop": true,
+    "note": "the cable lying straight across, centred on row 16: a 3 px core with insulation joins, DARK with a GRAY top edge. Tiles left to right"
+   },
+   "wire_end": {
+    "row": 2,
+    "frames": 1,
+    "dur": [
+     0
+    ],
+    "loop": true,
+    "note": "the cut end: the cable arrives from the right, frayed strands splay from the cut, the tip is frame (4, 16)"
+   },
+   "wire_lit": {
+    "row": 3,
+    "frames": 2,
+    "dur": [
+     0,
+     0
+    ],
+    "loop": true,
+    "note": "0 the wire tile lit, 1 the wire_end tile lit: the core GRAY, a thin DARK glow above and below. No white"
+   },
+   "ring": {
+    "row": 4,
+    "frames": 3,
+    "dur": [
+     0.06,
+     0.06,
+     0.06
+    ],
+    "loop": true,
+    "note": "a ring of light running along the cable: a GRAY bead in a black rim and a DARK halo that pulses, centred on (16, 16), with a short tail behind it (right). Never white"
+   },
+   "ring_pop": {
+    "row": 5,
+    "frames": 3,
+    "dur": [
+     0.05,
+     0.05,
+     0.05
+    ],
+    "loop": false,
+    "note": "the ring reaches the tip and bursts into four GRAY flecks, centred on (16, 16)"
+   }
+  }
+ },
+ "intro_far": {
+  "file": "intro_far.png",
+  "fw": 64,
+  "fh": 64,
+  "about": "Night silhouettes where the normal art would show white. keeper_night has the same anchor as house: top-left = (door cell x - 24, door cell y - 48). gate_far stands on the horizon: its foot is row 63.",
+  "order": [
+   "keeper_night",
+   "gate_far"
+  ],
+  "anims": {
+   "keeper_night": {
+    "row": 0,
+    "frames": 2,
+    "dur": [
+     0.8,
+     0.15
+    ],
+    "loop": true,
+    "note": "house facade 0 as a night silhouette, the lit window (with its broken diagonal mullion) GRAY. 1 flickers the window. Window centre frame (12, 40). The wire bracket's insulator is frame (0, 20): hang the wire from the hill there"
+   },
+   "gate_far": {
+    "row": 1,
+    "frames": 1,
+    "dur": [
+     0
+    ],
+    "loop": true,
+    "note": "the World 1 gate transmitter far off: an open DARK lattice about 32x60 on a base hut, black-edged low down where it stands in front of the far buildings, one GRAY lamp pixel at frame (16, 2). The art fills frame x 0 to 31 (centre column 16) with its foot on row 63"
+   }
+  }
+ },
+ "intro_window": {
+  "file": "intro_window.png",
+  "fw": 320,
+  "fh": 176,
+  "about": "The keeper's window from inside, one 320x176 frame. The opening is transparent from frame (12, 10) to (308, 150), not including x 308 or y 150. The mullion covers frame x 146 to 149 and the transom rows 44 to 47. The upper left pane carries the broken diagonal mullion. The lower right pane (x 170 to 300, y 60 to 148) is clear. The sill runs from row 150 to 175 and its top edge, row 150, is the surface the Spark sits on.",
+  "order": [
+   "frame"
+  ],
+  "anims": {
+   "frame": {
+    "row": 0,
+    "frames": 1,
+    "dur": [
+     0
+    ],
+    "loop": true,
+    "note": "the keeper's window seen from inside, DARK with GRAY edges"
+   }
+  }
+ },
+ "title_hero": {
+  "file": "title_hero.png",
+  "fw": 64,
+  "fh": 64,
+  "about": "The Spark on the title cliff, twice game size: the same body, visor, nub and antenna dot as spark_close, with the trailing flicker grown into a GRAY scarf that streams behind her. Faces left, toward the land. Anchor: feet at frame (24, 59), the bottom-centre body pixel, so top-left = (feet x - 24, feet y - 59) and the ground's top row is feet y + 1. On the cliff the feet go at screen (hx + 347, 171).",
+  "order": [
+   "idle",
+   "look",
+   "leap",
+   "blink",
+   "answer"
+  ],
+  "anims": {
+   "idle": {
+    "row": 0,
+    "frames": 8,
+    "dur": [
+     0.12,
+     0.12,
+     0.12,
+     0.12,
+     0.12,
+     0.12,
+     0.12,
+     0.12
+    ],
+    "loop": true,
+    "note": "standing on the cliff tip looking out, the scarf streaming right in two ripples per loop, a 1 px breath on frames 3 to 5, and the antenna pulsing on frames 0 and 1 (GRAY arcs, then DARK arcs further out)"
+   },
+   "look": {
+    "row": 1,
+    "frames": 8,
+    "dur": [
+     0.12,
+     0.12,
+     0.12,
+     0.12,
+     0.12,
+     0.12,
+     0.12,
+     0.12
+    ],
+    "loop": false,
+    "note": "the same frames as idle with the visor turned toward us: a quarter turn, six frames looking out of the screen, a quarter turn back. Play it in place of one pass of idle every 6 to 10 s, starting as idle wraps to frame 0, so the scarf never stops"
+   },
+   "leap": {
+    "row": 2,
+    "frames": 5,
+    "dur": [
+     0.1,
+     0.06,
+     0.1,
+     0.1,
+     0.1
+    ],
+    "loop": false,
+    "note": "on START: crouch, spring (off the lip, grit kicked back), airborne and tucked, then two diving frames with the scarf streaming up. Holds the last frame. The frames already lift her 3 to 8 px. From the start of frame 2 (0.16 s) move the feet point too: with u = (t - 0.16) / 0.55 and (x0, y0) the feet point on the tip, x = x0 - 96u, y = y0 - 56u + 140u^2 (a short rise, then down into the valley). Close the circle on the feet point + (0, -18)"
+   },
+   "blink": {
+    "row": 3,
+    "frames": 8,
+    "dur": [
+     0.12,
+     0.12,
+     0.12,
+     0.12,
+     0.12,
+     0.12,
+     0.12,
+     0.12
+    ],
+    "loop": true,
+    "note": "idle frame for frame with the visor shut to a 1 px line. Swap in for about 0.12 s every few seconds, using the idle frame the clock is on"
+   },
+   "answer": {
+    "row": 4,
+    "frames": 8,
+    "dur": [
+     0.12,
+     0.12,
+     0.12,
+     0.12,
+     0.12,
+     0.12,
+     0.12,
+     0.12
+    ],
+    "loop": true,
+    "note": "idle frame for frame with the antenna answering: both rings of arcs and a GRAY halo round the dot. Flicker it against idle just after the far caller blinks, so the two lights talk"
+   }
+  }
+ },
+ "title_cliff": {
+  "file": "title_cliff.png",
+  "fw": 160,
+  "fh": 128,
+  "about": "The cliff the Spark stands on, at the right of the title. DARK rock that sinks into black by row 90, with GRAY rim light, so she is the only white thing below the logo. Top-left = (hx + 320, 142) with hx = (view width - 480) / 2, so at 480 wide it fills x 320 to 479 and y 142 to 269: the tip at screen y 172, x hx + 332 to hx + 365. On wider views draw fill tiles from hx + 480 to the right edge. Draw after the poles and wire (it hides them where they pass behind it) and before the logo and menu.",
+  "order": [
+   "edge",
+   "grass",
+   "fill"
+  ],
+  "anims": {
+   "edge": {
+    "row": 0,
+    "frames": 1,
+    "dur": [
+     0
+    ],
+    "loop": true,
+    "note": "the promontory: a thick top slab jutting left to a blunt tip, a wedge of shadow under it, three slabs stepping down and back, rim light on the world side, the snapped last pole of the old line on the plateau. The tip's level top is frame row 30 from frame x 12 to 45"
+   },
+   "grass": {
+    "row": 1,
+    "frames": 4,
+    "dur": [
+     0.16,
+     0.16,
+     0.16,
+     0.16
+    ],
+    "loop": true,
+    "note": "tufts along the top blowing right. Same origin as edge: draw over it, before the Spark"
+   },
+   "fill": {
+    "row": 2,
+    "frames": 1,
+    "dur": [
+     0
+    ],
+    "loop": true,
+    "note": "the plateau carried on to the right: a 32x128 tile at the frame's top-left (the rest is empty). Draw it from the piece's right edge every 32 px until past the view's right edge. It joins the piece and itself seamlessly"
    }
   }
  }

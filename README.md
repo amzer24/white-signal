@@ -1,114 +1,82 @@
 # WHITE SIGNAL
 
-A monochrome deckbuilder × platformer. You are a **SPARK** crossing a dead
-relay world — collect **SHARDS**, draft **GLYPHS** at every **SIGNAL SURGE**,
-and light the **GATE**.
+A small spark of signal wakes when a dead line starts ringing, and follows it, gate by gate, to find out who is still calling.
 
-> 1-bit ditherpunk · 480×270 · deckbuilder × platformer hybrid
+A classic Mario-style pixel platformer for ages 10 and up. Short levels, lives, a timer, shards to collect and a mast at the end of every level. Between worlds you return to **Last Relay**, a village whose people carry the story.
 
-![Z0 FLATS](screenshots/ws_shots_z0_vista.png)
-![RUINS](screenshots/ws_shots_ruins.png)
-![GATE shaft](screenshots/ws_shots_shaft.png)
+![Title screen](screenshots/title.png)
+![Last Relay](screenshots/last-relay.png)
+![World 3, Carrier Wind](screenshots/world3-carrier-wind.png)
+![The intro](screenshots/intro-spark.png)
 
-## Versions in this repo
+## What's in the game
 
-| Path | What | Status |
-|---|---|---|
-| `/` (root) | **Godot 4.7 port** — the active project | playable |
-| `/js-original` | Vanilla JS canvas engine — the feel reference & spec | playable |
+| Part | Status |
+|---|---|
+| Title screen and story intro | Built |
+| Last Relay (hub village, shop, radio shack) | Built |
+| World 1: The Flats (4 levels, bonus room, training yard) | Built and proven |
+| World 2: The Switchyard (4 levels, relay boss) | Built and proven |
+| World 3: The Aerials (4 levels, the Spire) | Built and proven |
+| World 4: Dead Air and the ending | Planned |
 
-Both implement the same design (see [`js-original/GDD.md`](js-original/GDD.md)):
-fixed-clamped loop, coyote/buffer, wall kicks with span-gated grace, dash,
-2×JUMP, and a 10-glyph draft deck (incl. cursed row: HEAVY, GLASS).
+The full design is in [docs/GDD.md](docs/GDD.md).
 
-## Run (Godot)
+## Run it
 
-Open the project with **Godot 4.7+** and press F5, or:
-
-```bash
-godot --path . 
-```
-
-Headless validation (integration suite, outcome-based assertions):
+Open the project with **Godot 4.7** or later and press F5, or:
 
 ```bash
-WS_TEST=1 godot --headless --path .
-```
-
-## Run (JS original)
-
-```bash
-cd js-original
-python3 -m http.server 8000   # → http://localhost:8000
+godot --path .
 ```
 
 ## Controls
 
-Use **Up/Down + Enter/Space** or click a row on the title screen. **Continue**
-appears when a saved campaign boundary exists; **New Run** starts the tutorial.
-Movement instructions now live under **How to Play**.
+| Keyboard | Pad | Action |
+|---|---|---|
+| Arrows or A/D | Stick or D-pad | Move |
+| Space, W or Up | A | Jump (hold for height) |
+| Shift | RB | Dash |
+| X | X | The Arc (after World 1) |
+| Down | Down | Talk, doors, pipes. Down + jump drops through girders |
+| Esc | Start | Pause |
 
-Open **Settings** from the title, or press **O while paused**. Music and effects
-have separate volume sliders (zero mutes), and fullscreen can be toggled there or
-with F11. Settings save automatically to `user://ws_settings.cfg`, separately from
-campaign progress. Back from pause settings leaves the game paused.
+Keys can be remapped in Settings. In a development build, 0 to 9 on the pause screen jump to any level for testing.
 
-The supplied **tutorial.wav** plays and loops in **R0**. Death does not restart
-the song; pause freezes playback, and entering R1 stops the tutorial music.
+## Levels are proven
 
-### Afterlight lighting study
+Every level is a text file (`levels/world*/*.txt`). A checker plays each one with the game's own physics and proves it can be finished and that every shard can be reached:
 
-Press **L on the title screen** for **THE ROOM REMEMBERS**, a separate three-memory
-test room. Jump into each diamond block to briefly restore its former workstation;
-blocks can replay the memory. Activated beacons leave nearby windows lit.
+```bash
+python tools/levels/build_maps.py          # every level
+python tools/levels/build_maps.py 2-3      # one level
+```
 
-- **1 / 2 / 3:** ordinary light / authored darkness / readability assist.
-- **G:** generated repeating background / original procedural background.
-- **H:** gentler memory fade and a stationary service lamp.
-- **Q:** return to the title; Enter/Space replays after completion.
+It writes a map (`.png`), results (`.proof.json`) and the winning route (`.route.json`) next to each level. The game then replays every route to make sure the checker and the game agree.
 
-The room preserves the saved campaign boundary. Foreground collision geometry
-stays visible in every lighting mode. This is a visual experiment, not another
-finished campaign relay; exploration design is queued in [the backlog](docs/BACKLOG.md).
-See [research and measured results](docs/research/afterlight-results.md) and
-[tile asset prompts](assets/backgrounds/afterlight-v2/PROMPTS.md).
+## Tests
 
-### Campaign controls
+```bash
+godot --headless --path . --script res://scripts/world1/w1_replay_test.gd
+godot --headless --path . --script res://scripts/world1/w1_village_test.gd
+godot --headless --path . --script res://scripts/world1/w1_arc_test.gd
+godot --headless --path . --script res://scripts/title/title_test.gd
+godot --headless --path . --script res://scripts/intro/intro_test.gd
+```
 
-| Input | Action |
+Tests use their own save files under `test-user/`, never the player's save.
+
+## Where things are
+
+| What | Where |
 |---|---|
-| A/D or ←/→ | Move |
-| Space / W / ↑ | Jump (hold = higher) |
-| Shift | Dash (glyph) |
-| 1/2/3 · S | Draft pick · skip |
-| R / P · F11 | Respawn / pause · fullscreen |
+| Design | `docs/GDD.md`, `docs/levels/`, `docs/story/` |
+| Levels and dialogue | `levels/`, `levels/story/npcs.json` |
+| Game rules | `scripts/world1/w1_sim.gd`, mirrored by `tools/levels/sim.py` |
+| Game, title and intro | `scripts/world1/w1_game.gd`, `scripts/title/`, `scripts/intro/` |
+| Art (generated in code) | `assets/world1/src/make_sheets.py` |
+| Music and sound (generated in code) | `tools/audio/sfx8.py`, `assets/audio/sfx8/` |
 
-## Design docs
+## Older versions
 
-- [`js-original/GDD.md`](js-original/GDD.md) — living design doc (v8): pillars,
-  tuning table (source of truth), glyph deck, zones, art direction.
-- Best-run persistence: Godot saves to `user://ws_best.json`, JS to localStorage.
-
-## Campaign continuation (v8)
-
-The original strip is R0, the tutorial. Reach its transmitter, then press
-**Enter/Space or click** to enter R1, **The Listening Field**. Wake its three
-EARS using the RISE/CROSS/SEARCH conduits, return to the hub transmitter, then
-continue to R2, **The Stand**. There are **3 playable relays of 8 planned**.
-The remaining relays are described in the GDD; this build ends honestly at R2.
-
-- Jump into diamond memory blocks from below for one shard; patterned bricks break.
-- Stand on a conduit and press **Down or S**; marked exits return you safely.
-- Your deck, shards and run totals carry forward. Death retains local rewards and dishes.
-- **C** on the title screen resumes the current relay from its entry save.
-  **Space/click starts a new run and replaces the saved run.** Mid-relay progress
-  is rewound when resuming; checkpoint respawn within play retains it.
-- In The Stand, rain intensifies every 40 seconds, shortening crumble life.
-  Death or reaching a different beacon calms it.
-
-Campaign integration: `godot --headless --path . --script res://scripts/campaign_test.gd`.
-Create `test-user/` before running; test saves are isolated there. The original
-`WS_TEST=1` traversal suite still runs. Rendering capture is available through
-`scripts/campaign_capture.gd` and writes PNGs into `test-user/`.
-
-Lighting and darkness research is queued in [docs/BACKLOG.md](docs/BACKLOG.md).
+The repo still holds two earlier versions of the game. They are reachable from **EXTRAS > CLASSIC ARCADE** but are no longer being developed: the Classic card-draft run and the exploration campaign. `js-original/` is the first JavaScript version. Its design document, `js-original/GDD.md`, is kept as history.

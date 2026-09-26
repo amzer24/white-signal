@@ -335,5 +335,5 @@ LLLLLLLLLLLLLLLLLLLL..........
 gate#1 open=3.0
 gate#2 open=0.5
 O#3 via=204,22
-hint#1 c=122 r=24 text=KEEP_CLIMBING
+hint#1 c=122 r=24 text=KEEP_CLIMBING_._STEPS_CRUMBLE
 npc#1 id=wren
