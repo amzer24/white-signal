@@ -22,6 +22,6 @@
   "reachable": 0,
   "missing": []
  },
- "solve_seconds": 509.9,
+ "solve_seconds": 601.9,
  "line": "270 tiles (4320px, 9 screens)  .  FINISHABLE  .  fastest proven route 23.4s  .  big shards reachable 3/3  .  small shards reachable 13/13  .  blocks hittable 7/7  .  17 shards  .  owns: machinery in rhythm (presses, girders, spike vents), lift rings"
 }

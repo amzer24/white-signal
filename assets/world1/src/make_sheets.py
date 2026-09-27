@@ -2673,7 +2673,7 @@ def build_atmosphere():
 # the 8x8 bubble parts), the art sits at the frame's top-left and the rest is
 # transparent. Drawing the frame at the art's own top-left is then correct.
 
-# Story signatures (docs/research/exploration/notes/story-arc.md)
+# Story signatures (docs/research/exploration/notes/story-arc.md, kept in the legacy-archive git tag)
 MAINT_MARK = ['..g', 'g.g', 'g..', 'gg.']            # two-part maintenance mark
 HANDLE_SMALL = ['ggg', '.g.', '.g.', '.gg', '.g.']   # notched isolation handle, belt size
 

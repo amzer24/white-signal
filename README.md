@@ -79,4 +79,4 @@ Tests use their own save files under `test-user/`, never the player's save.
 
 ## Older versions
 
-The repo still holds two earlier versions of the game. They are reachable from **EXTRAS > CLASSIC ARCADE** but are no longer being developed: the Classic card-draft run and the exploration campaign. `js-original/` is the first JavaScript version. Its design document, `js-original/GDD.md`, is kept as history.
+Earlier versions of the game are no longer in the project: the Classic card-draft run, the exploration campaign, the Afterlight study and the first JavaScript version. Git keeps them under the tag `legacy-archive`. To look at them, run `git checkout legacy-archive`, and `git checkout main` to come back.

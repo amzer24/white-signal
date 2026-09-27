@@ -22,6 +22,6 @@
   "reachable": 0,
   "missing": []
  },
- "solve_seconds": 317.0,
+ "solve_seconds": 408.4,
  "line": "240 tiles (3840px, 8 screens)  .  FINISHABLE  .  fastest proven route 19.5s  .  big shards reachable 3/3  .  small shards reachable 18/18  .  blocks hittable 15/15  .  28 shards  .  owns: run, jump, bump, stomp, dash"
 }

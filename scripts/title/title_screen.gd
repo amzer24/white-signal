@@ -96,9 +96,7 @@ func _ready() -> void:
 	post.material = mat
 	post.visible = bool(progress.get("filter", true))
 	layer.add_child(post)
-	# settings reuse the shared settings pages
-	settings = preload("res://scripts/menu_ui.gd").new()
-	settings.settings_only = true
+	settings = preload("res://scripts/settings_menu.gd").new()
 	settings.z_index = 100
 	add_child(settings)
 	get_tree().root.size_changed.connect(_fit_screen)
@@ -189,7 +187,7 @@ func _home_rows() -> Array:
 		rows.append(["CONTINUE", detail, "continue"])
 		rows.append(["NEW GAME", "START THE STORY AGAIN . YOU KEEP YOUR BIG SHARDS AND BEST TIMES", "new"])
 	rows.append(["SETTINGS", "MUSIC . EFFECTS . DISPLAY . KEYS", "settings"])
-	rows.append(["EXTRAS", "THE INTRO . HOW TO PLAY . CREDITS . CLASSIC ARCADE", "extras"])
+	rows.append(["EXTRAS", "THE INTRO . HOW TO PLAY . CREDITS", "extras"])
 	rows.append(["QUIT", "BACK TO THE DESKTOP", "quit"])
 	return rows
 
@@ -202,7 +200,7 @@ func _rows() -> Array:
 			return [["BACK", "KEEP YOUR SAVE", "back"], ["START OVER", "YOU LOSE YOUR PLACE, LIVES AND SHARDS . YOU KEEP BIG SHARDS AND BEST TIMES", "new_go"]]
 		"extras":
 			return [["WATCH THE INTRO", "HOW THE STORY BEGINS . ABOUT A MINUTE", "intro"], ["HOW TO PLAY", "THE CONTROLS", "controls"], ["CREDITS", "WHO MADE WHAT", "credits"],
-				["CLASSIC ARCADE", "THE EARLIER ARCADE RUN AND THE AFTERLIGHT STUDY", "arcade"], ["BACK", "", "back"]]
+				["BACK", "", "back"]]
 		"controls", "credits":
 			return [["BACK", "", "back"]]
 	return []
@@ -394,9 +392,6 @@ func _confirm() -> void:
 			_play("menu_confirm")
 			Intro.replay = true
 			get_tree().change_scene_to_file("res://scenes/intro.tscn")
-		"arcade":
-			_play("menu_confirm")
-			get_tree().change_scene_to_file("res://scenes/main.tscn")
 		"quit":
 			_play("menu_back")
 			get_tree().quit()
@@ -647,8 +642,7 @@ func _draw_page(a: float) -> void:
 			_panel()
 			_ctext("CREDITS", 92, white, 2)
 			var credits := [["ENGINE", "GODOT"], ["PIXEL ART", "MADE IN CODE . PIXELLAB . IMAGEGEN"],
-				["8-BIT MUSIC AND EFFECTS", "WRITTEN AS CODE FOR THE NES SOUND CHIP"], ["EARLIER MUSIC", "DEAD CARRIER . SUNO"],
-				["TUTORIAL AUDIO", "PROVIDED BY THE CREATOR"]]
+				["8-BIT MUSIC AND EFFECTS", "WRITTEN AS CODE FOR THE NES SOUND CHIP"]]
 			for i in credits.size():
 				DrawUtil.text(self, Vector2(hx + 110.0, 114.0 + i * 20.0), credits[i][0], gray)
 				DrawUtil.text(self, Vector2(hx + 110.0, 123.0 + i * 20.0), credits[i][1], white)

@@ -22,6 +22,6 @@
   "reachable": 1,
   "missing": []
  },
- "solve_seconds": 568.6,
+ "solve_seconds": 654.0,
  "line": "150 tiles (2400px, 5 screens)  .  FINISHABLE  .  fastest proven route 13.8s  .  big shards reachable 3/3  .  small shards reachable 21/21  .  blocks hittable 2/2  .  cracked walls breakable 1/1  .  23 shards  .  owns: wind and updrafts"
 }

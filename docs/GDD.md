@@ -1,6 +1,6 @@
 # WHITE SIGNAL: game design document
 
-Living document. Last updated 26 Sep 2026. This replaces `js-original/GDD.md`, which describes the earlier exploration and card-draft designs and is kept only as history.
+Living document. Last updated 26 Sep 2026. This replaces `js-original/GDD.md`, which describes the earlier exploration and card-draft designs. That file is kept in git under the tag `legacy-archive`.
 
 ## 1. The game in one line
 
@@ -29,7 +29,7 @@ It is a classic Mario-style platformer: short levels, lives, a timer, shards to 
 | The ending | Not written |
 | Big shards | Collected and counted, but they don't do anything yet (see Q1) |
 
-The earlier exploration mode and the Classic arcade run are still in the code. Players only reach them through EXTRAS > CLASSIC ARCADE.
+The earlier exploration mode and the Classic arcade run were removed from the project on 27 Sep 2026. Git keeps them under the tag `legacy-archive`.
 
 ## 3. Story
 

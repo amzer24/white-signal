@@ -22,6 +22,6 @@
   "reachable": 1,
   "missing": []
  },
- "solve_seconds": 256.1,
+ "solve_seconds": 366.9,
  "line": "180 tiles (2880px, 6 screens)  .  FINISHABLE  .  fastest proven route 16.9s  .  big shards reachable 3/3  .  small shards reachable 26/26  .  blocks hittable 5/5  .  cracked walls breakable 1/1  .  30 shards  .  owns: hoppers"
 }

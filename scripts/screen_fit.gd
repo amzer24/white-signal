@@ -2,6 +2,8 @@ extends RefCounted
 ## Wide screens: the platformer shows more of the level at the sides instead of
 ## black bars. The picture is always 270 px tall and 480 to 720 px wide, so 16:9
 ## up to about 24:9 fills the screen. Anything wider gets thin bars at the sides.
+## The project scales by whole numbers only (every game pixel the same size on
+## screen), so the width is worked out from that whole-number scale.
 ## Older scenes that draw at a fixed 480 px call reset() to keep their layout.
 
 const H := 270
@@ -12,7 +14,8 @@ const MAX_W := 720
 static func width_for(win_size: Vector2i) -> int:
 	if win_size.y <= 0:
 		return MIN_W
-	var w := clampi(int(round(H * float(win_size.x) / float(win_size.y))), MIN_W, MAX_W)
+	var scale := maxi(1, mini(win_size.x / MIN_W, win_size.y / H))
+	var w := clampi(win_size.x / scale, MIN_W, MAX_W)
 	return w - w % 2   # even, so a centred 480 column lands on whole pixels
 
 

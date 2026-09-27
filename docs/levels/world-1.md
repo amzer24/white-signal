@@ -125,7 +125,7 @@ Limits of the proof:
 - The proof shows a level can be finished, but not that it's fair. The route it finds is the fastest, which uses dash almost everywhere, so a first-time player will be much slower.
 - Enemies follow their patrol paths. An enemy is lost when the floor under it falls, or when a falling loose floor lands on it. A falling loose floor that lands on the Spark kills it. All of this is simulated.
 - Every small shard is checked as well as the big ones (`small_shards` in the proof file).
-- If `player.gd` or `RunState.BASE` changes, `tools/levels/physics.py` has to change with it.
+- If the movement rules in `scripts/world1/w1_sim.gd` change, `tools/levels/physics.py` has to change with it.
 
 ## Level file format
 
@@ -136,9 +136,9 @@ Limits of the proof:
 Choose WORLD 1 on the title screen. It starts in the test room (`levels/world1/test-room.txt`), which has one labelled station per item, then runs 1-1 to 1-4.
 
 - The rules live in `scripts/world1/w1_sim.gd`. It's a direct port of the simulator, so what you play is what was proven. `scripts/world1/w1_replay_test.gd` replays every proven route inside Godot. Each must reach the mast on the same frame as in Python.
-- Drawing, HUD, sound, lives and level flow are in `scripts/world1/w1_game.gd`. The art is from `assets/world1/`, the sounds from `assets/audio/sfx8/` and the music from `assets/audio/music/`.
+- Drawing, HUD, sound, lives and level flow are in `scripts/world1/w1_game.gd`. The art is from `assets/world1/`, and the sounds and music from `assets/audio/sfx8/`.
 - Controls: arrows or A/D to move. Space, W or Up to jump. Shift to dash. Down or S to enter a pipe. Esc or P to pause. On the pause screen, 0 opens the test room, 1 to 4 open levels 1-1 to 1-4, R restarts and Q quits to the title. F toggles the screen filter.
-- Exploration is hidden from the title (`show_exploration` in `scripts/menu_ui.gd`). Its code and saves are unchanged.
+- Exploration was removed on 27 Sep 2026. Git keeps it under the tag `legacy-archive`.
 
 - The camera looks ahead only while you keep running one way, and it moves gently. Small moves don't shift it.
 - Hidden blocks glint faintly every few seconds.

@@ -20,9 +20,6 @@ boot_splash/bg_color=Color(0.043, 0.043, 0.043, 1)
 [autoload]
 
 AppSettings="*res://scripts/app_settings.gd"
-RunState="*res://scripts/run_state.gd"
-Sfx="*res://scripts/sfx.gd"
-Music="*res://scripts/music.gd"
 GameInput="*res://scripts/game_input.gd"
 
 [display]
@@ -30,9 +27,10 @@ GameInput="*res://scripts/game_input.gd"
 window/size/viewport_width=480
 window/size/viewport_height=270
 window/size/mode=2
-window/size/window_width_override=1280
-window/size/window_height_override=720
+window/size/window_width_override=960
+window/size/window_height_override=540
 window/stretch/mode="canvas_items"
+window/stretch/scale_mode="integer"
 
 [input]
 

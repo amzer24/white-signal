@@ -13,14 +13,7 @@ const T := 16.0
 const ROWS := 17
 
 const ORDER := ["test-room", "1-1", "1-2", "1-3", "1-4", "2-1", "2-2", "2-3", "2-4", "3-1", "3-2", "3-3", "3-4"]
-const MUSIC := {
-	"test-room": "w1-first-light", "1-1": "w1-first-light", "1-1-bonus": "w1-first-light",
-	"1-2": "w1-loose-ground", "1-3": "w1-presses", "1-4": "w1-gate",
-	# World 2 borrows World 1's tracks until it has its own
-	"2-1": "w1-loose-ground", "2-2": "w1-presses", "2-3": "w1-first-light", "2-4": "w1-gate",
-}
-## The 8-bit loops that replaced the soundtrack above (assets/audio/sfx8/).
-## A level falls back to its OGG track if its loop is missing.
+## Each level's 8-bit loop (assets/audio/sfx8/). A level header can name another with `music:`.
 const MUSIC8 := {
 	"test-room": "m_training", "1-1": "m_1_1", "1-1-bonus": "m_1_1_bonus",
 	"1-2": "m_1_2", "1-3": "m_1_3", "1-4": "m_1_4",
@@ -28,6 +21,7 @@ const MUSIC8 := {
 	"3-1": "m_3_1", "3-2": "m_3_2", "3-3": "m_3_3", "3-4": "m_3_4",
 }
 const START_LIVES := 5
+const MUSIC_DB := -9.0   # the 8-bit loops are mono at full level
 const SFX_TRIM := -5.0   # effects sat too loud over the 8-bit music
 ## Each world's four colours, darkest first. The art is drawn in four greys and
 ## the atmosphere pass maps them onto these (shaders/world1/world_fx.gdshader).
@@ -184,7 +178,7 @@ func _ready() -> void:
 	add_child(arm_whir)
 	music = AudioStreamPlayer.new()
 	music.bus = "Music"
-	music.volume_db = -6.0
+	music.volume_db = MUSIC_DB
 	add_child(music)
 	var fx_layer := CanvasLayer.new()
 	fx_layer.layer = 9
@@ -283,28 +277,20 @@ func load_level(id: String, cell := Vector2i(-1, -1), card := true) -> void:
 		S.charged = true  # Tally's charged start
 		charge_next = false
 		_save_progress()
-	# music is an 8-bit loop among the sounds when there is one, else the OGG soundtrack
+	# music is the level's 8-bit loop; a level without one is quiet
 	var want := str(L.meta.get("music", MUSIC8.get(id, "")))
-	var mstream: AudioStream
-	if sfx.has(want):
-		mstream = sfx[want]
-		if mstream is AudioStreamWAV and mstream.loop_mode == AudioStreamWAV.LOOP_DISABLED:
-			mstream.loop_mode = AudioStreamWAV.LOOP_FORWARD
-			mstream.loop_end = int(mstream.get_length() * mstream.mix_rate)
-	else:
-		var path := "res://assets/audio/music/%s.ogg" % MUSIC.get(id, "w1-first-light")
-		if music.stream != null and music.stream.resource_path == path:
-			mstream = music.stream
-		else:
-			mstream = load(path)
-			if mstream is AudioStreamOggVorbis:
-				mstream.loop = true
+	var mstream: AudioStream = sfx.get(want)
+	if mstream is AudioStreamWAV and mstream.loop_mode == AudioStreamWAV.LOOP_DISABLED:
+		mstream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+		mstream.loop_end = int(mstream.get_length() * mstream.mix_rate)
 	if music_fade:
 		music_fade.kill()
 		music_fade = null
-	# the 8-bit loops are mono at full level, about 3 dB louder than the stereo OGGs
-	music.volume_db = -9.0 if mstream is AudioStreamWAV else -6.0
-	if music.stream != mstream or not music.playing:
+	music.volume_db = MUSIC_DB
+	if mstream == null:
+		music.stop()
+		music.stream = null
+	elif music.stream != mstream or not music.playing:
 		music.stream = mstream
 		music.play()
 	_set_state("card" if card else "play")
@@ -816,7 +802,7 @@ func _restart_music() -> void:
 		music_fade = null
 	if music.stream == null:
 		return
-	music.volume_db = -9.0 if music.stream is AudioStreamWAV else -6.0
+	music.volume_db = MUSIC_DB
 	music.play()
 
 
@@ -954,7 +940,10 @@ func _pause_choose(row: String) -> void:
 				"RESUME":
 					_set_state(pause_from)
 				"RESTART LEVEL":
-					load_level(level_id)
+					# back to the very start, and it costs a life like any other restart,
+					# so restarting can't refill a level's shards for free
+					S.lit = false
+					_restart_life()
 				"LEVEL SELECT":
 					pause_page = "levels"
 					pause_sel = maxi(0, _pause_rows().find(level_id))
@@ -1080,6 +1069,8 @@ func _draw_pause() -> void:
 		_center(where, 190, DrawUtil.GRAY)
 		if best.has(level_id):
 			_center("BEST TIME %s" % DrawUtil.fmt_time(float(best[level_id])), 202, DrawUtil.DARK)
+		if str(rows[pause_sel]) == "RESTART LEVEL":
+			_center("COSTS ONE LIFE", 214, DrawUtil.DARK)
 
 
 ## "2-3  CHANNELS  **": the level, its name, and its big shards found so far.
@@ -2147,11 +2138,23 @@ func _cond(c: String) -> bool:
 ## just met does not vanish mid-conversation.
 func _pick_people() -> void:
 	here.clear()
+	_send_home()
 	for n in L.npcs:
 		var who: Dictionary = story.get(str(n.id), {})
 		var show: Dictionary = who.get("show", {})
 		if show.has(level_id) and _cond(str(show[level_id])):
 			here.append(n)
+
+
+## Someone waiting in a level (shown there while "!met_<id>") goes home to Last
+## Relay once you have cleared that level, even if you ran past without talking.
+func _send_home() -> void:
+	for id in story:
+		var show = story[id].get("show", {}) if story[id] is Dictionary else {}
+		for lvl in show:
+			var met := "met_" + str(id)
+			if str(show[lvl]) == "!" + met and flags.has("clear_" + str(lvl)) and not flags.has(met):
+				flags.append(met)
 
 
 ## The person, door or switchboard you can use with Down, or {}.

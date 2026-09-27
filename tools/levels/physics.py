@@ -2,8 +2,8 @@
 It started as a copy of scripts/player.gd. World 1 adds a softer wall kick and
 slowing down in the air when no direction is held.
 
-Numbers come from RunState.BASE and player.gd. If those change, change them
-here too: the level maps are only proven against these values.
+If the numbers in w1_sim.gd change, change them here too: the level maps are
+only proven against these values.
 """
 from dataclasses import dataclass, replace
 

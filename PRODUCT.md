@@ -4,7 +4,7 @@
 
 ## Platform
 
-Desktop game made in Godot 4.7, for Windows first. Keyboard and gamepad. `js-original/` is the first JavaScript version and is kept only as history.
+Desktop game made in Godot 4.7, for Windows first. Keyboard and gamepad. Earlier versions, including the first JavaScript one, are kept in git under the tag `legacy-archive`.
 
 ## Product Purpose
 

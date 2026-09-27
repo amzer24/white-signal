@@ -22,6 +22,6 @@
   "reachable": 1,
   "missing": []
  },
- "solve_seconds": 258.5,
+ "solve_seconds": 353.2,
  "line": "150 tiles (2400px, 5 screens)  .  FINISHABLE  .  fastest proven route 11.2s  .  big shards reachable 3/3  .  small shards reachable 21/21  .  blocks hittable 4/4  .  cracked walls breakable 1/1  .  25 shards  .  owns: wave flyers"
 }
