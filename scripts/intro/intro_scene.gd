@@ -11,6 +11,7 @@ const Game := preload("res://scripts/world1/w1_game.gd")
 const ScreenFit := preload("res://scripts/screen_fit.gd")
 const SFX_DIR := "res://assets/audio/sfx8/"
 const SFX_TRIM := -5.0
+const MUSIC_DB := -9.0
 const STEP := 0.12            # one palette step when fading
 const WIRE_Y := 190.0
 const POLE_GAP := 160.0
@@ -175,8 +176,10 @@ func _joined(head_name: String, loop_name: String) -> AudioStream:
 	return j
 
 
-## Start a music cue, fading out whatever was playing.
-func _cue(name: String) -> void:
+## Start a music cue. The old cue fades out while the new one fades in on its
+## own player, so the music changes smoothly. A `fade_in` of 0 starts the new cue
+## at full level, for a cue that begins on a hit.
+func _cue(name: String, fade_in := 1.5) -> void:
 	if name == cue:
 		return
 	cue = name
@@ -185,15 +188,21 @@ func _cue(name: String) -> void:
 		st = _joined("intro_wake", "intro_home")
 	elif name != "" and sfx.has(name):
 		st = _looped(name)
-	var tw := create_tween()
-	if music.playing:
-		tw.tween_property(music, "volume_db", -40.0, 0.3)
-	tw.tween_callback(func():
-		music.stop()
-		if st != null:
-			music.stream = st
-			music.volume_db = -9.0
-			music.play())
+	var old := music
+	if old.playing:
+		var tw := create_tween()
+		tw.tween_property(old, "volume_db", -40.0, 0.3 if fade_in <= 0.0 else maxf(fade_in, 1.0))
+		tw.tween_callback(old.queue_free)
+	else:
+		old.queue_free()
+	music = _player("Music")
+	if st == null:
+		return
+	music.stream = st
+	music.volume_db = MUSIC_DB if fade_in <= 0.0 else -40.0
+	music.play()
+	if fade_in > 0.0:
+		_fade(music, MUSIC_DB, fade_in)
 
 
 func _fade(p: AudioStreamPlayer, to_db: float, secs: float, stop_after := false) -> void:
@@ -222,30 +231,31 @@ func _enter_card(i: int) -> void:
 	fired.clear()
 	loop_a.stop()
 	match i:
+		# The music follows the story's acts: the warm line, the noise (cut dead when
+		# the line is cut), the quiet, the sleeping Spark under the rings, then home.
 		0, 1:
-			_cue("intro_line")
+			_cue("intro_line", 0.8)
 			_amb("amb_w1", -40.0, -12.0, 1.0)
 			if i == 1 and sfx.has("relay_hum"):
 				loop_a.stream = _looped("relay_hum")
 				loop_a.volume_db = -12.0 + SFX_TRIM
 				loop_a.play()
 		2, 3:
-			_cue("intro_noise")
+			_cue("intro_noise", 1.5)
 			_amb("amb_w1", -12.0, -12.0, 0.1)
 		4:
 			_cue("")
 			_fade(amb, -60.0, 0.2, true)
 		5:
-			_cue("intro_still")
+			_cue("intro_still", 2.0)
 			_fade(amb, -60.0, 0.2, true)
 		6:
-			if cue != "intro_still":
-				_cue("")
+			if cue == "intro_still":
+				_fade(music, -20.0, 1.0)   # it plays on, quieter, under the three rings
 			else:
-				_fade(music, -40.0, 0.6, true)
-				cue = ""
+				_cue("")
 		7:
-			_cue("wake_home")
+			_cue("wake_home", 0.0)   # the Spark flares awake on the downbeat
 		8, 9:
 			if cue != "wake_home":
 				_cue("intro_home")
@@ -1013,7 +1023,9 @@ func _draw_skip() -> void:
 	if hold_t < 0.15:
 		if clock > 0.6 and clock < 5.0:   # say once, quietly, that it can be skipped
 			var hint := "HOLD %s TO SKIP" % ("A" if GameInput.controller_active else GameInput.keyboard.key_label("jump").split("/")[0])
-			DrawUtil.text(self, Vector2(hx + 470.0 - DrawUtil.text_width(hint), 256.0), hint, DARK)
+			var hw := DrawUtil.text_width(hint)
+			draw_rect(Rect2(hx + 464.0 - hw, 253.0, hw + 12.0, 11.0), Color(DrawUtil.BG, 0.8))
+			DrawUtil.text(self, Vector2(hx + 470.0 - hw, 256.0), hint, DrawUtil.GRAY)
 		return
 	var x := hx + 430.0
 	var u := clampf((hold_t - 0.15) / 0.45, 0.0, 1.0)

@@ -122,7 +122,9 @@ var up_prev := false
 var hold_jump := false      # ignore a jump still held from closing a bubble
 var board_open := false     # the level list was opened from the switchboard
 var stick_held := {}        # pad axis -> pushed past halfway, so one push is one menu step
-var level_names := {}       # level id -> its name: header, for the level list
+var level_info := {}        # level id -> {name, big}, read once for the switchboard
+var ui_clear: Array = []    # screen rects of text, menus and bubbles, which the dark must not cover
+var world_off := Vector2.ZERO   # where the level is drawn this frame: -camera plus shake
 var dither: ImageTexture   # 2x2 checker of DARK, for far silhouettes
 var fx_rect: ColorRect
 const NPC_LIFT := Color(1.4, 1.4, 1.4)        # villagers a step brighter than the grey world around them
@@ -445,6 +447,11 @@ func _play_frame(delta: float) -> void:
 	var prev_t: int = S.t
 	S.advance(dir, jump, dash, down)
 	S.update_walkers()
+	if level_id == "village" and dir > 0 and S.x >= (L.width - 2) * T:
+		# walking on east past the signpost follows the line to the next level
+		_play("door_open")
+		load_level(_next_level())
+		return
 	while not S.bumps.is_empty() and S.t - int(S.bumps[0][1]) > 12:
 		S.bumps.pop_front()   # the hop is over; the list is read for every block on screen
 	if S.dash_t > 0.0 and S.t % 2 == 0:
@@ -1041,7 +1048,7 @@ func _draw_pause() -> void:
 	_center(title, 34, DrawUtil.WHITE, 2)
 	var rows := _pause_rows()
 	var y0 := 70.0 if rows.size() <= 7 else 58.0
-	var step := 18.0 if rows.size() <= 7 else 15.0
+	var step := 18.0 if rows.size() <= 7 else minf(15.0, floorf((226.0 - y0) / rows.size()))
 	for i in rows.size():
 		var row := str(rows[i])
 		var y := y0 + i * step
@@ -1053,13 +1060,14 @@ func _draw_pause() -> void:
 			DrawUtil.text(self, Vector2(132, y), row, col)
 			var v := _pause_value(row)
 			DrawUtil.text(self, Vector2(348 - DrawUtil.text_width(v), y), v, col)
+		elif pause_page == "levels" and row != "BACK":
+			_draw_level_row(row, y, col, sel)
 		else:
-			var text := _level_label(row) if pause_page == "levels" and row != "BACK" else row
-			DrawUtil.text(self, Vector2(240 - DrawUtil.text_width(text) / 2.0, y), text, col)
+			DrawUtil.text(self, Vector2(240 - DrawUtil.text_width(row) / 2.0, y), row, col)
 	var foot := "ARROWS CHOOSE . ENTER OR SPACE SELECT . ESC BACK"
 	if pause_page == "settings":
 		foot = "LEFT AND RIGHT CHANGE . ESC BACK . SETTINGS SAVE AUTOMATICALLY"
-	_center(foot, 236, DrawUtil.DARK)
+	_center(foot, 236, DrawUtil.GRAY)
 	if pause_page == "main":
 		var where := "WORLD %s . %s" % [str(L.meta.get("world", "1")), str(L.name)]
 		if level_id == "test-room":
@@ -1068,24 +1076,42 @@ func _draw_pause() -> void:
 			where = "LAST RELAY . " + str(L.name)
 		_center(where, 190, DrawUtil.GRAY)
 		if best.has(level_id):
-			_center("BEST TIME %s" % DrawUtil.fmt_time(float(best[level_id])), 202, DrawUtil.DARK)
+			_center("BEST TIME %s" % DrawUtil.fmt_time(float(best[level_id])), 202, DrawUtil.GRAY)
 		if str(rows[pause_sel]) == "RESTART LEVEL":
-			_center("COSTS ONE LIFE", 214, DrawUtil.DARK)
+			_center("COSTS ONE LIFE", 214, DrawUtil.GRAY)
 
 
-## "2-3  CHANNELS  **": the level, its name, and its big shards found so far.
-func _level_label(id: String) -> String:
-	if id == "test-room":
-		return "TRAINING YARD"
-	var got := 0
-	if big.has(id):
-		got = (big[id] as Dictionary).size()
-	var label := id
-	for line in FileAccess.get_file_as_string(Level.path_for(id)).split("\n"):
-		if line.begins_with("name:"):
-			label = id + "  " + line.substr(5).strip_edges()
-			break
-	return label + ("  " + "*".repeat(got) if got > 0 else "")
+## A switchboard row: the level and its name, NEXT on the level the signpost
+## leads to, and its big shards on the right, filled in once found.
+func _draw_level_row(id: String, y: float, col: Color, sel: bool) -> void:
+	var info := _level_info(id)
+	DrawUtil.text(self, Vector2(132, y), "TRAINING YARD" if id == "test-room" else id + "  " + str(info.name), col)
+	if id == _next_level() and not flags.has("clear_" + id):
+		DrawUtil.text(self, Vector2(286, y), "NEXT", DrawUtil.BG if sel else DrawUtil.WHITE)
+	var got: int = (big.get(id, {}) as Dictionary).size()
+	var total: int = info.big
+	for i in total:
+		var at := Vector2(343 - (total - 1 - i) * 8, y)
+		DrawUtil.diamond(self, at, col, i >= got)
+		if sel and i >= got:
+			# on the white bar a hollow diamond's middle must be white, or it reads as found
+			draw_rect(Rect2(at.x + 2, at.y + 1, 1, 3), DrawUtil.WHITE)
+			draw_rect(Rect2(at.x + 1, at.y + 2, 3, 1), DrawUtil.WHITE)
+
+
+## A level's name and big shard count, read from its file once.
+func _level_info(id: String) -> Dictionary:
+	if not level_info.has(id):
+		level_info[id] = Level.summary(id)
+	return level_info[id]
+
+
+## "2-1  RAIL HOPPERS": where the signpost leads next, or "" once every level is cleared.
+func _next_label() -> String:
+	var id := _next_level()
+	if flags.has("clear_" + id):
+		return ""
+	return id + "  " + str(_level_info(id).name)
 
 
 # ================================================================ save
@@ -1170,10 +1196,14 @@ func _draw() -> void:
 	if shake > 0.0 and AppSettings.camera_shake:
 		var h := DrawUtil.hash2(int(clock * 60.0), 7)
 		off = Vector2(float(h % 5) - 2.0, float((h >> 4) % 5) - 2.0) * minf(1.0, shake / 3.0)
+	ui_clear.clear()
+	if state in ["pause", "shop", "gameover", "done"]:
+		ui_clear.append(Rect2(0, 0, vw, 270))   # a whole-screen menu
 	draw_rect(Rect2(0, 0, vw, 270), DrawUtil.BG)
 	_draw_sky(cam)
 	var camy := floorf(cam_y)
-	draw_set_transform(Vector2(-cam, -camy) + off.round())
+	world_off = Vector2(-cam, -camy) + off.round()
+	draw_set_transform(world_off)
 	var c0 := int(cam / T) - 3
 	var c1 := c0 + int(vw / T) + 4
 	var r0 := maxi(0, int(camy / T) - 3)
@@ -1207,6 +1237,21 @@ func _draw() -> void:
 	_draw_overlay()
 	draw_set_transform(Vector2.ZERO)
 	_draw_handoff_iris()
+	_upload_clear()
+
+
+## Tells the atmosphere pass which parts of the screen are text or menus, so a
+## dark stretch never hides them.
+func _upload_clear() -> void:
+	if fxmat == null:
+		return
+	var rects: Array = []
+	for r in ui_clear.slice(0, 16):
+		rects.append(Vector4(r.position.x, r.position.y, r.end.x, r.end.y))
+	fxmat.set_shader_parameter("clear_count", rects.size())
+	while rects.size() < 16:
+		rects.append(Vector4.ZERO)
+	fxmat.set_shader_parameter("clear_rects", rects)
 
 
 func _draw_sky(cam: float) -> void:
@@ -1874,7 +1919,8 @@ func _draw_hints() -> void:
 		var txt := _plain(str(h.text))
 		var marks := _marks(str(h.text))
 		var w := DrawUtil.text_width(txt)
-		draw_rect(Rect2(p.x - 2, p.y - 2, w + 4, 9), Color(DrawUtil.BG, 0.8))
+		draw_rect(Rect2(p.x - 2, p.y - 2, w + 4, 9), DrawUtil.BG)
+		ui_clear.append(Rect2(p + world_off - Vector2(3, 3), Vector2(w + 6, 11)))
 		DrawUtil.text(self, p, txt, DrawUtil.GRAY)
 		# key words stand out: bright and underlined
 		for k in txt.length():
@@ -2021,12 +2067,15 @@ func _draw_hud() -> void:
 		title = "BONUS ROOM"
 	elif _is_hub():
 		title = "LAST RELAY"
+		if _next_label() != "":
+			title += " . NEXT " + _next_label() + " >"   # the signpost at the east end
 	DrawUtil.text(self, Vector2(240 - DrawUtil.text_width(title) / 2.0, y), title, DrawUtil.GRAY)
 	if clock - life_note_t < 3.0 and state != "pause":
 		var n := earned / 100 * 100
 		var note := "%d SHARDS . YOU EARNED AN EXTRA LIFE AND KEEP YOUR SHARDS" % n
 		var nw := DrawUtil.text_width(note) + 10
 		draw_rect(Rect2(240 - nw / 2.0, 22, nw, 13), Color(DrawUtil.BG, 0.85))
+		ui_clear.append(Rect2(hx + 240 - nw / 2.0, 22, nw, 13))
 		DrawUtil.text(self, Vector2(240 - DrawUtil.text_width(note) / 2.0, 25), note,
 			DrawUtil.WHITE if int(clock * 6.0) % 2 == 0 or clock - life_note_t > 1.0 else DrawUtil.GRAY)
 	if _is_hub():
@@ -2043,10 +2092,13 @@ func _draw_hud() -> void:
 	DrawUtil.text(self, Vector2(412, y), "TIME %03d" % maxi(0, int(ceil(time_left))), tcol)
 	if clock - saved_t < 1.6 and state != "pause":
 		DrawUtil.text_shadow(self, Vector2(440, 22), "SAVED", DrawUtil.GRAY)
+		ui_clear.append(Rect2(hx + 438, 20, 26, 10))
 
 
 func _center(text: String, y: float, col: Color, scale := 1) -> void:
-	DrawUtil.text_shadow(self, Vector2(240 - DrawUtil.text_width(text, scale) / 2.0, y), text, col, scale)
+	var w := DrawUtil.text_width(text, scale)
+	DrawUtil.text_shadow(self, Vector2(240 - w / 2.0, y), text, col, scale)
+	ui_clear.append(Rect2(hx + 238 - w / 2.0, y - 2, w + 5, 6 * scale + 4))
 
 
 ## The intro's closing circle in reverse: black, then a circle opening on the Spark.
@@ -2080,8 +2132,9 @@ func _draw_overlay() -> void:
 				_center(sub, 124, DrawUtil.GRAY)
 				J.spark(self, Vector2(214, 160), 1)
 				DrawUtil.text(self, Vector2(228, 152), "X %d" % lives, DrawUtil.WHITE)
+				ui_clear.append(Rect2(hx + 204, 146, 64, 20))
 				if L.meta.has("owns") and level_id != "test-room":
-					_center(str(L.meta.owns).to_upper(), 190, DrawUtil.DARK)
+					_center(str(L.meta.owns).to_upper(), 190, DrawUtil.GRAY)
 		"pause":
 			_draw_pause()
 		"dead":
@@ -2095,7 +2148,7 @@ func _draw_overlay() -> void:
 			if state_t > 1.0:
 				_center("LEVEL CLEAR", 60, DrawUtil.WHITE, 2)
 				_center(clear_bonus, 86, DrawUtil.GRAY)
-				_center("TIME %s" % DrawUtil.fmt_time(run_time), 100, DrawUtil.DARK)
+				_center("TIME %s" % DrawUtil.fmt_time(run_time), 100, DrawUtil.GRAY)
 		"done":
 			draw_rect(Rect2(-hx, 17, vw, 253), Color(DrawUtil.BG, 0.9))
 			var w := _world()
@@ -2199,7 +2252,7 @@ func _use(u: Dictionary) -> void:
 			board_open = true
 			pause_from = "play"
 			pause_page = "levels"
-			pause_sel = 0
+			pause_sel = maxi(0, _pause_rows().find(_next_level()))   # start on where the line goes next
 			_set_state("pause")
 
 
@@ -2338,6 +2391,14 @@ func _draw_people() -> void:
 			sh.draw_frame(self, "house", "facades", house, dp - Vector2(24, 48))
 		if str(d.get("to", "")) == "next":
 			sh.draw_frame(self, "village_props", "props", 1, dp)
+			var nl := _next_label()
+			if nl != "":
+				# the signpost says where the line goes next
+				var tw := DrawUtil.text_width(nl)
+				var right := minf(dp.x + 8.0 + tw / 2.0, L.width * T - 20.0)
+				draw_rect(Rect2(right - tw - 3.0, dp.y - 22.0, tw + 6.0, 19.0), Color(DrawUtil.BG, 0.8))
+				DrawUtil.text(self, Vector2(right - DrawUtil.text_width("NEXT"), dp.y - 20.0), "NEXT", DrawUtil.GRAY)
+				DrawUtil.text(self, Vector2(right - tw, dp.y - 12.0), nl, DrawUtil.WHITE)
 		elif house >= 0:
 			var open := str(d.get("to", "")) != "" and absf(S.x - (d.c * T + 8)) < 10.0 and state == "play"
 			sh.draw_frame(self, "house", "door", 1 if open else 0, dp - Vector2(0, 16))
@@ -2417,6 +2478,7 @@ func _draw_bubble() -> void:
 	var x := clampf(anchor.x - w / 2.0, 6.0, vw - 6.0 - w)
 	var y := clampf(anchor.y - h - 8.0, 30.0, 262.0 - h)
 	var box := Rect2(floorf(x), floorf(y), w, h)
+	ui_clear.append(Rect2(box.position.x - 1, box.position.y - 11, box.size.x + 2, box.size.y + 20))   # name above, tail below
 	if _has_sheet("bubble"):
 		_nine(box)
 		# the tail replaces one bottom-edge part and hangs below the bubble
@@ -2530,7 +2592,7 @@ func _draw_shop() -> void:
 		DrawUtil.text(self, Vector2(396 - DrawUtil.text_width(price), y + 1), price, col)
 	if shop_sel < SHOP.size():
 		_center(str(SHOP[shop_sel].note), 200, DrawUtil.GRAY)
-	_center("UP AND DOWN CHOOSE . JUMP BUYS . DASH LEAVES", 218, DrawUtil.DARK)
+	_center("UP AND DOWN CHOOSE . JUMP BUYS . DASH LEAVES", 218, DrawUtil.GRAY)
 
 
 func _draw_compass() -> void:
@@ -2555,6 +2617,7 @@ func _draw_compass() -> void:
 	if edge.distance_to(sp) < 1.0:
 		return  # already on screen
 	DrawUtil.diamond(self, edge.floor(), DrawUtil.WHITE)
+	ui_clear.append(Rect2(edge.floor() - Vector2(3, 3), Vector2(11, 11)))
 
 
 # ================================================================ progress

@@ -12,6 +12,8 @@ uniform vec4 dark_ranges[8];                  // x0, x1 (world px), fade px, str
 uniform int dark_count = 0;
 uniform vec3 lights[24];                      // world x, world y, radius
 uniform int light_count = 0;
+uniform vec4 clear_rects[16];                 // screen px x0, y0, x1, y1 the dark leaves alone: text, menus, bubbles
+uniform int clear_count = 0;
 uniform float flash = 0.0;                    // 0 none .. 1 full lightning
 uniform vec3 ramp0 : source_color = vec3(0.043);
 uniform vec3 ramp1 : source_color = vec3(0.227);
@@ -45,6 +47,10 @@ void fragment() {
 			vec4 d = dark_ranges[i];
 			float inside = min(w.x - d.x, d.y - w.x);
 			dark = max(dark, clamp(inside / max(d.z, 1.0), 0.0, 1.0) * d.w);
+		}
+		for (int i = 0; i < clear_count; i++) {
+			vec4 r = clear_rects[i];
+			if (px.x >= r.x && px.y >= r.y && px.x < r.z && px.y < r.w) dark = 0.0;
 		}
 		if (dark > 0.0) {
 			float lit = 0.0;

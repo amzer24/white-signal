@@ -666,6 +666,9 @@ func _draw_page(a: float) -> void:
 		draw_rect(Rect2(vw / 2.0 - dw / 2.0, 229.0, dw, 12.0), Color(DrawUtil.BG, 0.8 * a))
 		_ctext(detail, 232, gray)
 	var hint := "D-PAD CHOOSE . A CONFIRM . B BACK" if GameInput.controller_active else "ARROWS CHOOSE . ENTER CONFIRM . ESC BACK"
+	# a plate like the detail line's: grey on the bare ground strip is too faint
+	var hw := DrawUtil.text_width(hint) + 12.0
+	draw_rect(Rect2(vw / 2.0 - hw / 2.0, 249.0, hw, 12.0), Color(DrawUtil.BG, 0.8 * a))
 	_ctext(hint, 252, gray)
 
 

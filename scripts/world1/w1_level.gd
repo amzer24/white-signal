@@ -87,6 +87,24 @@ static func path_for(level_id: String) -> String:
 	return "res://levels/world%s/%s.txt" % [world if world.is_valid_int() else "1", level_id]
 
 
+## A level's name and how many big shards it holds, read without building the
+## level: the switchboard lists every level at once.
+static func summary(level_id: String) -> Dictionary:
+	var out := {"name": level_id, "big": 0}
+	var section := "head"
+	for raw in FileAccess.get_file_as_string(path_for(level_id)).split("\n"):
+		var line: String = raw.strip_edges(false, true)
+		if line.begins_with("== "):
+			section = "grid"
+		elif line.strip_edges() == "[objects]":
+			section = "objects"
+		elif section == "head" and line.begins_with("name:"):
+			out.name = line.substr(5).strip_edges()
+		elif section == "grid":
+			out.big += line.count("O")
+	return out
+
+
 func _parse(text: String) -> void:
 	var lines: Array = []
 	var block: Array = []
