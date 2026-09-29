@@ -185,7 +185,7 @@ func _home_rows() -> Array:
 		if bigs > 0:
 			detail += " . %d BIG" % bigs
 		rows.append(["CONTINUE", detail, "continue"])
-		rows.append(["NEW GAME", "START THE STORY AGAIN . YOU KEEP YOUR BIG SHARDS AND BEST TIMES", "new"])
+		rows.append(["NEW GAME", "START THE STORY AGAIN . YOU KEEP YOUR PIPS AND BEST TIMES", "new"])
 	rows.append(["SETTINGS", "MUSIC . EFFECTS . DISPLAY . KEYS", "settings"])
 	rows.append(["EXTRAS", "THE INTRO . HOW TO PLAY . CREDITS", "extras"])
 	rows.append(["QUIT", "BACK TO THE DESKTOP", "quit"])
@@ -197,7 +197,7 @@ func _rows() -> Array:
 		"home":
 			return _home_rows()
 		"new_confirm":
-			return [["BACK", "KEEP YOUR SAVE", "back"], ["START OVER", "YOU LOSE YOUR PLACE, LIVES AND SHARDS . YOU KEEP BIG SHARDS AND BEST TIMES", "new_go"]]
+			return [["BACK", "KEEP YOUR SAVE", "back"], ["START OVER", "YOU LOSE YOUR PLACE, LIVES AND SHARDS . YOU KEEP YOUR PIPS AND BEST TIMES", "new_go"]]
 		"extras":
 			return [["WATCH THE INTRO", "HOW THE STORY BEGINS . ABOUT A MINUTE", "intro"], ["HOW TO PLAY", "THE CONTROLS", "controls"], ["CREDITS", "WHO MADE WHAT", "credits"],
 				["BACK", "", "back"]]
@@ -630,7 +630,7 @@ func _draw_page(a: float) -> void:
 			_panel()
 			_ctext("START OVER?", 104, white, 2)
 			_ctext("YOU WILL LOSE YOUR PLACE, YOUR LIVES AND YOUR SHARDS", 126, gray)
-			_ctext("YOU KEEP YOUR BIG SHARDS AND BEST TIMES", 136, gray)
+			_ctext("YOU KEEP YOUR PIPS AND BEST TIMES", 136, gray)
 		"controls":
 			_panel()
 			_ctext("HOW TO PLAY", 92, white, 2)
@@ -692,6 +692,7 @@ func _control_lines() -> Array:
 		["ARC", ("X" if pad else k.key_label("attack")) + " . YOURS AFTER WORLD 1"],
 		["STOMP", "LAND ON AN ENEMY . JUMP AS YOU LAND FOR HEIGHT"],
 		["SHARDS", "SPEND THEM AT TALLY'S . EVERY 100 GIVES A LIFE"],
+		["PIPS", "TOUCH THE GLASS TO FREE THEM . DOT REWARDS YOU"],
 		["DROP", "PRESS DOWN AND JUMP ON A GIRDER"],
 		["TALK . DOORS", "PRESS DOWN NEXT TO SOMEONE OR A DOOR"],
 		["PAUSE", "START" if pad else "ESC"],

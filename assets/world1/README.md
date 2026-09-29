@@ -300,6 +300,18 @@ Items that come out of bump blocks.
 | 0 | charge | 4 | 0.08 s each | yes | CHARGE cell that rises out of a C block |
 | 1 | life | 2 | 0.2 s each | yes | 1UP: a little Spark |
 
+### pip.png (16x16 frames)
+
+Pips: tiny sparks of signal, the Spark's small cousins, caught in the old glass insulators when the line was cut. Top-left on the tile top-left, like a shard. They float, so the pin needs no pole. Boxy white body, flat underneath, two dot eyes and a one-pixel antenna, so they never read as enemies.
+
+| Row | Animation | Frames | Timing | Loops | Notes |
+|---|---|---|---|---|---|
+| 0 | trapped | 4 | 0.3 / 0.12 / 0.3 / 0.12 s | yes | a Pip caught in a glass insulator: rest, hop (antenna taps the glass), drift, dim flicker. Its 5x4 body is x 5 to 9, y 5 to 8, so its centre is (7.5, 7) from the frame top-left. The dome is x 2 to 13, y 1 to 10, the pin and crossarm stub below it to row 14 |
+| 1 | break | 5 | 0.05 s each | no | touched: the glass cracks with light, bursts, the Pip flashes white and is gone, the last bits fall. Then show empty and send a free Pip up from the same centre |
+| 2 | empty | 1 | static |  | the pin and the jagged dark lip of broken glass, after the rescue |
+| 3 | free | 4 | 0.08 s each | yes | the freed Pip zipping home. 5x5 body at x 5 to 9, y 5 to 9 (centre (7.5, 7.5)), antenna tip flickering, a sparkle trail below it. Move it in code |
+| 4 | hop | 4 | 0.12 s each | yes | a rescued Pip bouncing in the village: stand, squash, spring up, come down. Feet on the bottom row, centred on x 7.5. Start each Pip on a different frame so a crowd is not in step |
+
 ### walker.png (16x16 frames)
 
 Walker `w`: a NOISE blob. Static stripes crawl, so it never reads as the solid-white Spark.

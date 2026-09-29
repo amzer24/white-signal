@@ -3143,6 +3143,94 @@ def _(s):
     s.p2.put(0.24, 0.09, N("D6"), venv=[5, 5, 4, 4, 3, 2, 1], duty=12)
 
 
+# ---- Pips: tiny sparks of signal that used to carry voices along the line. They are trapped
+# in old glass insulators, call out when the player is near, fly home to the village when the
+# glass is broken, and Dot rewards the player for bringing enough of them back. Their voice is
+# the far caller's two-note call (A then D, a fourth up), an octave higher and scooped like a
+# small voice.
+
+def _scoop(v: Voice, t: float, semis: tuple[float, ...] = (-2.0, -1.0, -0.4)) -> None:
+    """Bend the first few ticks of the note starting at t up into its pitch, like a voice."""
+    a = int(round(t * TICK_HZ))
+    for i, d in enumerate(semis):
+        if a + i < len(v.freq) and v.freq[a + i] > 0:
+            v.freq[a + i] *= 2 ** (d / 12)
+
+
+@sfx("pip_call", 0.45, "pickups", "A trapped Pip calls from inside its glass insulator (every "
+     "couple of seconds while the player is near, quieter with distance)", trim_db=-5.0,
+     fade=0.04)
+def _(s):
+    # "pee-peep": A6 then D7 on a thin 12.5% pulse, each scooping up into its note from a
+    # soft start. The D7 wavers and sags a quarter-tone as it fades, like a small voice asking.
+    # A faint copy a hair sharp on pulse 2 shimmers against it, as if heard through glass.
+    s.p1.put(0, 0.055, N("A6"), venv=[4, 8, 9, 6], duty=12)
+    _scoop(s.p1, 0, (-3.0, -2.0, -1.0, -0.5))
+    s.p1.put(0.085, 0.3, N("D7"), st(N("D7"), -0.5), venv=[5, 9, 10, 10, 9, 8, 7, 6, 5, 5, 4, 3,
+                                                          3, 2, 2, 1, 1, 0],
+             duty=12, vib=(9, 0.2), gcurve=3.0)
+    _scoop(s.p1, 0.085, (-3.0, -2.0, -1.0, -0.5))
+    s.p2.put(0.008, 0.05, st(N("A6"), 0.3), venv=[1, 2, 3, 2], duty=25)
+    s.p2.put(0.093, 0.29, st(N("D7"), 0.3), venv=[2, 3, 4, 4, 3, 3, 3, 2, 2, 2, 1, 1, 1, 0],
+             duty=25, vib=(9, 0.2))
+
+
+@sfx("pip_free", 0.95, "pickups", "Player breaks a Pip's glass insulator and the Pip flies home "
+     "(replaces big_shard)", fade=0.06)
+def _(s):
+    # the glass breaks: a bright short-mode crash jangling between three pitches, a clangy ping
+    # on pulse 2 (E7 and A7 swapped every tick), and three small shards tinkling after it
+    s.noi.put(0, 0.1, 1, 4, venv=[15, 12, 13, 8, 9, 4], short=True, glide="lin", arp=[0, 2, 1],
+              arp_ticks=1)
+    s.p2.put(0, 0.06, N("E7"), venv=[14, 10, 6, 3], duty=25, arp=[0, 5], arp_ticks=1)
+    for t, p, v in [(0.13, 1, 7), (0.19, 2, 5), (0.27, 1, 4)]:
+        s.noi.put(t, 0.02, p, venv=[v, v // 3], short=True)
+    # the Pip sings free: up the D major chord in scooped chirps (its call, A6 to D7, at the
+    # top), a bird's trill on D7 and E7, then F#7 and away on a ringing A7 that fades
+    for i, n in enumerate(["D6", "F#6", "A6", "D7"]):
+        t = 0.07 + i * 0.045
+        s.p1.put(t, 0.045, N(n), venv=[13, 12, 11], duty=25)
+        _scoop(s.p1, t)
+    s.p1.put(0.25, 0.22, N("D7"), arp=[0, 2], arp_ticks=5,
+             venv=[13, 12, 12, 12, 11, 11, 11, 11, 10, 10, 10, 10, 10, 10], duty=25)
+    s.p1.put(0.47, 0.04, N("F#7"), venv=[12, 12, 11], duty=25)
+    _scoop(s.p1, 0.47)
+    s.p1.put(0.51, 0.4, N("A7"), venv=dec(11, 24, 1.3), duty=25, vib=(8, 0.12))
+    s.echo(s.p1, s.p2, 0.06, 0.4, duty=12)
+    # the triangle under it, D and A, then swooping up D5 to A5 as the Pip zips off home
+    s.tri.put(0.07, 0.17, N("D4"))
+    s.tri.put(0.25, 0.21, N("A4"))
+    s.tri.put(0.47, 0.3, N("D5"), N("A5"), gcurve=2.0)
+
+
+@sfx("pip_home", 1.5, "village", "Dot hands the player a reward for rescuing enough Pips (plays "
+     "over village_theme)", fade=0.1)
+def _(s):
+    # Dot's lamp blinks twice (her voice_dot blip: a relay click and a clipped 50% D5), then the
+    # tune steps up through G, A and D in lilting short-long pairs, pulse 2 a third under, the
+    # triangle walking G A D, and lands on a ringing 50% D7 over F#6 with a soft cymbal.
+    # Pulse 2 echoes the D7 once its own note ends.
+    for t in (0.0, 0.05):
+        s.noi.put(t, 0.008, 1, venv=[13], short=True)
+        s.p1.put(t + 0.004, 0.03, N("D5"), venv=[9, 7], duty=50)
+    lead = [("B5", "G5"), ("D6", "B5"), ("C#6", "A5"), ("E6", "C#6"), ("F#6", "D6"), ("A6", "F#6")]
+    for i, (hi, lo) in enumerate(lead):
+        t = 0.1 + (i // 2) * 0.2 + (i % 2) * 0.07
+        d = 0.07 if i % 2 == 0 else 0.13
+        s.p1.put(t, d, N(hi), venv=[13, 12, 11, 11, 10, 10, 9, 9], duty=50)
+        s.p2.put(t, d, N(lo), venv=[8, 7, 7, 6, 6, 6, 5, 5], duty=25)
+        if i % 2 == 0:
+            s.noi.put(t, 0.03, 1, venv=[5, 2, 1])                  # a light tick on each pair
+    for t, n in [(0.1, "G2"), (0.3, "A2"), (0.5, "D3")]:
+        s.tri.put(t, 0.18, N(n))
+    s.p1.put(0.7, 0.72, N("D7"), venv=dec(13, 43, 1.6), duty=50, vib=(5.5, 0.12))
+    s.p2.put(0.7, 0.2, N("F#6"), venv=[8, 8, 7, 7, 6, 6, 5, 5, 4, 4, 3, 2, 0], duty=25)
+    s.echo(s.p1, s.p2, 0.08, 0.4, duty=12)
+    s.tri.put(0.7, 0.4, N("D3"))
+    s.noi.put(0.7, 0.4, 3, 8, venv=[9, 8, 7, 6, 5, 4, 4, 3, 3, 2, 2, 1, 1, 1, 1, 1, 0],
+              glide="lin")
+
+
 # ---------------------------------------------------------------- build
 
 def build(names: list[str] | None = None) -> list[dict]:

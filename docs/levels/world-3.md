@@ -17,7 +17,7 @@ All four are pure functions of time, so the level checker proves them the same w
 
 ## The four levels
 
-**3-1 Wave Flyers.** A flyer that hovers, then one that patrols. Next comes a gap crossed by stomping three hovering flyers in a chain, then a climb to the high road under a patrolling flyer. At midway, two flyers carry you over a gap, and a flyer bounce reaches a big shard on a girder. The level ends by dropping down to the mast.
+**3-1 Wave Flyers.** A flyer that hovers, then one that patrols. Next comes a gap crossed by stomping three hovering flyers in a chain, then a climb to the high road under a patrolling flyer. At midway, two flyers carry you over a gap, and a flyer bounce reaches a Pip on a girder. The level ends by dropping down to the mast.
 
 **3-2 Carrier Wind.** Gusts blow two seconds in every three. You meet a tailwind on flat ground, and an updraft that lifts you to a ledge with shards. Then you ride an updraft out of a trench onto a high platform, and cross a catwalk against a headwind by jumping in the lulls. At midway, a tailwind carries a leap that's too long without it. An updraft beside the last tower takes you up to the mast. Spire, a mast rigger, stands at the start.
 

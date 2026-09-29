@@ -18,7 +18,7 @@ Open `project.godot` with Godot 4.7 or later and run it. The game starts on the 
 
 - Three worlds of four levels are built and proven: The Flats, The Switchyard and The Aerials. World 4, Dead Air, and the ending are planned.
 - Moves: run, jump, wall kick, dash, stomp, drop through girders, and the Arc (an attack earned by clearing World 1).
-- Lives, a 300-second timer per level, shards as currency at Tally's shop, 3 big shards hidden in most levels, one checkpoint per level.
+- Lives, a 300-second timer per level, shards as currency at Tally's shop, 3 Pips to rescue in most levels (Dot rewards them), one checkpoint per level.
 - Last Relay has seven villagers with speech bubbles and voices, a shop, a radio shack and a switchboard for replaying levels.
 - All music and sound is 8-bit, written as code for the NES's four voices. Every level has its own track.
 - All art uses four greys, tinted per world, generated in code.
@@ -36,4 +36,4 @@ Keep WHITE SIGNAL's four-grey pixel art, custom pixel lettering and relay-world 
 
 ## Open Decisions
 
-What big shards unlock, whether there is one caller or many, World 4's design, and the ending. See section 9 of `docs/GDD.md`.
+Whether there is one caller or many, World 4's design, and the ending. See section 9 of `docs/GDD.md`.

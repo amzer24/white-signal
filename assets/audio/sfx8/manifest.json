@@ -1486,6 +1486,39 @@
       "loudest_50ms_rms_dbfs": -14.5,
       "trim_db": 0.0,
       "trigger": "Story intro cards 8 and 10: the far light answers (the two-note call from title_theme and amb_w1, with a softer echo)"
+    },
+    {
+      "name": "pip_call",
+      "file": "pip_call.wav",
+      "category": "pickups",
+      "duration": 0.372,
+      "peak_dbfs": -7.64,
+      "rms_dbfs": -23.8,
+      "loudest_50ms_rms_dbfs": -19.5,
+      "trim_db": -5.0,
+      "trigger": "A trapped Pip calls from inside its glass insulator (every couple of seconds while the player is near, quieter with distance)"
+    },
+    {
+      "name": "pip_free",
+      "file": "pip_free.wav",
+      "category": "pickups",
+      "duration": 0.95,
+      "peak_dbfs": -4.64,
+      "rms_dbfs": -16.51,
+      "loudest_50ms_rms_dbfs": -14.5,
+      "trim_db": 0.0,
+      "trigger": "Player breaks a Pip's glass insulator and the Pip flies home (replaces big_shard)"
+    },
+    {
+      "name": "pip_home",
+      "file": "pip_home.wav",
+      "category": "village",
+      "duration": 1.484,
+      "peak_dbfs": -5.15,
+      "rms_dbfs": -17.16,
+      "loudest_50ms_rms_dbfs": -14.5,
+      "trim_db": 0.0,
+      "trigger": "Dot hands the player a reward for rescuing enough Pips (plays over village_theme)"
     }
   ]
 }

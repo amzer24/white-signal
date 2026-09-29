@@ -21,6 +21,6 @@
   "reachable": 1,
   "missing": []
  },
- "solve_seconds": 194.5,
+ "solve_seconds": 95.7,
  "line": "180 tiles (2880px, 6 screens)  .  FINISHABLE  .  fastest proven route 17.1s  .  big shards reachable 2/2  .  small shards reachable 22/22  .  blocks hittable 2/2  .  cracked walls breakable 1/1  .  22 shards  .  owns: channel switches"
 }

@@ -40,7 +40,7 @@ music: village_theme
 ..............................
 ..............................
 ..............................
-......H....J...V...b...J..H...
+......H....J.N.V...b...J..H...
 ##############################
 ##############################
 ##############################
@@ -66,7 +66,8 @@ music: village_theme
 
 [objects]
 npc#1 id=mast
-npc#2 id=spire
+npc#2 id=dot
+npc#3 id=spire
 door#1 house=0
 door#2 house=1 to=village-shop
 door#3 house=2 to=village-radio

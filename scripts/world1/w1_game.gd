@@ -34,13 +34,12 @@ const TINTS := {
 }
 const AMBIENCE := {"1": "amb_w1", "2": "amb_w2", "3": "amb_w3", "village": "amb_village"}
 const STORY_PATH := "res://levels/story/npcs.json"
-## Tally's shop. Prices are in shards. The compass and lantern are kept for good.
+## Tally's shop. Prices are in shards. The lantern is kept for good. (The shard
+## compass used to be sold here; it is now the Pip tuner, one of Dot's gifts.)
 const SHOP := [
 	{"id": "life", "name": "EXTRA LIFE", "price": 40, "icon": 0, "note": "GIVES YOU ONE MORE LIFE."},
 	{"id": "charge", "name": "CHARGED START", "price": 25, "icon": 1,
 		"note": "START YOUR NEXT LEVEL WITH CHARGE, SO YOU CAN SURVIVE ONE HIT."},
-	{"id": "compass", "name": "SHARD COMPASS", "price": 80, "icon": 2,
-		"note": "POINTS TO THE NEAREST BIG SHARD YOU HAVEN'T FOUND. YOURS TO KEEP."},
 	{"id": "lantern", "name": "LANTERN", "price": 60, "icon": 3,
 		"note": "YOUR LIGHT REACHES MUCH FURTHER IN THE DARK. YOURS TO KEEP."},
 ]
@@ -58,7 +57,7 @@ var earned := 0            # shards collected this game, spent or not: every 100
 var life_note_t := -99.0   # when the last 100-shard life was given, for the banner
 var handoff := -1.0        # seconds since the intro handed over, while the Spark wakes by Old Mast
 var lantern_talk := false  # Old Mast holds his lantern through that first talk
-var big := {}             # level id -> {"c,r": true}
+var big := {}             # level id -> {"c,r": true}: the Pips set free (the `O` tiles, once big shards)
 var best := {}            # level id -> seconds
 var time_left := 300.0
 var run_time := 0.0
@@ -111,7 +110,9 @@ var next_flash := 0.0
 var ambience: AudioStreamPlayer
 var story := {}             # levels/story/npcs.json
 var flags: Array = []       # story flags: met_<id>, w1_clear, w2_clear
-var items := {}             # shop items kept for good: compass, lantern
+var items := {}             # shop items kept for good: lantern (and compass, from older saves)
+var gifts: Array = []       # Dot's gifts for Pips brought home; kept through New Game, like the Pips
+var pip_call_t := -9.0      # clock when a trapped Pip last called out
 var charge_next := false    # bought a charged start for the next level
 var here: Array = []        # the people standing in this level
 var talk := {}              # the conversation in progress
@@ -221,8 +222,9 @@ func _ready() -> void:
 		earned = int(save.get("earned", shards))
 		load_level(str(save.level))
 	else:
-		# a new game: the story and Tally's items start again. Big shards and best times stay.
+		# a new game: the story and Tally's items start again. Pips, Dot's gifts and best times stay.
 		save = {}
+		lives = _start_lives()
 		if start_mode == "new":
 			flags = []
 			items = {}
@@ -381,7 +383,7 @@ func _physics_process(delta: float) -> void:
 					_set_state("card")
 		"gameover":
 			if state_t > 3.4:
-				lives = START_LIVES
+				lives = _start_lives()
 				shards = 0
 				earned = 0
 				load_level("test-room" if level_id == "test-room" else "village")
@@ -459,6 +461,7 @@ func _play_frame(delta: float) -> void:
 	for e in S.events:
 		_on_event(e)
 	_machine_sounds(prev_t)
+	_pip_calls()
 	if not _is_hub():
 		time_left -= delta
 	run_time += delta
@@ -489,14 +492,18 @@ func _clear_frame() -> void:
 		clear_paid = true
 		_play("level_clear")
 		var h: float = S.won_height
+		# the higher up the mast you touched it, the bigger the bonus, shown where you touched it
+		var touch := Vector2(L.goal.x * T + 8.0, clear_from_y)
 		if h > 0.85:
 			lives += 1
 			clear_bonus = "TIP OF THE MAST . 1UP"
 			_play("extra_life")
+			_fx("big_text", touch, "1UP")
 		else:
 			var n := 1 + int(h * 9.0)
 			_add_shards(n)
 			clear_bonus = "MAST BONUS . %d SHARDS" % n
+			_fx("big_text", touch, "+%d" % n)
 		if not best.has(level_id) or run_time < float(best[level_id]):
 			best[level_id] = run_time
 		if not flags.has("clear_" + level_id):
@@ -657,17 +664,19 @@ func _on_event(e: Dictionary) -> void:
 			_add_shards(1)
 			_fx("sparkle", pos)
 		"big_shard":
+			# (the rules still call it a big shard, so the proven levels stay proven)
 			var cell: Vector2i = e.cell
-			var key := "%d,%d" % [cell.x, cell.y]
+			if _pip_home_at(cell.x, cell.y):
+				return   # this Pip is already home with Dot
 			if not big.has(level_id):
 				big[level_id] = {}
-			var fresh: bool = not big[level_id].has(key)
-			big[level_id][key] = true
-			_play("big_shard")
+			big[level_id]["%d,%d" % [cell.x, cell.y]] = true
+			_play("pip_free")
+			_fx("pip_break", Vector2(cell.x * T, cell.y * T))
+			_fx("pip_fly", pos)
 			_fx("light", pos)
-			if fresh:
-				_fx("text", pos, "BIG SHARD")
-				_save_progress()
+			_fx("text", pos, "PIP SET FREE . %d OF %d HOME" % [_pips_home(), _pips_total()])
+			_save_progress()
 		"extra_life":
 			lives += 1
 			_play("extra_life")
@@ -1082,7 +1091,7 @@ func _draw_pause() -> void:
 
 
 ## A switchboard row: the level and its name, NEXT on the level the signpost
-## leads to, and its big shards on the right, filled in once found.
+## leads to, and its Pips on the right, filled in once they are home.
 func _draw_level_row(id: String, y: float, col: Color, sel: bool) -> void:
 	var info := _level_info(id)
 	DrawUtil.text(self, Vector2(132, y), "TRAINING YARD" if id == "test-room" else id + "  " + str(info.name), col)
@@ -1091,12 +1100,8 @@ func _draw_level_row(id: String, y: float, col: Color, sel: bool) -> void:
 	var got: int = (big.get(id, {}) as Dictionary).size()
 	var total: int = info.big
 	for i in total:
-		var at := Vector2(343 - (total - 1 - i) * 8, y)
-		DrawUtil.diamond(self, at, col, i >= got)
-		if sel and i >= got:
-			# on the white bar a hollow diamond's middle must be white, or it reads as found
-			draw_rect(Rect2(at.x + 2, at.y + 1, 1, 3), DrawUtil.WHITE)
-			draw_rect(Rect2(at.x + 1, at.y + 2, 3, 1), DrawUtil.WHITE)
+		# on the white bar the Pip's eyes and hollow middle are white
+		_pip_glyph(Vector2(342 - (total - 1 - i) * 9, y - 1), col, i >= got, DrawUtil.WHITE if sel else DrawUtil.BG)
 
 
 ## A level's name and big shard count, read from its file once.
@@ -1104,6 +1109,109 @@ func _level_info(id: String) -> Dictionary:
 	if not level_info.has(id):
 		level_info[id] = Level.summary(id)
 	return level_info[id]
+
+
+# ================================================================ pips
+
+## Every level that holds Pips: the training yard, the twelve levels and the bonus room.
+func _pip_levels() -> Array:
+	return ORDER + ["1-1-bonus"]
+
+
+func _pips_total() -> int:
+	var n := 0
+	for id in _pip_levels():
+		n += int(_level_info(id).big)
+	return n
+
+
+func _pips_home() -> int:
+	var n := 0
+	for id in _pip_levels():
+		n += (big.get(id, {}) as Dictionary).size()
+	return n
+
+
+func _pip_home_at(c: int, r: int) -> bool:
+	return big.has(level_id) and big[level_id].has("%d,%d" % [c, r])
+
+
+## Lives at the start of a game: five, plus one for each of Dot's hearts.
+func _start_lives() -> int:
+	return START_LIVES + int(gifts.has("heart1")) + int(gifts.has("heart2"))
+
+
+## A trapped Pip calls out every couple of seconds while the Spark is near,
+## louder the closer it is, so players can hunt them by ear.
+func _pip_calls() -> void:
+	if clock - pip_call_t < 2.2:
+		return
+	var near := 1e9
+	for cell in L.find("O"):
+		if S.taken.has(cell) or _pip_home_at(cell.x, cell.y):
+			continue
+		near = minf(near, Vector2(S.x, S.y).distance_to(Vector2(cell.x * T + 8, cell.y * T + 8)))
+	if near < 220.0:
+		pip_call_t = clock
+		_play("pip_call", 0.0, lerpf(-2.0, -16.0, near / 220.0))
+
+
+## A tiny Pip for the HUD and the switchboard: a rounded body with two eyes, or
+## an outline while it is still trapped. `inner` is the colour behind it.
+func _pip_glyph(at: Vector2, col: Color, hollow: bool, inner := DrawUtil.BG) -> void:
+	draw_rect(Rect2(at.x + 1, at.y, 4, 6), col)
+	draw_rect(Rect2(at.x, at.y + 1, 6, 4), col)
+	if hollow:
+		draw_rect(Rect2(at.x + 1, at.y + 1, 4, 4), inner)
+	else:
+		draw_rect(Rect2(at.x + 1, at.y + 2, 1, 1), inner)
+		draw_rect(Rect2(at.x + 4, at.y + 2, 1, 1), inner)
+
+
+## The Pips you have brought home, hopping about beside Dot's switchboard.
+func _draw_pip_crowd(v: Vector2i) -> void:
+	var n := mini(_pips_home(), 24)
+	var step := minf(8.0, 110.0 / maxf(1.0, float(n)))
+	for i in n:
+		var x := v.x * T + 20.0 + i * step
+		var y := v.y * T + (3.0 if i % 3 == 1 else 0.0)   # a ragged little crowd, not a queue
+		sh.draw_anim(self, "pip", "hop", clock + i * 0.17, Vector2(floorf(x), y), i % 2 == 1)
+
+
+## Dot's side of the Pips: any gifts now due, then how many are home. Gifts are
+## given once and kept through New Game, like the Pips themselves.
+func _keeper_lines(who: Dictionary, lines: Array) -> Array:
+	var out: Array = lines.duplicate()
+	var home := _pips_home()
+	var total := _pips_total()
+	var gave := false
+	for g in who.get("gifts", []):
+		var id := str(g.id)
+		var at := total if int(g.at) < 0 else int(g.at)
+		if home >= at and not gifts.has(id):
+			gifts.append(id)
+			out.append_array(g.lines)
+			if id in ["life", "heart1", "heart2"]:
+				lives += 1
+			gave = true
+	if gave:
+		_play("pip_home")
+		_save_progress()
+	var said: Dictionary = who.get("progress", {})
+	var next := -1
+	for g in who.get("gifts", []):
+		var at := total if int(g.at) < 0 else int(g.at)
+		if at > home and (next < 0 or at < next):
+			next = at
+	var line := str(said.get("rest", ""))
+	if home >= total:
+		line = str(said.get("all", ""))
+	elif next > 0:
+		line = str(said.get("next", ""))
+	line = line.replace("{home}", str(home)).replace("{total}", str(total)).replace("{need}", str(next - home))
+	if line != "":
+		out.append(line)
+	return out
 
 
 ## "2-1  RAIL HOPPERS": where the signpost leads next, or "" once every level is cleared.
@@ -1453,14 +1561,11 @@ func _draw_tile(c: int, r: int) -> void:
 				var bob := roundf(sin(t * 4.0 + c) * 2.0)
 				sh.draw_anim(self, "shard", "spin", t + c * 0.21, p + Vector2(0, bob))
 		"O":
-			if not S.taken.has(key):
-				var have: bool = big.has(level_id) and big[level_id].has("%d,%d" % [c, r])
-				var bob2 := roundf(sin(t * 2.0 + c) * 2.0)
-				sh.draw_anim(self, "big_shard", "spin", t, p - Vector2(4, 4 - bob2), false,
-					Color(1, 1, 1, 0.35) if have else Color.WHITE)
-				if not have:
-					var ang := t * 2.4
-					draw_rect(Rect2((p + Vector2(8 + cos(ang) * 14.0, 8 + sin(ang) * 6.0)).floor(), Vector2.ONE), DrawUtil.WHITE)
+			# a Pip trapped in a glass insulator; once it is home, only the broken glass is left
+			if S.taken.has(key) or _pip_home_at(c, r):
+				sh.draw_frame(self, "pip", "empty", 0, p)
+			else:
+				sh.draw_anim(self, "pip", "trapped", t + c * 0.37, p)
 		"M":
 			if S.lit:
 				sh.draw_anim(self, "beacon", "lit", t, p - Vector2(0, 16))
@@ -1565,7 +1670,7 @@ func _update_atmosphere() -> void:
 		if not S.fuses.has(cell):
 			lights.append(Vector3(cell.x * T + 8, cell.y * T + 12, 26.0))
 	for cell in L.find("O"):
-		if not S.taken.has(cell) and _on_screen(cell.x * T):
+		if not S.taken.has(cell) and not _pip_home_at(cell.x, cell.y) and _on_screen(cell.x * T):
 			lights.append(Vector3(cell.x * T + 8, cell.y * T + 8, 30.0))
 	lights = lights.slice(0, 24)
 	fxmat.set_shader_parameter("light_count", lights.size())
@@ -2040,6 +2145,19 @@ func _draw_fx() -> void:
 			"light":
 				sh.draw_anim(self, "fx_light", "ring", age, pos - Vector2(24, 24))
 				life = 0.5
+			"pip_break":
+				sh.draw_anim(self, "pip", "break", age, pos)
+				life = 0.25
+			"pip_fly":
+				# the freed Pip wiggles up and away, home to Last Relay
+				var fp := pos + Vector2(sin(age * 10.0) * 5.0, -40.0 * age - 220.0 * age * age)
+				sh.draw_anim(self, "pip", "free", age, (fp - Vector2(8, 8)).floor())
+				life = 1.3
+			"big_text":
+				var s2: String = f[4]
+				var bp := pos + Vector2(-DrawUtil.text_width(s2, 2) / 2.0, -20.0 - age * 18.0)
+				DrawUtil.text_shadow(self, bp.floor(), s2, DrawUtil.WHITE, 2)
+				life = 1.6
 			"text":
 				var s: String = f[4]
 				var tp := pos + Vector2(-DrawUtil.text_width(s) / 2.0, -12.0 - age * 24.0)
@@ -2083,11 +2201,9 @@ func _draw_hud() -> void:
 			DrawUtil.text_shadow(self, Vector2(440, 22), "SAVED", DrawUtil.GRAY)
 		return
 	var total := L.find("O").size()
+	var got: int = (big.get(level_id, {}) as Dictionary).size()
 	for i in total:
-		var got := 0
-		if big.has(level_id):
-			got = big[level_id].size()
-		DrawUtil.diamond(self, Vector2(330 + i * 10, 8), DrawUtil.WHITE if i < got else DrawUtil.DARK, i >= got)
+		_pip_glyph(Vector2(330 + i * 9, 6), DrawUtil.WHITE if i < got else DrawUtil.GRAY, i >= got)
 	var tcol := DrawUtil.WHITE if time_left > 100.0 or int(clock * 4.0) % 2 == 0 else DrawUtil.GRAY
 	DrawUtil.text(self, Vector2(412, y), "TIME %03d" % maxi(0, int(ceil(time_left))), tcol)
 	if clock - saved_t < 1.6 and state != "pause":
@@ -2147,7 +2263,7 @@ func _draw_overlay() -> void:
 		"clear":
 			if state_t > 1.0:
 				_center("LEVEL CLEAR", 60, DrawUtil.WHITE, 2)
-				_center(clear_bonus, 86, DrawUtil.GRAY)
+				_center(clear_bonus, 86, DrawUtil.WHITE)
 				_center("TIME %s" % DrawUtil.fmt_time(run_time), 100, DrawUtil.GRAY)
 		"done":
 			draw_rect(Rect2(-hx, 17, vw, 253), Color(DrawUtil.BG, 0.9))
@@ -2274,6 +2390,8 @@ func _start_talk(n: Dictionary, fixed: Array = []) -> void:
 				entry = e
 				break
 		lines = entry.get("lines", ["..."])
+		if who.has("gifts"):
+			lines = _keeper_lines(who, lines)
 	talk = {"n": n, "lines": lines, "i": 0, "shown": 0.0, "entry": entry}
 	S.vx = 0.0
 	_play("talk_open")
@@ -2407,6 +2525,8 @@ func _draw_people() -> void:
 	for v in L.find("V"):
 		if _has_sheet("switchboard"):
 			sh.draw_anim(self, "switchboard", "idle", clock, Vector2(v.x * T - 8, v.y * T - 16))
+		if level_id == "village":
+			_draw_pip_crowd(v)
 	if _has_sheet("village_props"):
 		for ch in ["b", "c", "n", "g"]:
 			var frame: int = {"b": 0, "c": 2, "n": 4, "g": 1}[ch]
@@ -2596,9 +2716,9 @@ func _draw_shop() -> void:
 
 
 func _draw_compass() -> void:
-	## With the shard compass, a blinking diamond at the screen edge points to
-	## the nearest big shard you haven't found yet.
-	if not items.get("compass", false) or _is_hub() or state != "play":
+	## With Dot's Pip tuner, a blinking diamond at the screen edge points to the
+	## nearest Pip still trapped. (Older saves may have bought it as the shard compass.)
+	if not (gifts.has("tuner") or items.get("compass", false)) or _is_hub() or state != "play":
 		return
 	var best_d := 1e9
 	var target := Vector2.ZERO
@@ -2645,6 +2765,7 @@ func _load_progress() -> void:
 	flags = _typed(data.get("flags"), [])
 	items = _typed(data.get("items"), {})
 	charge_next = _typed(data.get("charge_next"), false)
+	gifts = _typed(data.get("gifts"), [])
 	# saves from before this game's clears were kept (version 1): best times stand in
 	if float(_typed(data.get("v"), 1.0)) < 2.0 and not save.is_empty():
 		for id in best:
@@ -2665,6 +2786,6 @@ func _save_progress() -> bool:
 	if f == null:
 		return false
 	f.store_string(JSON.stringify({"big": big, "best": best, "save": save, "unlocked": unlocked,
-		"filter": filter_on, "flags": flags, "items": items, "charge_next": charge_next, "v": 2}))
+		"filter": filter_on, "flags": flags, "items": items, "charge_next": charge_next, "gifts": gifts, "v": 2}))
 	f.close()
 	return DirAccess.rename_absolute(tmp, progress_path) == OK

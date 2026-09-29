@@ -18,7 +18,7 @@ Someone is still calling. Reach them. Each world ends at a Gate, and when you li
 | Stomp | Landing on an enemy bounces you. Hold jump and you bounce as high as a normal jump. Each enemy you land on before touching the ground adds more height. |
 | Checkpoint | Each level has one midway beacon. |
 | Goal | A mast at the end of the level. The higher you touch it, the bigger the bonus. |
-| Mastery | Every level has 3 big shards, a target time and a replay of your best run. |
+| Mastery | Every level has 3 Pips to rescue, a target time and a replay of your best run. |
 | HUD | Shards, lives, world number and time. Nothing else. |
 
 ### Movement change (approved 24 Sep 2026, now in `scripts/player.gd`)
@@ -38,7 +38,7 @@ A kick with nothing held now carries about 2 tiles. Holding into the wall still 
 Hold Down and press jump while standing on a thin girder to drop through it (added 26 Sep 2026). It only works in play. The level checker never presses Down, so no proof depends on it.
 
 After playtesting, every level felt flat, so World 1 levels are now two screens tall (34 rows, ground at row 31). The back half of each level sits 8 rows higher, and a new climb screen joins the two:
-- 1-1 C2: block steps up to the high road, with a girder and a big shard above.
+- 1-1 C2: block steps up to the high road, with a girder and a Pip above.
 - 1-2 D2: loose steps that crumble behind you, with a solid girder ladder as the slower way up.
 - 1-3 E2: a girder that lifts you 8 rows.
 - 1-4 D2: a wall-kick shaft between two walls, 10 rows high.
@@ -85,19 +85,19 @@ Each map image shows every tile, all moving parts with how far they travel and t
 
 ### 1-1 First Light (`levels/world1/1-1.png`)
 Teaches running, jumping, bumping blocks, stomping and dash.
-A: you meet your first bump block and first walker. B: pillars 2, 3 and 3 tiles tall with walkers between them. A pipe leads to a bonus room with 21 shards. Two ledges you can jump up through reach the high rows, and a block by the exit pipe holds the big shard. C: pits 3 and 5 wide, with a hidden 1UP block. D: a brick bridge with walkers on it, plus a high route up to a big shard. E: a 9-tile gap you can only cross with dash. Missing it drops you into a shallow trench, and you can climb back out to the left and try again. F: a real pit you have to dash over, then three walkers in a row. Stomping two or more in a row without landing bounces you up to a 1UP. G: the staircase and the mast. The big shard above the mast needs a jump with a dash at the top of the arc. The solver shows it's only just reachable.
+A: you meet your first bump block and first walker. B: pillars 2, 3 and 3 tiles tall with walkers between them. A pipe leads to a bonus room with 21 shards. Two ledges you can jump up through reach the high rows, and a block by the exit pipe holds the Pip. C: pits 3 and 5 wide, with a hidden 1UP block. D: a brick bridge with walkers on it, plus a high route up to a Pip. E: a 9-tile gap you can only cross with dash. Missing it drops you into a shallow trench, and you can climb back out to the left and try again. F: a real pit you have to dash over, then three walkers in a row. Stomping two or more in a row without landing bounces you up to a 1UP. G: the staircase and the mast. The Pip above the mast needs a jump with a dash at the top of the arc. The solver shows it's only just reachable.
 
 ### 1-2 Loose Ground (`levels/world1/1-2.png`)
 Teaches loose floors, loose ceilings, and plates with gates.
-A: loose floor over a shallow trench, so falling in is safe. B: a loose bridge over a pit, then floating loose steps. C: you have no choice but to drop through the floor into a low channel with walkers in it. D: a corridor with a loose ceiling where you have to keep moving, and a walker coming the other way. A chimney leads up to a big shard. E: the midway beacon, then a plate in plain sight that opens a short gate for 3 seconds. F: a gate you can't jump over. The floor over the pit falls, and the piece above the plate lands on it and holds the gate open. A spring throws you up onto the roof in screen G. G: a loose bridge with the roof dropping on it, and a high route along the top of the roof. H: the staircase and the mast.
+A: loose floor over a shallow trench, so falling in is safe. B: a loose bridge over a pit, then floating loose steps. C: you have no choice but to drop through the floor into a low channel with walkers in it. D: a corridor with a loose ceiling where you have to keep moving, and a walker coming the other way. A chimney leads up to a Pip. E: the midway beacon, then a plate in plain sight that opens a short gate for 3 seconds. F: a gate you can't jump over. The floor over the pit falls, and the piece above the plate lands on it and holds the gate open. A spring throws you up onto the roof in screen G. G: a loose bridge with the roof dropping on it, and a high route along the top of the roof. H: the staircase and the mast.
 
 ### 1-3 The Presses (`levels/world1/1-3.png`)
 One idea: machinery that moves in rhythm (presses, girders, spike vents). Lift rings are the finale. Hoppers were moved to World 2 so this level doesn't teach too much.
-A: one press with a safe spot to watch it. B: four presses slamming in a wave. C: a sideways girder and a lifting girder over a pit. D: walkers under a row of blocks. E: the midway beacon, a CHARGE block, and the first lift ring over solid floor. F: you ride a long girder under two presses. The girder starts when you step on it. The first press always misses you, so you see what it does. The second only misses you if you stand on the back two-fifths of the girder. The press shakes before each slam as the warning. G: a run of spike vents in rhythm. H: three lift rings about 5 tiles apart across a 16-tile drop, then the mast. The first ring is low and easy to hit. Missing it drops you into a short trench you can climb out of. The drop can't be crossed without the rings. The big shard sits just above the second ring.
+A: one press with a safe spot to watch it. B: four presses slamming in a wave. C: a sideways girder and a lifting girder over a pit. D: walkers under a row of blocks. E: the midway beacon, a CHARGE block, and the first lift ring over solid floor. F: you ride a long girder under two presses. The girder starts when you step on it. The first press always misses you, so you see what it does. The second only misses you if you stand on the back two-fifths of the girder. The press shakes before each slam as the warning. G: a run of spike vents in rhythm. H: three lift rings about 5 tiles apart across a 16-tile drop, then the mast. The first ring is low and easy to hit. Missing it drops you into a short trench you can climb out of. The drop can't be crossed without the rings. The Pip sits just above the second ring.
 
 ### 1-4 The Gate (`levels/world1/1-4.png`)
 Teaches droppers, a timed gate and the warden. This level is indoors, with a ceiling throughout.
-A: a dropper that falls behind you if you keep running. You then ride it up to a ledge with a big shard. B: a plate that opens a gate 21 tiles away for 4.5 seconds, so it's a race. Running there takes about 2.5 seconds. C: spike vents under a row of presses. D: the midway beacon. E: three droppers in a low corridor. F: the warden on the bridge. You run under it when it hops, or jump over it, then pull the lever. G: the Gate.
+A: a dropper that falls behind you if you keep running. You then ride it up to a ledge with a Pip. B: a plate that opens a gate 21 tiles away for 4.5 seconds, so it's a race. Running there takes about 2.5 seconds. C: spike vents under a row of presses. D: the midway beacon. E: three droppers in a low corridor. F: the warden on the bridge. You run under it when it hops, or jump over it, then pull the lever. G: the Gate.
 
 ## Research behind the changes
 
@@ -119,7 +119,7 @@ The four tracks provided on 23 Sep 2026 are assigned by title and length. Nobody
 
 ## How the maps are proven
 
-`python tools/levels/build_maps.py` reads each level file and searches for a route using a copy of the Spark's movement from `scripts/player.gd`. It steps every frame at 60 per second, with every moving part in the level running. A route it finds is a real sequence of button presses. It also searches for a route to every big shard. The results go to `levels/world1/<level>.proof.json`, and each map shows its route. Where a route needs you to go past something and come back, like riding a dropper, the level file lists waypoints (`route#1 via=` and `O#2 via=`) and the proof checks each leg in turn.
+`python tools/levels/build_maps.py` reads each level file and searches for a route using a copy of the Spark's movement from `scripts/player.gd`. It steps every frame at 60 per second, with every moving part in the level running. A route it finds is a real sequence of button presses. It also searches for a route to every Pip. The results go to `levels/world1/<level>.proof.json`, and each map shows its route. Where a route needs you to go past something and come back, like riding a dropper, the level file lists waypoints (`route#1 via=` and `O#2 via=`) and the proof checks each leg in turn.
 
 Limits of the proof:
 - The proof shows a level can be finished, but not that it's fair. The route it finds is the fastest, which uses dash almost everywhere, so a first-time player will be much slower.

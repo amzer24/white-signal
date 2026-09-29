@@ -1110,6 +1110,226 @@ def build_pickups():
     ], 'Items that come out of bump blocks.')
 
 
+# =================================================================== pips
+
+# Pips are tiny sparks of signal, the Spark's small cousins, that carried
+# voices along the line. When it was cut they were caught in the old glass
+# insulators. Touch one and the glass breaks and the Pip zips home.
+
+# the glass dome: (row, first x, last x). 12 px wide, 10 rows, the groove for
+# the wire pinches it at row 6.
+PIP_DOME = [(1, 5, 10), (2, 4, 11), (3, 3, 12), (4, 3, 12), (5, 3, 12), (6, 4, 11),
+            (7, 3, 12), (8, 2, 13), (9, 2, 13), (10, 2, 13)]
+
+
+def _pip_mount(c):
+    """The metal pin under the glass and the stub of crossarm it bolts to."""
+    c.rect(7, 11, 2, 3, D)
+    c.rect(3, 14, 10, 1, D)
+    c.px(4, 14, G)                         # bolt heads
+    c.px(11, 14, G)
+    c.px(7, 11, G)                         # a glint on the pin
+
+
+def _pip_body(c, x, y, w, h, col=W, shut=False, feet=False, tip=W):
+    """Boxy body, rounded on top and flat underneath, two dot eyes low in the
+    middle and a one-pixel antenna with a lit tip (tip=None leaves it off).
+    Flat bottom and antenna keep it a little creature, never a skull."""
+    c.rect(x + 1, y, w - 2, h, col)
+    c.rect(x, y + 1, w, h - 1, col)
+    ey = y + h // 2
+    ex = x + (w - 3) // 2
+    if shut:
+        c.rect(ex, ey, 3, 1, K)
+    else:
+        c.px(ex, ey, K)
+        c.px(ex + 2, ey, K)
+    if tip:
+        c.px(x + w // 2, y - 1, G)
+        c.px(x + w // 2, y - 2, tip)
+    if feet:
+        c.px(x + 1, y + h, D)
+        c.px(x + w - 2, y + h, D)
+
+
+def _pip_glass():
+    """The dome's pixels and its 1 px glass wall (thick at the crown and lip)."""
+    dome = {(x, y) for y, x0, x1 in PIP_DOME for x in range(x0, x1 + 1)}
+    wall = {(x, y) for (x, y) in dome if y in (1, 10) or
+            any((x + dx, y + dy) not in dome for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)))}
+    return dome, wall
+
+
+PIP_SHINE = ((4, 3), (4, 4), (4, 5), (3, 8), (3, 9), (6, 1), (7, 1), (11, 3))
+
+
+def _pip_glow(c, inside, body, strong=True):
+    """A dark grey halo on the glass's inside round the Pip: solid beside it,
+    half on the diagonals. Dim, it thins to a dither."""
+    for (x, y) in inside:
+        if (x, y) in body:
+            continue
+        d = min(math.hypot(x - bx, y - by) for (bx, by) in body)
+        thr = (16 if strong else 6) if d < 1.1 else (8 if strong else 0) if d < 1.5 else 0
+        if bayer(x, y) < thr:
+            c.px(x, y, D)
+
+
+def _pip_insulator(c, bx, by, strong=True):
+    """Pin, dark glass dome with its wall and shine, glow round a 5x4 Pip whose
+    top-left is (bx, by)."""
+    _pip_mount(c)
+    dome, wall = _pip_glass()
+    for (x, y) in dome:
+        c.px(x, y, K)
+    c.outline(K)
+    for (x, y) in wall:
+        c.px(x, y, G)
+    body = {(x, y) for x in range(bx, bx + 5) for y in range(by, by + 4)} | {(bx + 2, by - 1), (bx + 2, by - 2)}
+    _pip_glow(c, dome - wall, body, strong)
+    for (x, y) in PIP_SHINE:
+        c.px(x, y, W)
+
+
+def pip_trapped(f):
+    """A glass insulator on its pin with a Pip glowing inside. Frame 1 it hops
+    and its antenna taps the glass, frame 2 it drifts a pixel, frame 3 it
+    flickers dim with its eyes shut."""
+    c = C(16, 16)
+    bx, by = 5 + (0, 0, 1, 0)[f], 5 + (0, -1, 0, 0)[f]
+    _pip_insulator(c, bx, by, strong=(f != 3))
+    if f == 1:                             # the shine slides as it knocks the glass
+        c.px(11, 3, G)
+        c.px(11, 4, W)
+    _pip_body(c, bx, by, 5, 4, G if f == 3 else W, shut=(f == 3), tip=G if f == 3 else W)
+    return c
+
+
+# what is left on the pin: the dark lip of the glass with a jagged broken edge
+PIP_RIM = ['...g............',
+           '...gw......g....',
+           '..gdd.g...gdg...',
+           '..gddddddddddg..']
+
+
+def _pip_rim(c):
+    _pip_mount(c)
+    c.art(0, 7, PIP_RIM)
+
+
+def _plus(c, x, y, r, arm=G, mid=W):
+    for k in range(1, r + 1):
+        for (dx, dy) in ((k, 0), (-k, 0), (0, k), (0, -k)):
+            c.px(x + dx, y + dy, arm)
+    c.px(x, y, mid)
+
+
+def pip_break(f):
+    """The glass cracks with light, bursts into shards that fly out and fall,
+    and the Pip flashes white and goes. The last frame is the empty pin and a
+    few falling bits."""
+    c = C(16, 16)
+    if f == 0:
+        _pip_insulator(c, 5, 5)
+        for (x, y) in ((5, 2), (6, 3), (6, 4), (10, 3), (10, 4), (11, 5), (4, 7), (3, 7),
+                       (11, 8), (12, 9), (9, 9), (8, 10)):
+            c.px(x, y, W)                  # cracks full of light
+        _pip_body(c, 5, 5, 5, 4, W, shut=True)
+        c.outline(K)
+        return c
+    _pip_rim(c)
+    _, wall = _pip_glass()
+    rim = {(x, y) for y, row in enumerate(PIP_RIM, 7) for x, ch in enumerate(row) if ch != '.'}
+    if f <= 2:                             # the dome in seven pieces, flying out and falling
+        pieces = (wall | set(PIP_SHINE)) - rim - {(x, 10) for x in range(16)}
+        r = 2 * f
+        for (x, y) in sorted(pieces):
+            if f == 2 and hash2(x, y) % 2:
+                continue
+            ang = math.atan2(y + 0.5 - 6, x + 0.5 - 8)
+            sector = (math.floor((ang + math.pi) / (2 * math.pi) * 7) + 0.5) / 7 * 2 * math.pi - math.pi
+            nx = x + round(math.cos(sector) * r)
+            ny = y + round(math.sin(sector) * r + 0.25 * f * f)
+            shiny = (x, y) in PIP_SHINE or hash2(y, x) % 3 == 0
+            c.px(nx, ny, W if shiny else G)
+    else:                                  # the last bits, near the edges and dropping
+        bits = [((1, 3, G), (14, 2, W), (0, 8, W), (15, 9, G), (2, 13, G), (13, 12, W)),
+                ((0, 7, G), (15, 6, W), (1, 14, W), (14, 15, G))][f - 3]
+        for (x, y, col) in bits:
+            c.px(x, y, col)
+    if f == 1:                             # the Pip flares, eyes squeezed shut
+        for (x, y, col) in ((2, 6, W), (1, 6, G), (12, 6, W), (13, 6, G), (3, 2, W), (2, 1, G),
+                            (11, 2, W), (12, 1, G), (3, 10, W), (11, 10, W)):
+            c.px(x, y, col)
+        _pip_body(c, 5, 4, 5, 5, W, shut=True)
+    elif f == 2:                           # a white star where it was
+        _plus(c, 7, 6, 3, W, W)
+        c.rect(6, 5, 3, 3, W)
+        for (x, y) in ((4, 3), (10, 3), (4, 9), (10, 9)):
+            c.px(x, y, G)
+    elif f == 3:
+        _plus(c, 7, 5, 1, G, W)
+    c.outline(K)
+    return c
+
+
+def pip_empty():
+    """After the rescue: the pin and the jagged lip of broken glass."""
+    c = C(16, 16)
+    _pip_rim(c)
+    c.outline(K)
+    return c
+
+
+def pip_free(f):
+    """The freed Pip, 5x5 in the middle of the frame, antenna tip flickering,
+    fizzing a sparkle trail below it as it zips up and away."""
+    c = C(16, 16)
+    _pip_body(c, 5, 5, 5, 5, W, tip=(W, G, W, G)[f])
+    c.outline(K)
+    trail = [((7, 12, W), (6, 12, G), (8, 12, G), (7, 13, G), (7, 15, G)),
+             ((8, 12, G), (6, 13, W), (8, 15, G)),
+             ((7, 12, W), (7, 13, G), (8, 14, W), (6, 15, G)),
+             ((6, 12, G), (8, 13, W), (7, 15, W))][f]
+    for (x, y, col) in trail:
+        c.px(x, y, col)
+    return c
+
+
+def pip_hop(f):
+    """A rescued Pip bouncing on the spot, feet on the frame's bottom row:
+    stand, squash, spring up stretched, come down."""
+    c = C(16, 16)
+    x, y, w, h = [(5, 10, 5, 5), (4, 11, 7, 4), (5, 7, 5, 6), (5, 9, 5, 5)][f]
+    _pip_body(c, x, y, w, h, W, feet=True)
+    c.outline(K)
+    if f == 2:                             # a happy fizz by its antenna at the top of the hop
+        c.px(10, 4, W)
+        c.px(11, 3, G)
+    return c
+
+
+def build_pips():
+    sheet('pip', 16, 16, [
+        A('trapped', [pip_trapped(f) for f in range(4)], [0.3, 0.12, 0.3, 0.12],
+          note='a Pip caught in a glass insulator: rest, hop (antenna taps the glass), drift, dim flicker. '
+               'Its 5x4 body is x 5 to 9, y 5 to 8, so its centre is (7.5, 7) from the frame top-left. '
+               'The dome is x 2 to 13, y 1 to 10, the pin and crossarm stub below it to row 14'),
+        A('break', [pip_break(f) for f in range(5)], 0.05, loop=False,
+          note='touched: the glass cracks with light, bursts, the Pip flashes white and is gone, the last '
+               'bits fall. Then show empty and send a free Pip up from the same centre'),
+        A('empty', [pip_empty()], 0, note='the pin and the jagged dark lip of broken glass, after the rescue'),
+        A('free', [pip_free(f) for f in range(4)], 0.08,
+          note='the freed Pip zipping home. 5x5 body at x 5 to 9, y 5 to 9 (centre (7.5, 7.5)), antenna tip '
+               'flickering, a sparkle trail below it. Move it in code'),
+        A('hop', [pip_hop(f) for f in range(4)], 0.12,
+          note='a rescued Pip bouncing in the village: stand, squash, spring up, come down. Feet on the '
+               'bottom row, centred on x 7.5. Start each Pip on a different frame so a crowd is not in step'),
+    ], "Pips: tiny sparks of signal, the Spark's small cousins, caught in the old glass insulators when "
+       'the line was cut. Top-left on the tile top-left, like a shard. They float, so the pin needs no pole. '
+       'Boxy white body, flat underneath, two dot eyes and a one-pixel antenna, so they never read as enemies.')
+
+
 # =================================================================== enemies
 
 def static_body(c, x0, y0, w, h, f, eye_side=-1, eye=(3, 3), eye_mode='open', flash=False, round_=2):
@@ -6657,6 +6877,7 @@ def main():
     build_dropper()
     build_switches()
     build_pickups()
+    build_pips()
     build_enemies()
     build_markers()
     build_backdrop()

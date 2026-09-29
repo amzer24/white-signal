@@ -23,8 +23,19 @@ Prices are in shards.
 |---|---|---|
 | Extra life | 40 | One more life |
 | Charged start | 25 | The next level starts with CHARGE on |
-| Shard compass | 80 | Kept for good. A blinking diamond at the screen edge points to the nearest big shard you haven't found. |
 | Lantern | 60 | Kept for good. Your light reaches much further in dark stretches. |
+
+## Dot and the Pips
+
+Dot stands beside the switchboard. Every Pip you free flies home to her, and the Pips gather there as a little crowd. Talk to her to collect a gift when enough are home. Each gift is given once and kept through New Game, like the Pips.
+
+| Pips home | Gift |
+|---|---|
+| 5 | An extra life |
+| 10 | The Pip tuner: a blinking diamond at the screen edge points to the nearest Pip still trapped |
+| 18 | Every game starts with one more life |
+| 27 | Every game starts with another life |
+| All 35 | Her thanks, and the promise that the Pips will answer the caller with the Spark (for the ending) |
 
 ## The people and the story
 
@@ -36,7 +47,7 @@ The call comes from past the gates. Each listener you meet out on the line goes 
 | Tally | The shop | The trader |
 | Wren | 1-2 | The call isn't static, it's words. After World 2 she hears it: "SPARK. COME HOME." |
 | Brace | 1-4 | Why the old crews cut the lines: to stop the noise spreading |
-| Dot | 2-3 | Explains the channel switches, then runs the switchboard |
+| Dot | The village, at the switchboard | Keeps the Pips, gives the gifts and runs the switchboard |
 | Hum | 2-4 | Asks you to blow the relay's three fuses so it can rest |
 
 All the lines are in `levels/story/npcs.json`. Each person has a `show` rule for each level they appear in and a list of `talk` entries. The game uses the first entry whose `when` rule holds. The rules use flags: `met_<id>` is set by talking to someone, and `w1_clear` and `w2_clear` are set by clearing a world. Flags, shop items and the charged start are saved in the progress file.

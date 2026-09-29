@@ -873,6 +873,66 @@ const SHEETS := {
 			}
 		}
 	},
+	"pip": {
+		"file": "pip.png",
+		"fw": 16,
+		"fh": 16,
+		"anims": {
+			"trapped": {
+				"row": 0,
+				"frames": 4,
+				"dur": [
+					0.3,
+					0.12,
+					0.3,
+					0.12
+				],
+				"loop": true
+			},
+			"break": {
+				"row": 1,
+				"frames": 5,
+				"dur": [
+					0.05,
+					0.05,
+					0.05,
+					0.05,
+					0.05
+				],
+				"loop": false
+			},
+			"empty": {
+				"row": 2,
+				"frames": 1,
+				"dur": [
+					0
+				],
+				"loop": true
+			},
+			"free": {
+				"row": 3,
+				"frames": 4,
+				"dur": [
+					0.08,
+					0.08,
+					0.08,
+					0.08
+				],
+				"loop": true
+			},
+			"hop": {
+				"row": 4,
+				"frames": 4,
+				"dur": [
+					0.12,
+					0.12,
+					0.12,
+					0.12
+				],
+				"loop": true
+			}
+		}
+	},
 	"walker": {
 		"file": "walker.png",
 		"fw": 16,

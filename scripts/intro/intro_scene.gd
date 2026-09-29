@@ -20,15 +20,15 @@ const GAP := Vector2(203, 220)   # where the crew cut the line (card 4)
 ## Each card: text, length, when the text comes and goes, and its act (tint).
 const CARDS := [
 	{"lines": ["ONE LINE RAN ACROSS THE WHOLE LAND", "JOINING EVERY RELAY AND EVERY GATE"], "dur": 6.0, "in": 0.8, "out": 5.6, "act": "amber"},
-	{"lines": ["THE RELAYS CARRIED EVERY VOICE ALONG", "SO NO ONE WAS EVER TOO FAR AWAY"], "dur": 6.0, "in": 0.8, "out": 5.6, "act": "amber"},
+	{"lines": ["LITTLE PIPS OF SIGNAL CARRIED EVERY VOICE", "SO NO ONE WAS EVER TOO FAR AWAY"], "dur": 6.0, "in": 0.8, "out": 5.6, "act": "amber"},
 	{"lines": ["THEN A HOWLING NOISE FILLED THE LINE", "AND SPREAD FROM STATION TO STATION"], "dur": 6.0, "in": 0.8, "out": 5.6, "act": "grey"},
 	{"lines": ["SO THE CREWS CUT THE LINE APART", "ONE STATION AFTER ANOTHER"], "dur": 6.0, "in": 0.8, "out": 5.6, "act": "grey"},
-	{"lines": ["THE NOISE STOPPED . SO DID THE VOICES", "EACH STATION ALONE IN THE QUIET"], "dur": 7.0, "in": 2.0, "out": 6.4, "act": "grey"},
+	{"lines": ["THE NOISE STOPPED . SO DID THE VOICES", "AND THE PIPS WERE CAUGHT IN THE GLASS"], "dur": 7.0, "in": 2.0, "out": 6.4, "act": "grey"},
 	{"lines": ["AT THE END OF ONE CUT WIRE", "A TINY SPARK OF SIGNAL LAY SLEEPING"], "dur": 6.0, "in": 0.8, "out": 5.6, "act": "blue"},
 	{"lines": ["UNTIL ONE NIGHT THE DEAD LINE RANG", "ONCE . TWICE . THREE TIMES"], "dur": 7.0, "in": 0.6, "out": 6.6, "act": "blue"},
 	{"lines": ["NOTHING SHOULD RING ON A DEAD LINE", "BUT SOMEONE IS STILL CALLING"], "dur": 6.0, "in": 0.8, "out": 5.6, "act": "blue"},
 	{"lines": ["IT FOLLOWED THE WIRE TO THE LAST LIGHT", "A HILLTOP STATION CALLED LAST RELAY"], "dur": 6.0, "in": 0.8, "out": 5.6, "act": "warm"},
-	{"lines": ["FOLLOW THE LINE AND LIGHT THE GATES", "TO FIND WHO IS ON THE OTHER END"], "dur": 7.0, "in": 1.0, "out": 6.6, "act": "warm"},
+	{"lines": ["FREE THE PIPS AND LIGHT THE GATES", "TO FIND WHO IS ON THE OTHER END"], "dur": 7.0, "in": 1.0, "out": 6.6, "act": "warm"},
 ]
 const TINT_OF := {"amber": "2", "grey": "test", "blue": "1", "warm": "village"}
 const FADE_IN := [0, 4, 5, 8, 9]            # cards (0-based) that fade up from black
@@ -624,7 +624,10 @@ func _land(cam: float, state: String) -> void:
 	# the wire
 	if state == "dead":
 		_dead_wire(cam)
+		_trapped_pips(cam)
 	else:
+		if state == "alive":
+			_wire_pips(cam)
 		var nx := _noise_x()
 		var last := Vector2(-1.0, _sag(-1.0 + cam - hx))
 		for sxi in range(0, int(vw) + 1):
@@ -653,6 +656,29 @@ func _land(cam: float, state: String) -> void:
 					draw_rect(Rect2(sx2 - 8.0 + float(h % 16), _sag(nx) - 4.0 + float((h >> 4) % 8), 2, 1), DrawUtil.WHITE)
 		if card == 3 and ct >= 1.25 and ct < 1.4 and _has("arc_hit"):
 			sh.draw_anim(self, "arc_hit", "hit", ct - 1.25, Vector2(hx + 212.0 - 8.0, 182.0))
+
+
+## Card 1: Pips running along the living wire, each carrying a voice.
+func _wire_pips(cam: float) -> void:
+	if not _has("pip"):
+		return
+	for k in 5:
+		var colx := fposmod(clock * 70.0 + k * 131.0, vw + 80.0) - 40.0 - hx + cam
+		var sx := hx + colx - cam
+		sh.draw_anim(self, "pip", "free", clock + k * 0.3, Vector2(floorf(sx - 8.0), floorf(_sag(colx)) - 9.0))
+
+
+## Card 5: after the cut, the Pips are caught in the glass of the dead poles,
+## glowing faintly and flickering.
+func _trapped_pips(cam: float) -> void:
+	if not _has("pip"):
+		return
+	var first := -ceilf((hx + 40.0) / POLE_GAP)
+	for k in range(int(first), int(first) + int(vw / POLE_GAP) + 3):
+		var sx := hx + 40.0 + POLE_GAP * k - cam
+		if posmod(k, 2) == 0 and ct > 3.0:   # as the second line types
+			var dim := Color(1, 1, 1, clampf((ct - 3.0) / 0.8, 0.0, 1.0))
+			sh.draw_anim(self, "pip", "trapped", ct + k * 0.4, Vector2(floorf(sx + 20.0 - 8.0), WIRE_Y - 15.0), false, dim)
 
 
 func _sag(colx: float) -> float:
@@ -727,8 +753,12 @@ func _relay_station() -> void:
 	elif ct >= 3.3 and ct < 4.9:
 		bx = lerpf(240.0, 500.0 + hx, (ct - 3.3) / 1.6)
 	if bx > -9000.0 and ct >= 1.5 and ct < 4.9 and not (ct >= 3.0 and ct < 3.3):
-		draw_rect(Rect2(floorf(hx + bx - 8.0), 142.0, 6.0, 1.0), DrawUtil.GRAY)
-		draw_rect(Rect2(floorf(hx + bx - 2.0), 142.0, 3.0, 1.0), DrawUtil.WHITE)
+		# a Pip carrying the voice along the cable, a short trail behind it
+		draw_rect(Rect2(floorf(hx + bx - 12.0), 142.0, 6.0, 1.0), DrawUtil.GRAY)
+		if _has("pip"):
+			sh.draw_anim(self, "pip", "free", ct, Vector2(floorf(hx + bx - 8.0), 142.0 - 9.0))
+		else:
+			draw_rect(Rect2(floorf(hx + bx - 2.0), 142.0, 3.0, 1.0), DrawUtil.WHITE)
 
 
 # ---------------------------------------------------------------- cards 6 to 8: the close-up

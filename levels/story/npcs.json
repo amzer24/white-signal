@@ -1,5 +1,5 @@
 {
-  "_about": "Who lives where, and what they say. 'show' maps a level to a condition; 'talk' is checked top to bottom and the first entry whose 'when' holds is used. Conditions are flag names joined by '&', with '!' for not. Flags: met_<id> (set by talking), told_arc, w1_clear to w3_clear, clear_<level> (set by the game). 'set' flags are set when the conversation ends. 'shop' opens the shop after the lines.",
+  "_about": "Who lives where, and what they say. 'show' maps a level to a condition; 'talk' is checked top to bottom and the first entry whose 'when' holds is used. Conditions are flag names joined by '&', with '!' for not. Flags: met_<id> (set by talking), told_arc, w1_clear to w3_clear, clear_<level> (set by the game). A person with 'gifts' keeps the Pips (Dot): each gift is given once when that many Pips are home ('at' -1 means all of them), and a 'progress' line says how many are home ({home}, {total}, {need}). 'set' flags are set when the conversation ends. 'shop' opens the shop after the lines.",
   "mast": {
     "name": "OLD MAST",
     "show": {"village": ""},
@@ -9,7 +9,8 @@
         "THIS IS *LAST RELAY*, THE ONLY STATION STILL HUMMING ANYWHERE ON THE LINE AFTER ALL THESE YEARS.",
         "SOMEBODY OUT THERE KEEPS CALLING US, THREE RINGS AND THEN A VOICE THAT NONE OF US CAN UNDERSTAND.",
         "THE CALL COMES FROM PAST THE GATES, AND THE GATES ONLY OPEN FOR SIGNAL, NEVER FOR LISTENERS LIKE US.",
-        "BUT YOU'RE A SPARK, MADE OF SIGNAL YOURSELF, SO FOLLOW THE LINE AND DISCOVER WHO IS CALLING."
+        "BUT YOU'RE A SPARK, MADE OF SIGNAL YOURSELF, SO FOLLOW THE LINE AND DISCOVER WHO IS CALLING.",
+        "AND IF YOU HEAR A TINY VOICE IN THE GLASS ON THE POLES, THAT'S A *PIP*. DOT AT THE SWITCHBOARD WILL WANT IT HOME."
       ]},
       {"when": "w1_clear&!told_arc", "set": ["told_arc"], "lines": [
         "WHEN THE GATE LIT UP, SOME OF ITS ENERGY JUMPED ONTO YOU, AND IT'S STILL CRACKLING AROUND YOU NOW.",
@@ -104,19 +105,45 @@
   },
   "dot": {
     "name": "DOT",
-    "show": {"2-3": "!met_dot", "village-radio": "met_dot"},
+    "show": {"village": ""},
     "talk": [
       {"when": "!met_dot", "set": ["met_dot"], "lines": [
-        "BLINK, BLINK! THAT'S HOW WE SAID HELLO ON THE SWITCHBOARD, BACK WHEN I CONNECTED EVERY CALL.",
-        "ONE *CHANNEL* OR THE OTHER, NEVER BOTH. BUMP A *SWITCH* AND THE WHOLE WORLD CHANGES SHAPE.",
-        "THE SEE-THROUGH BLOCKS BELONG TO THE OTHER CHANNEL, AND ONE BUMP MAKES THEM SOLID UNDER YOUR FEET.",
-        "I OPERATED THE SWITCHBOARD AT LAST RELAY ONCE, AND MAYBE IT'S TIME I WENT HOME AND DID IT AGAIN."
+        "BLINK, BLINK! THAT'S HOW WE SAID HELLO ON THE SWITCHBOARD. I'M DOT, AND I CONNECTED EVERY CALL ON THE LINE.",
+        "EVERY VOICE WAS CARRIED BY A *PIP*, A TINY SPARK OF SIGNAL. A BIT LIKE YOU, ONLY MUCH SMALLER.",
+        "WHEN THE CREWS CUT THE LINE, MY PIPS WERE CAUGHT IN THE GLASS ON THE OLD POLES, AND THEY'RE STILL THERE.",
+        "LISTEN FOR THEM CALLING. TOUCH THE GLASS TO SET ONE FREE, AND IT WILL COME STRAIGHT HOME TO ME.",
+        "BRING ENOUGH OF THEM HOME AND I'LL HAVE SOMETHING FOR YOU. MY *SWITCHBOARD* CAN ALSO SEND YOU ANYWHERE YOU'VE BEEN."
+      ]},
+      {"when": "w3_clear", "lines": [
+        "THE PIPS HAVE BEEN WHISPERING ALL NIGHT. THEY SAY THE CALL COMES FROM A PLACE WITH NO LIGHT AT ALL."
       ]},
       {"when": "", "lines": [
-        "BLINK, BLINK! THE *SWITCHBOARD* OUTSIDE IS LIVE AGAIN, AND I'M THE ONE OPERATING IT.",
-        "PICK ANY STRETCH OF LINE YOU'VE VISITED BEFORE, AND I'LL PATCH YOU STRAIGHT THROUGH."
+        "BLINK, BLINK! THE PIPS YOU FREED ARE HELPING ME CONNECT THE VILLAGE AGAIN, ONE LITTLE CALL AT A TIME."
       ]}
-    ]
+    ],
+    "gifts": [
+      {"at": 5, "id": "life", "lines": [
+        "FIVE PIPS HOME ALREADY! HERE, TAKE THIS SPARE CELL. IT'S AN *EXTRA LIFE*."
+      ]},
+      {"at": 10, "id": "tuner", "lines": [
+        "TEN PIPS! TAKE MY OLD *PIP TUNER*. OUT ON THE LINE IT POINTS TO THE NEAREST PIP STILL TRAPPED."
+      ]},
+      {"at": 18, "id": "heart1", "lines": [
+        "EIGHTEEN! THE PIPS WANT TO KEEP YOU SAFE, SO FROM NOW ON YOU START EVERY GAME WITH *ONE MORE LIFE*."
+      ]},
+      {"at": 27, "id": "heart2", "lines": [
+        "TWENTY-SEVEN! LISTEN TO THEM CHEER. THAT'S *ANOTHER LIFE* TO START EVERY GAME WITH."
+      ]},
+      {"at": -1, "id": "all", "lines": [
+        "EVERY SINGLE PIP IS HOME. I NEVER THOUGHT I'D HEAR THIS SWITCHBOARD SO FULL AGAIN.",
+        "WHEN YOU REACH THE CALLER AT LAST, WE'LL ALL ANSWER TOGETHER. YOU WON'T BE ALONE."
+      ]}
+    ],
+    "progress": {
+      "next": "{home} OF {total} PIPS ARE HOME. BRING ME {need} MORE AND I'LL HAVE ANOTHER GIFT FOR YOU.",
+      "rest": "{home} OF {total} PIPS ARE HOME. LISTEN FOR THE REST, STILL CALLING IN THE GLASS.",
+      "all": "ALL {total} PIPS ARE HOME. THANK YOU, LITTLE SPARK."
+    }
   },
   "hum": {
     "name": "HUM",

@@ -10,7 +10,7 @@ It is a classic Mario-style platformer: short levels, lives, a timer, shards to 
 
 **Pillars**
 
-- **P1 Dead simple, hard to master.** Run, jump, dash, stomp. Every level can be finished by anyone. The big shards and best times are for experts.
+- **P1 Dead simple, hard to master.** Run, jump, dash, stomp. Every level can be finished by anyone. The Pips and best times are for experts.
 - **P2 One new idea at a time.** Each level introduces one thing on its own, safely, before it's combined with anything else.
 - **P3 Every level is proven.** A checker plays each level with the game's own physics and proves it can be finished, and that every shard can be reached.
 - **P4 Quiet, lonely, hopeful.** Four greys, a tint per world, 8-bit music. The Spark is the only pure white thing in the story.
@@ -27,13 +27,13 @@ It is a classic Mario-style platformer: short levels, lives, a timer, shards to 
 | World 3: The Aerials | Built and proven. 4 levels, a tall finale |
 | World 4: Dead Air | Planned only |
 | The ending | Not written |
-| Big shards | Collected and counted, but they don't do anything yet (see Q1) |
+| Pips | Built. Tiny sparks trapped in glass in every level. Dot keeps them in Last Relay and gives gifts as they come home |
 
 The earlier exploration mode and the Classic arcade run were removed from the project on 27 Sep 2026. Git keeps them under the tag `legacy-archive`.
 
 ## 3. Story
 
-The full arc, the style guide for game text and the proposals for World 4 and big shards are in `docs/story/story-arc.md`.
+The full arc, the style guide for game text and the proposals for World 4 are in `docs/story/story-arc.md`.
 
 **The world.** One line once ran across the whole land, relay to relay, gate to gate, and it carried everyone's voices. Then a howling noise came down the line. The crews cut the line apart, one station at a time, to stop it spreading. The noise stopped, and so did the voices. The years since are called the Quiet.
 
@@ -90,12 +90,12 @@ Every key can be remapped in Settings.
 | Lives | Start with 5. Game over sends you back to Last Relay |
 | Timer | 300 seconds a level. Run out and you lose a life |
 | Shards | Collected everywhere. They are Tally's currency, so passing 100 no longer resets them. Every 100 collected also gives a free life, with a message on screen. A game over empties them |
-| Big shards | 3 hidden in most levels (2 in 2-2, 2-3 and 2-4). Counted per level, kept across new games |
+| Pips | 3 in most levels (2 in 2-2, 2-3 and 2-4), plus one in the training yard and one in the bonus room: 35 in all. A Pip is a tiny spark of signal trapped in a glass insulator. It calls out when you are near, and touching the glass sets it free. Kept across new games |
 | CHARGE | The one power-up. Survives one hit, and breaks bricks when you bump them |
 | Blocks | Bump blocks give shards, CHARGE or a life. Hidden blocks give lives or 5 shards. Bumping a block knocks out an enemy standing on it |
 | Checkpoint | One midway beacon per level |
 | Goal | A mast. The higher you touch it, the bigger the bonus |
-| Saving | Automatic at the start of every level, and on Save and Quit. New Game restarts the story but keeps big shards and best times |
+| Saving | Automatic at the start of every level, and on Save and Quit. New Game restarts the story but keeps the Pips, Dot's gifts and best times |
 
 ## 5. Structure
 
@@ -112,7 +112,8 @@ A warm village, the last station on the line that still hums. **Look:** warm win
 | Place | What's there |
 |---|---|
 | The street | Old Mast, the switchboard (pick any level you've reached), the signpost (next level), Spire after World 3 |
-| Tally's | The shop: extra life 40, charged start 25, shard compass 80 (points to missing big shards), lantern 60 (see further in the dark) |
+| Tally's | The shop: extra life 40, charged start 25, lantern 60 (see further in the dark) |
+| Dot | Keeps the Pips beside the switchboard, where they gather as a crowd. Gifts, each given once: an extra life (5 Pips), the Pip tuner that points to the nearest trapped Pip (10), one more starting life (18), another (27), and a thank-you that sets up the ending (all 35) |
 | The radio shack | Wren and the listeners you've met, and the call as it's pieced together |
 
 No timer and no lives lost here. Design: `docs/levels/village.md`.
@@ -137,7 +138,7 @@ A dead relay yard where the line splits into two channels. **Look:** sodium ambe
 
 | Level | Name | New idea | Notes |
 |---|---|---|---|
-| 2-1 | Rail Hoppers | Hoppers (jump on a beat), the Arc | Opens with the cracked-wall shed that teaches the Arc. Chain-stomp three hoppers for a big shard |
+| 2-1 | Rail Hoppers | Hoppers (jump on a beat), the Arc | Opens with the cracked-wall shed that teaches the Arc. Chain-stomp three hoppers for a Pip |
 | 2-2 | Spiked Line | Spiked walkers | Can't be stomped: bump them from below, crush them, or Arc them from the side |
 | 2-3 | Channels | Channel switches | Only one channel of blocks is solid at a time. Meet Dot |
 | 2-4 | The Relay | The relay (boss) | It swaps the channels on a beat. Blow its fuses. Meet Hum |
@@ -165,7 +166,7 @@ The deep exchange under the network. The caller is close. **Planned new ideas:**
 
 - **Cracked walls** (`%`). A shed or wall you can only open with the Arc, hiding shards. One in every World 2 and 3 level.
 - **Hidden blocks.** Two in most World 1 and 2 levels (one in 2-1), giving 5 shards or a life. World 3 has none yet.
-- **Big shards.** Off the main route, often needing a skill move.
+- **Pips.** Off the main route, often needing a skill move. A trapped Pip calls out when you're near, so players can hunt by ear.
 
 ## 7. Presentation
 
@@ -181,11 +182,11 @@ Levels are text files, one character per tile (legend in `tools/levels/levelkit.
 
 ## 9. Open decisions
 
-- **Q1 What do big shards do?** Options: tune Wren's radio to hear more of the call (recommended), unlock a secret level per world, buy special stock from Tally, or stay pure collectibles.
+- **Q1 What do big shards do?** Decided 29 Sep 2026: they became the Pips, kept by Dot (see above).
 - **Q2 One caller or many?** One design note says the last world ends with "the other spark". Wren's last line says there's more than one of them. World 4 must settle it.
 - **Q3 World 4.** The design needs approval before it's built.
 - **Q4 The ending.** What happens at the last Gate.
-- **Q5 Big shard counts.** 2-2, 2-3 and 2-4 have 2 big shards, not 3.
+- **Q5 Pip counts.** 2-2, 2-3 and 2-4 have 2 Pips, not 3.
 - **Q6 Name.** White Signal is kept for now. "The Signal" was considered and set aside because it's hard to find in searches.
 
 ## 10. Where things live

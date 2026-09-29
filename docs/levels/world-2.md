@@ -28,7 +28,7 @@ World 2 levels are two screens tall (34 rows), with ground at row 31. Any multip
 - A: a hopper in a pen.
 - B: a girder ladder, with a hopper on one rung, up to a tower roof.
 - C: across tower tops of different heights. If you fall, you land on the ground level below and climb a ladder back up.
-- D: the midway beacon on the roof, and three hoppers to chain-stomp for a big shard. Before the roof there's a girder shaft. Hold Down and jump to drop to its floor, where a hidden block (tile `i`) gives 5 shards. Then climb back up the girders. Added 26 Sep 2026.
+- D: the midway beacon on the roof, and three hoppers to chain-stomp for a Pip. Before the roof there's a girder shaft. Hold Down and jump to drop to its floor, where a hidden block (tile `i`) gives 5 shards. Then climb back up the girders. Added 26 Sep 2026.
 - E: drop to the ground, then knock a hopper off its blocks.
 - F: the staircase and the mast.
 
@@ -36,7 +36,7 @@ World 2 levels are two screens tall (34 rows), with ground at row 31. Any multip
 - A: a spiked walker on bump blocks. Bump it from below.
 - B: two on the roof. Jump over them.
 - C: the roof is loose floor. It falls under you and the pieces crush the spiked walkers on the floor below.
-- D: the midway beacon, a CHARGE, and a raised row of bump blocks with a spiked walker on it, guarding a big shard.
+- D: the midway beacon, a CHARGE, and a raised row of bump blocks with a spiked walker on it, guarding a Pip.
 - E: climb steps of bump blocks, knocking each spiked walker off from the step below.
 - F: the mast on a roof.
 
@@ -68,7 +68,7 @@ More hidden shard blocks (26 Sep 2026): 2-2 (62,17) and (145,16); 2-3 (7,27) beh
 
 This is all look and sound, so the proofs ignore it.
 - **Colour per world:** the art is still drawn in four greys, and a screen pass (`shaders/world1/world_fx.gdshader`) maps them onto each world's four colours. World 1 is cold blue-grey and World 2 is sodium amber. The test room stays grey.
-- **Dark stretches:** a level header line `dark: 60-89` makes those columns dark except near a light. Lights are the Spark, lit lamps, live fuses, the relay and big shards. Lamps (`J`) light up when you pass them and stay lit. They're used in 1-4 (the shaft and the dropper hall), 2-2 (the building) and 2-4 (the relay hall).
+- **Dark stretches:** a level header line `dark: 60-89` makes those columns dark except near a light. Lights are the Spark, lit lamps, live fuses, the relay and Pips. Lamps (`J`) light up when you pass them and stay lit. They're used in 1-4 (the shaft and the dropper hall), 2-2 (the building) and 2-4 (the relay hall).
 - **Weather:** `weather: rain` or `weather: static` sets the weather, and `lightning: yes` adds lightning. Lightning follows the reduced-flashes setting, which is on by default.
 - **Fog** drifts along the bottom of tall levels.
 - **Ambience:** each world has its own background loop (`amb_w1` and `amb_w2`).
@@ -77,9 +77,9 @@ This is all look and sound, so the proofs ignore it.
 
 - **Pause** with Esc, P or Start. The menu has Resume, Restart Level, Level Select, Settings and Save and Quit.
   - Settings covers music and effects volume, the screen filter, screen shake, flashes and fullscreen.
-  - Level Select lists the levels you've reached, with the big shards found in each.
+  - Level Select lists the levels you've reached, with the Pips freed in each.
   - The number keys 0 to 8 still jump to any level, for testing.
-- **Saving:** the game saves automatically at the start of every level, and Save and Quit saves too. The title screen's PLAY opens Continue or New Game. A new game keeps big shards and best times.
+- **Saving:** the game saves automatically at the start of every level, and Save and Quit saves too. The title screen's PLAY opens Continue or New Game. A new game keeps Pips and best times.
 - Progress lives in `user://w1_progress.json`. Captures and tests use their own file.
 
 ## Not done yet

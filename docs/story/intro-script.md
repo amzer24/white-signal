@@ -18,16 +18,16 @@ A small spark of signal wakes when a line that has been dead for years starts ri
 
 | # | Image | Text | Feeling | Seconds |
 |---|---|---|---|---|
-| 1 | One wire on poles runs across a flat, dark land. A small light sits at every station along it, all lit. | ONE LINE RAN ACROSS THE WHOLE LAND<br>JOINING EVERY RELAY AND EVERY GATE | Calm, wide, a little old | 6 |
-| 2 | A relay tower with a lit window. A tiny listener sits at its base, and a pulse of light travels along the wire past them. | THE RELAYS CARRIED EVERY VOICE ALONG<br>SO NO ONE WAS EVER TOO FAR AWAY | Warm, safe | 6 |
+| 1 | One wire on poles runs across a flat, dark land. A small light sits at every station along it, all lit, and little Pips run along the wire. | ONE LINE RAN ACROSS THE WHOLE LAND<br>JOINING EVERY RELAY AND EVERY GATE | Calm, wide, a little old | 6 |
+| 2 | A relay tower with a lit window. A tiny listener sits at its base, and a Pip, a tiny spark carrying a voice, runs along the cable past them. | LITTLE PIPS OF SIGNAL CARRIED EVERY VOICE<br>SO NO ONE WAS EVER TOO FAR AWAY | Warm, safe | 6 |
 | 3 | A scribble of white static crawls along the wire from the right. The station lights behind it go out one by one. | THEN A HOWLING NOISE FILLED THE LINE<br>AND SPREAD FROM STATION TO STATION | Unease | 6 |
 | 4 | A listener in a crew coat pulls a big handle. The wire snaps apart in front of the static, which stops at the gap. | SO THE CREWS CUT THE LINE APART<br>ONE STATION AFTER ANOTHER | Sad, but a choice made for good reasons | 6 |
-| 5 | The same wide land as card 1, now all dark. Poles lean. The wire hangs in pieces. No sound. | THE NOISE STOPPED . SO DID THE VOICES<br>EACH STATION ALONE IN THE QUIET | Lonely. The low point. | 7 |
+| 5 | The same wide land as card 1, now all dark. Poles lean. The wire hangs in pieces. No sound. As the second line types, Pips glow faintly in the glass insulators, trapped. | THE NOISE STOPPED . SO DID THE VOICES<br>AND THE PIPS WERE CAUGHT IN THE GLASS | Lonely. The low point. | 7 |
 | 6 | Close up. A cut wire end lies in the grass. At its tip, a tiny white spark is curled up and barely glowing. | AT THE END OF ONE CUT WIRE<br>A TINY SPARK OF SIGNAL LAY SLEEPING | Tender, small | 6 |
 | 7 | The same close up. Three rings of light travel down the dead wire toward the Spark, one per ring. A phone ring sound plays with each. | UNTIL ONE NIGHT THE DEAD LINE RANG<br>ONCE . TWICE . THREE TIMES | Surprise. Hold your breath. | 7 |
 | 8 | The Spark flares bright and sits up. Its glow lights the wire for a few tiles in both directions. | NOTHING SHOULD RING ON A DEAD LINE<br>BUT SOMEONE IS STILL CALLING | Wonder. This echoes the title tagline. | 6 |
 | 9 | Wide shot at night. The Spark, a small dot, follows the wire up a slope toward one lit window on a hill. A lantern comes down the path to meet it. | IT FOLLOWED THE WIRE TO THE LAST LIGHT<br>A HILLTOP STATION CALLED LAST RELAY | Relief, company | 6 |
-| 10 | From Last Relay's window, the line runs east into the dark, past a gate on the horizon. Very far off, one tiny light blinks. | FOLLOW THE LINE AND LIGHT THE GATES<br>TO FIND WHO IS ON THE OTHER END | Hope, with a question left open | 7 |
+| 10 | From Last Relay's window, the line runs east into the dark, past a gate on the horizon. Very far off, one tiny light blinks. | FREE THE PIPS AND LIGHT THE GATES<br>TO FIND WHO IS ON THE OTHER END | Hope, with a question left open | 7 |
 
 Total: about 63 seconds. Every line is 38 characters or fewer.
 
@@ -62,13 +62,9 @@ Last Relay is the last station that still hums. Old Mast, Tally and the others w
 
 The caller rings three times, then speaks. Its words become clear world by world. Who they are, and what "home" means, stay secret until World 4.
 
-## PROPOSAL: what big shards could do (Lee hasn't decided)
+## The Pips (decided 29 Sep 2026)
 
-1. Big shards are pieces of the call that broke off when the line was cut. That fits Wren's "it keeps breaking off" and Tally's "proper signal".
-2. Bring them to Wren in the radio shack and she tunes them in.
-3. Every 3 big shards unlock one short extra fragment of the call, like a background sound, a second voice or a half sentence.
-4. The fragments hint at the caller without saying who it is, so they reward searching and never block the main story.
-5. Finding all of a world's big shards gives that world's fragment in full, and the full set might hint at what "home" means before World 4.
+Big shards became the Pips: tiny sparks that carried every voice, caught in the glass when the line was cut. Cards 1, 2, 5 and 10 introduce them. The full picture is in `docs/story/story-arc.md`, section 5.
 
 ## Canon problems found while writing
 

@@ -2,7 +2,7 @@
 
 A small spark of signal wakes when a dead line starts ringing, and follows it, gate by gate, to find out who is still calling.
 
-A classic Mario-style pixel platformer for ages 10 and up. Short levels, lives, a timer, shards to collect and a mast at the end of every level. Between worlds you return to **Last Relay**, a village whose people carry the story.
+A classic Mario-style pixel platformer for ages 10 and up. Short levels, lives, a timer, shards to collect, little Pips to rescue from the glass and a mast at the end of every level. Between worlds you return to **Last Relay**, a village whose people carry the story, where Dot looks after every Pip you bring home.
 
 ![Title screen](screenshots/title.png)
 ![Last Relay](screenshots/last-relay.png)
@@ -62,6 +62,7 @@ godot --headless --path . --script res://scripts/world1/w1_village_test.gd
 godot --headless --path . --script res://scripts/world1/w1_arc_test.gd
 godot --headless --path . --script res://scripts/title/title_test.gd
 godot --headless --path . --script res://scripts/intro/intro_test.gd
+godot --headless --path . --script res://scripts/world1/w1_pips_test.gd
 ```
 
 Tests use their own save files under `test-user/`, never the player's save.

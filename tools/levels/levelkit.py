@@ -38,7 +38,7 @@ LEGEND = {
     'S': 'spring',
     'R': 'lift ring (refills dash and pops you upward)',
     'o': 'shard',
-    'O': 'big shard (3 hidden per level)',
+    'O': 'Pip in glass (3 hidden per level; the rules still call it a big shard)',
     'w': 'walker',
     'k': 'hopper',
     'W': 'warden (world boss, 2x2)',

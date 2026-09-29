@@ -112,9 +112,9 @@ func _run() -> void:
 	check(game.lives == 6 and game.shards == 10, "buying an extra life costs 40 shards")
 	await tap_jump()
 	check(game.lives == 6 and game.shards == 10, "no sale without enough shards")
-	for i in 4:
+	for i in game.SHOP.size():
 		await tap_down()
-	check(game.shop_sel == 4, "Down moves to LEAVE")
+	check(game.shop_sel == game.SHOP.size(), "Down moves to LEAVE")
 	await tap_jump()
 	check(game.state == "play", "LEAVE closes the shop")
 	await walk_to(3)

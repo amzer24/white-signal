@@ -1,6 +1,6 @@
 # 8-bit sound set (sfx8)
 
-132 sounds for the platformer rework: 53 for World 1, 10 for World 2, 5 for World 3, 7 for ambience, weather, lamps and menus, 15 for the Last Relay hub village, 14 music loops for the levels, 10 for the title screen and its menus, 5 for the Arc, and 13 for the story intro (the last eight groups are listed below). Every sound is made only from the four voices of the NES sound chip, so the set hangs together as one machine.
+135 sounds for the platformer rework: 53 for World 1, 10 for World 2, 5 for World 3, 7 for ambience, weather, lamps and menus, 15 for the Last Relay hub village, 14 music loops for the levels, 10 for the title screen and its menus, 5 for the Arc, 13 for the story intro and 3 for the Pips (the last nine groups are listed below). Every sound is made only from the four voices of the NES sound chip, so the set hangs together as one machine.
 
 The game, the title screen and the story intro all play these files.
 
@@ -211,6 +211,14 @@ Thirteen sounds for the new-game story intro, following the sound request in `do
 | `line_ring` | 0.89 s | Card 7, once per ring. An old phone bell heard down a long dead wire: two 50% pulses trilling 20 times a second between A5 and D6, a soft thump, then a fading tail. Three in a row are easy to count. |
 | `spark_flare` | 0.60 s | Card 8, on `intro_wake`'s downbeat. Crackle swelling into a bright blip that rises from D6 to D7, an octave above the music's held note. |
 | `caller_blip` | 0.34 s | Cards 8 and 10, as the far light blinks. The two-note call from `title_theme` and `amb_w1` (A5 then D6), with a softer copy replying. |
+
+## The Pips
+
+| Sound | Length | When it plays |
+|---|---|---|
+| `pip_call` | 0.37 s | A trapped Pip calling from its glass, every couple of seconds while the Spark is within about 14 tiles, quieter with distance. "Pee-peep": A6 then D7 on a thin 12.5% pulse, scooped up like a voice, with a faint sharp copy for the glass. 5 dB under the other pickups. |
+| `pip_free` | 0.95 s | The Spark breaks the glass and the Pip flies home. A metallic glass break, then the Pip sings up D6, F sharp 6, A6, D7, trills and ends on a ringing A7. Replaces `big_shard`, which is no longer played. |
+| `pip_home` | 1.48 s | Dot hands over a gift. Two blinks of her lamp, then a short-long step up through G, A and D chords, landing on D7. All in D major, over the village theme. |
 
 The four music loops sit at -14.3 dBFS overall, like the level music. `intro_still` is so sparse that it stops at the -3 dBFS peak limit, at -14.5 dBFS.
 
