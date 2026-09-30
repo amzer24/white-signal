@@ -2578,6 +2578,17 @@ const SHEETS := {
 					0.1
 				],
 				"loop": false
+			},
+			"w4": {
+				"row": 4,
+				"frames": 4,
+				"dur": [
+					0,
+					0,
+					0,
+					0
+				],
+				"loop": true
 			}
 		}
 	},
@@ -2888,6 +2899,77 @@ const SHEETS := {
 			}
 		}
 	},
+	"howl": {
+		"file": "howl.png",
+		"fw": 96,
+		"fh": 64,
+		"anims": {
+			"sleep": {
+				"row": 0,
+				"frames": 4,
+				"dur": [
+					0.14,
+					0.14,
+					0.14,
+					0.14
+				],
+				"loop": true
+			},
+			"wake": {
+				"row": 1,
+				"frames": 6,
+				"dur": [
+					0.1,
+					0.1,
+					0.1,
+					0.1,
+					0.1,
+					0.1
+				],
+				"loop": false
+			},
+			"idle": {
+				"row": 2,
+				"frames": 4,
+				"dur": [
+					0.12,
+					0.12,
+					0.12,
+					0.12
+				],
+				"loop": true
+			},
+			"speak": {
+				"row": 3,
+				"frames": 4,
+				"dur": [
+					0.08,
+					0.08,
+					0.08,
+					0.08
+				],
+				"loop": true
+			}
+		}
+	},
+	"howl_far": {
+		"file": "howl_far.png",
+		"fw": 32,
+		"fh": 24,
+		"anims": {
+			"watch": {
+				"row": 0,
+				"frames": 4,
+				"dur": [
+					0.2,
+					0.2,
+					0.2,
+					0.2
+				],
+				"loop": true
+			}
+		}
+	},
 	"title_hero": {
 		"file": "title_hero.png",
 		"fw": 64,
@@ -2996,6 +3078,301 @@ const SHEETS := {
 				"frames": 1,
 				"dur": [
 					0
+				],
+				"loop": true
+			}
+		}
+	},
+	"ground_w4": {
+		"file": "ground_w4.png",
+		"fw": 16,
+		"fh": 16,
+		"anims": {
+			"top": {
+				"row": 0,
+				"frames": 4,
+				"dur": [
+					0,
+					0,
+					0,
+					0
+				],
+				"loop": true
+			},
+			"mid": {
+				"row": 1,
+				"frames": 4,
+				"dur": [
+					0,
+					0,
+					0,
+					0
+				],
+				"loop": true
+			},
+			"deep": {
+				"row": 2,
+				"frames": 4,
+				"dur": [
+					0,
+					0,
+					0,
+					0
+				],
+				"loop": true
+			},
+			"bottom": {
+				"row": 3,
+				"frames": 4,
+				"dur": [
+					0,
+					0,
+					0,
+					0
+				],
+				"loop": true
+			},
+			"alt": {
+				"row": 4,
+				"frames": 4,
+				"dur": [
+					0,
+					0,
+					0,
+					0
+				],
+				"loop": true
+			}
+		}
+	},
+	"block_w4": {
+		"file": "block_w4.png",
+		"fw": 16,
+		"fh": 16,
+		"anims": {
+			"lip": {
+				"row": 0,
+				"frames": 4,
+				"dur": [
+					0,
+					0,
+					0,
+					0
+				],
+				"loop": true
+			},
+			"stacked": {
+				"row": 1,
+				"frames": 4,
+				"dur": [
+					0,
+					0,
+					0,
+					0
+				],
+				"loop": true
+			}
+		}
+	},
+	"backdrop_w4": {
+		"file": "backdrop_w4.png",
+		"fw": 96,
+		"fh": 128,
+		"anims": {
+			"pieces": {
+				"row": 0,
+				"frames": 4,
+				"dur": [
+					0,
+					0,
+					0,
+					0
+				],
+				"loop": true
+			}
+		}
+	},
+	"turret": {
+		"file": "turret.png",
+		"fw": 16,
+		"fh": 16,
+		"anims": {
+			"idle": {
+				"row": 0,
+				"frames": 2,
+				"dur": [
+					0.3,
+					0.3
+				],
+				"loop": true
+			},
+			"tell": {
+				"row": 1,
+				"frames": 3,
+				"dur": [
+					0.1,
+					0.1,
+					0.1
+				],
+				"loop": false
+			},
+			"fire": {
+				"row": 2,
+				"frames": 2,
+				"dur": [
+					0.08,
+					0.08
+				],
+				"loop": false
+			}
+		}
+	},
+	"bolt": {
+		"file": "bolt.png",
+		"fw": 16,
+		"fh": 8,
+		"anims": {
+			"fly": {
+				"row": 0,
+				"frames": 4,
+				"dur": [
+					0.05,
+					0.05,
+					0.05,
+					0.05
+				],
+				"loop": true
+			},
+			"pop": {
+				"row": 1,
+				"frames": 3,
+				"dur": [
+					0.05,
+					0.05,
+					0.05
+				],
+				"loop": false
+			}
+		}
+	},
+	"echo": {
+		"file": "echo.png",
+		"fw": 16,
+		"fh": 16,
+		"anims": {
+			"drift": {
+				"row": 0,
+				"frames": 4,
+				"dur": [
+					0.12,
+					0.12,
+					0.12,
+					0.12
+				],
+				"loop": true
+			},
+			"hide": {
+				"row": 1,
+				"frames": 4,
+				"dur": [
+					0.15,
+					0.15,
+					0.15,
+					0.15
+				],
+				"loop": true
+			},
+			"knocked": {
+				"row": 2,
+				"frames": 5,
+				"dur": [
+					0.07,
+					0.07,
+					0.07,
+					0.07,
+					0.07
+				],
+				"loop": false
+			}
+		}
+	},
+	"static_wall": {
+		"file": "static_wall.png",
+		"fw": 16,
+		"fh": 16,
+		"anims": {
+			"body": {
+				"row": 0,
+				"frames": 4,
+				"dur": [
+					0.08,
+					0.08,
+					0.08,
+					0.08
+				],
+				"loop": true
+			},
+			"edge_up": {
+				"row": 1,
+				"frames": 4,
+				"dur": [
+					0.08,
+					0.08,
+					0.08,
+					0.08
+				],
+				"loop": true
+			},
+			"edge_right": {
+				"row": 2,
+				"frames": 4,
+				"dur": [
+					0.08,
+					0.08,
+					0.08,
+					0.08
+				],
+				"loop": true
+			}
+		}
+	},
+	"ring": {
+		"file": "ring.png",
+		"fw": 96,
+		"fh": 64,
+		"anims": {
+			"wait": {
+				"row": 0,
+				"frames": 4,
+				"dur": [
+					0.2,
+					0.2,
+					0.2,
+					0.2
+				],
+				"loop": true
+			},
+			"close": {
+				"row": 1,
+				"frames": 6,
+				"dur": [
+					0.12,
+					0.12,
+					0.12,
+					0.12,
+					0.12,
+					0.12
+				],
+				"loop": false
+			},
+			"lit": {
+				"row": 2,
+				"frames": 4,
+				"dur": [
+					0.1,
+					0.1,
+					0.1,
+					0.1
 				],
 				"loop": true
 			}

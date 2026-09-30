@@ -12,13 +12,15 @@ const J := preload("res://scripts/world1/juice.gd")
 const T := 16.0
 const ROWS := 17
 
-const ORDER := ["test-room", "1-1", "1-2", "1-3", "1-4", "2-1", "2-2", "2-3", "2-4", "3-1", "3-2", "3-3", "3-4"]
+const ORDER := ["test-room", "1-1", "1-2", "1-3", "1-4", "2-1", "2-2", "2-3", "2-4", "3-1", "3-2", "3-3", "3-4",
+	"4-1", "4-2", "4-3", "4-4"]
 ## Each level's 8-bit loop (assets/audio/sfx8/). A level header can name another with `music:`.
 const MUSIC8 := {
 	"test-room": "m_training", "1-1": "m_1_1", "1-1-bonus": "m_1_1_bonus",
 	"1-2": "m_1_2", "1-3": "m_1_3", "1-4": "m_1_4",
 	"2-1": "m_2_1", "2-2": "m_2_2", "2-3": "m_2_3", "2-4": "m_2_4",
 	"3-1": "m_3_1", "3-2": "m_3_2", "3-3": "m_3_3", "3-4": "m_3_4",
+	"4-1": "m_4_1", "4-2": "m_4_2", "4-3": "m_4_3", "4-4": "m_4_4",
 }
 const START_LIVES := 5
 const MUSIC_DB := -9.0   # the 8-bit loops are mono at full level
@@ -30,9 +32,10 @@ const TINTS := {
 	"1": [Color("#0a0c12"), Color("#343c4d"), Color("#8190a8"), Color("#eef2f8")],   # cold first light
 	"2": [Color("#0f0a05"), Color("#4a3418"), Color("#b8863a"), Color("#fcebc4")],   # sodium lamps
 	"3": [Color("#0c0a12"), Color("#3a3150"), Color("#9b8bb4"), Color("#f5effb")],   # violet dawn
+	"4": [Color("#060908"), Color("#23302b"), Color("#6e8c80"), Color("#e8f4ee")],   # dead air
 	"village": [Color("#0d0907"), Color("#473226"), Color("#b08866"), Color("#f7e8d2")],   # warm windows
 }
-const AMBIENCE := {"1": "amb_w1", "2": "amb_w2", "3": "amb_w3", "village": "amb_village"}
+const AMBIENCE := {"1": "amb_w1", "2": "amb_w2", "3": "amb_w3", "4": "amb_w4", "village": "amb_village"}
 const STORY_PATH := "res://levels/story/npcs.json"
 ## Tally's shop. Prices are in shards. The lantern is kept for good. (The shard
 ## compass used to be sold here; it is now the Pip tuner, one of Dot's gifts.)
@@ -44,6 +47,9 @@ const SHOP := [
 		"note": "YOUR LIGHT REACHES MUCH FURTHER IN THE DARK. YOURS TO KEEP."},
 ]
 const CAM_LEAD := 32.0         # px the camera looks ahead of a running Spark
+## Inside the ring's 96x64 frame, where the empty place is, measured from the
+## ring's bottom middle (the goal tile's base): the Spark drifts there to close it.
+const RING_SLOT := Vector2(19.0, 35.0)
 const CAM_LEAD_SPEED := 40.0   # px per second the look-ahead drifts
 const CAM_DEAD_ZONE := 16.0    # px the Spark can move before the camera follows
 
@@ -87,6 +93,8 @@ var music: AudioStreamPlayer
 var music_fade: Tween
 var relay_hum: AudioStreamPlayer
 var arm_whir: AudioStreamPlayer   # World 3 sweep arms on screen
+var static_hum: AudioStreamPlayer # World 4 wall of static on screen
+var echo_whine_t := -9.0          # clock when an echo last whined, so a crowd doesn't drone
 var in_updraft := false
 var ground_sheet := "ground"   # World 2 swaps in its own ground and blocks
 var block_sheet := "block"
@@ -179,6 +187,16 @@ func _ready() -> void:
 			wh.loop_end = int(wh.get_length() * wh.mix_rate)
 		arm_whir.stream = wh
 	add_child(arm_whir)
+	static_hum = AudioStreamPlayer.new()
+	static_hum.bus = "SFX"
+	static_hum.volume_db = -10.0 + SFX_TRIM
+	if sfx.has("static_loop"):
+		var sl: AudioStream = sfx["static_loop"]
+		if sl is AudioStreamWAV and sl.loop_mode == AudioStreamWAV.LOOP_DISABLED:
+			sl.loop_mode = AudioStreamWAV.LOOP_FORWARD
+			sl.loop_end = int(sl.get_length() * sl.mix_rate)
+		static_hum.stream = sl
+	add_child(static_hum)
 	music = AudioStreamPlayer.new()
 	music.bus = "Music"
 	music.volume_db = MUSIC_DB
@@ -242,19 +260,24 @@ func _ready() -> void:
 # ================================================================ levels
 
 func load_level(id: String, cell := Vector2i(-1, -1), card := true) -> void:
+	if id == "4-1" and card and not flags.has("seen_descent") and not flags.has("clear_4-1"):
+		_play_cutscene("descent", "4-1")   # the way down into Dead Air, the first time only
+		return
 	level_id = id
 	board_open = false
 	if not pipe_travel:
 		bonus_keep.clear()
 	L = Level.load_file(id)
-	# Worlds 2 and 3 swap in their own ground and blocks
+	# Worlds 2 to 4 swap in their own ground and blocks
 	var wn := _world()
-	ground_sheet = "ground_w%s" % wn if wn in ["2", "3"] and _has_sheet("ground_w%s" % wn) else "ground"
-	block_sheet = "block_w%s" % wn if wn in ["2", "3"] and _has_sheet("block_w%s" % wn) else "block"
+	ground_sheet = "ground_w%s" % wn if wn in ["2", "3", "4"] and _has_sheet("ground_w%s" % wn) else "ground"
+	block_sheet = "block_w%s" % wn if wn in ["2", "3", "4"] and _has_sheet("block_w%s" % wn) else "block"
 	if relay_hum:
 		relay_hum.stop()
 	if arm_whir:
 		arm_whir.stop()
+	if static_hum:
+		static_hum.stop()
 	in_updraft = false
 	if ORDER.has(id) or id == "village":
 		_write_save(id)  # autosave at the start of every level
@@ -340,6 +363,8 @@ func _set_state(s: String) -> void:
 			relay_hum.stop()
 		if arm_whir and arm_whir.playing:
 			arm_whir.stop()
+		if static_hum and static_hum.playing:
+			static_hum.stop()
 	state = s
 	state_t = 0.0
 
@@ -394,7 +419,10 @@ func _physics_process(delta: float) -> void:
 			if state_t > 0.6:
 				_enter_pipe()
 		"done":
-			if _world() == "1" and state_t - delta <= 1.6 and state_t > 1.6:
+			if _world() == "1" and not flags.has("seen_gate1"):
+				if state_t > 2.6:
+					_play_cutscene("gate1")   # the Gate wakes, the Arc, and the Howl stirs
+			elif _world() == "1" and state_t - delta <= 1.6 and state_t > 1.6:
 				_play("arc_learn")
 			if state_t > (7.0 if _world() == "1" else 5.0):
 				load_level("village")  # a world cleared: back to Last Relay
@@ -484,6 +512,9 @@ func _play_frame(delta: float) -> void:
 
 func _clear_frame() -> void:
 	var base: float = (L.goal.y + 1) * T - 7.0
+	if _ring_goal():
+		_ring_clear_frame(base)
+		return
 	if state_t < 1.0:
 		S.x = L.goal.x * T + 4.0
 		S.y = lerpf(clear_from_y, base, state_t)
@@ -727,6 +758,16 @@ func _on_event(e: Dictionary) -> void:
 			_play("bump_used")
 			S.x = float(e.pipe.c) * T + 16.0
 			_set_state("pipe")
+		"echo_move":
+			if clock - echo_whine_t > 1.2:
+				echo_whine_t = clock
+				_play_at("echo_whine", pos)
+		"echo_hide":
+			_play_at("echo_hide", pos)
+		"echo_knock":
+			_play("echo_knock")
+			_fx("burst", pos)
+			hitstop = maxi(hitstop, 3)
 
 
 func _machine_sounds(prev_t: int) -> void:
@@ -778,6 +819,7 @@ func _machine_sounds(prev_t: int) -> void:
 			relay_hum.stop()
 	if L.warden.x >= 0 and S.lever_t < 0 and S.t % 150 == 0 and _on_screen(S.warden_pos(S.t).x):
 		_play("warden_hop")
+	_deep_sounds(prev_t)
 
 
 func _add_shards(n: int) -> void:
@@ -1063,7 +1105,8 @@ func _draw_pause() -> void:
 		var y := y0 + i * step
 		var sel := i == pause_sel
 		if sel:
-			draw_rect(Rect2(120, y - 4, 240, step - 2), DrawUtil.WHITE)
+			var bh := maxf(8.0, step - 2.0)   # centred on the text, so tight lists still show the whole row
+			draw_rect(Rect2(120, floorf(y + 3.0 - bh / 2.0), 240, bh), DrawUtil.WHITE)
 		var col := DrawUtil.BG if sel else DrawUtil.GRAY
 		if pause_page == "settings" and row != "BACK":
 			DrawUtil.text(self, Vector2(132, y), row, col)
@@ -1113,7 +1156,7 @@ func _level_info(id: String) -> Dictionary:
 
 # ================================================================ pips
 
-## Every level that holds Pips: the training yard, the twelve levels and the bonus room.
+## Every level that holds Pips: the training yard, the sixteen levels and the bonus room.
 func _pip_levels() -> Array:
 	return ORDER + ["1-1-bonus"]
 
@@ -1331,6 +1374,7 @@ func _draw() -> void:
 	if state != "pipe":
 		_draw_player()
 	_draw_fx()
+	_draw_static_wall()
 	_draw_weather()
 	draw_set_transform(Vector2.ZERO)
 	draw_rect(Rect2(0, 0, vw, 16), DrawUtil.BG)
@@ -1365,6 +1409,9 @@ func _upload_clear() -> void:
 func _draw_sky(cam: float) -> void:
 	if str(L.meta.get("interior", "")) != "":
 		return  # indoors: the room is drawn with the tiles
+	if _world() == "4":
+		_draw_deep(cam)
+		return
 	var off := floorf(cam * 0.1)
 	for i in int(90.0 * vw / 480.0):
 		var h := DrawUtil.hash2(i, 77)
@@ -1571,6 +1618,8 @@ func _draw_tile(c: int, r: int) -> void:
 				sh.draw_anim(self, "beacon", "lit", t, p - Vector2(0, 16))
 			else:
 				sh.draw_frame(self, "beacon", "dark", 0, p - Vector2(0, 16))
+		"G" when _ring_goal():
+			_draw_ring(p)
 		"G":
 			var lit := state == "clear" or state == "done"
 			sh.draw_frame(self, "mast", "base_lit" if lit else "pieces", 0, p)
@@ -1628,6 +1677,8 @@ func _draw_tile(c: int, r: int) -> void:
 				draw_rect(Rect2(p + Vector2(2, 2), Vector2(12, 12)), DrawUtil.GRAY)
 		"<", ">", "u":
 			_draw_wind(ch, c, r, p)
+		"t":
+			_draw_turret(c, r, p)
 
 
 # ================================================================ atmosphere
@@ -1672,6 +1723,16 @@ func _update_atmosphere() -> void:
 	for cell in L.find("O"):
 		if not S.taken.has(cell) and not _pip_home_at(cell.x, cell.y) and _on_screen(cell.x * T):
 			lights.append(Vector3(cell.x * T + 8, cell.y * T + 8, 30.0))
+	for tu in L.turrets:
+		if _on_screen(float(tu.c) * T):
+			lights.append(Vector3(float(tu.c) * T + (4.0 if float(tu.d) < 0.0 else 12.0), float(tu.y), 18.0))
+	for bo in L.bolts(S.t):
+		if _on_screen(float(bo[0])):
+			lights.append(Vector3(float(bo[0]), float(bo[1]), 20.0))
+	for n in L.echoes.size():
+		var ep: Array = S.echo_pos[n]
+		if not S.echo_killed.has(n) and _on_screen(float(ep[0])):
+			lights.append(Vector3(float(ep[0]), float(ep[1]), 22.0))
 	lights = lights.slice(0, 24)
 	fxmat.set_shader_parameter("light_count", lights.size())
 	while lights.size() < 24:
@@ -1722,6 +1783,212 @@ func _draw_weather() -> void:
 			continue
 		sh.draw_frame(self, "weather", anim, h % 4, cam + Vector2(floorf(x), floorf(y)), false,
 			Color(1, 1, 1, 0.55 if kind == "rain" else 0.8))
+
+
+# ================================================================ World 4 Dead Air
+
+## Underground there is no sky: far racks of dead equipment, cut cables
+## hanging from the dark, and now and then a dead lamp that flickers.
+func _draw_deep(cam: float) -> void:
+	var hz := floorf((maxf(0.0, L.rows * T - 270.0) - cam_y) * 0.2)
+	for i in int(26.0 * vw / 480.0):
+		var h := DrawUtil.hash2(i, 419)
+		var x := fposmod(float(h % 1400) - cam * 0.12, vw + 40.0) - 20.0
+		var len := 30.0 + float((h >> 6) % 120)
+		draw_rect(Rect2(floorf(x), 0, 1, len), DrawUtil.DARK)
+		if (h + int(clock * 2.0)) % 23 == 0:
+			draw_rect(Rect2(floorf(x) - 1.0, len, 3, 2), DrawUtil.GRAY)   # a spark dripping off the cut end
+	if _has_sheet("backdrop_w4"):
+		var bs: Vector2 = sh.size("backdrop_w4")
+		var bo := cam * 0.2
+		var first := int(floor(bo / bs.x))
+		for slot in range(first, first + int(vw / bs.x) + 2):
+			var bp := DrawUtil.hash2(slot, 877) % 4
+			if bp == DrawUtil.hash2(slot - 1, 877) % 4:
+				bp = (bp + 1) % 4
+			sh.draw_frame(self, "backdrop_w4", "pieces", bp,
+				Vector2(floorf(slot * bs.x - bo), 232.0 - bs.y + hz), false, Color(1, 1, 1, 0.6))
+	else:
+		for i in 24:
+			var h2 := DrawUtil.hash2(i, 613)
+			var bx := fposmod(float(i * 64) - cam * 0.3, 24.0 * 64.0) - 64.0
+			var bh := 40.0 + float(h2 % 60)
+			draw_texture_rect(dither, Rect2(floorf(bx), 224.0 - bh + hz, 28.0 + float(h2 % 16), bh + 46.0), true)
+			if (h2 + int(clock * 3.0)) % 9 == 0:
+				draw_rect(Rect2(floorf(bx) + 6.0, 224.0 - bh + 8.0 + hz, 1, 1), DrawUtil.GRAY)
+
+
+func _turret_at(c: int, r: int) -> Dictionary:
+	for tu in L.turrets:
+		if int(tu.c) == c and int(tu.r) == r:
+			return tu
+	return {}
+
+
+## A relay turret: its eye brightens for 0.3 s before it fires.
+func _draw_turret(c: int, r: int, p: Vector2) -> void:
+	var tu := _turret_at(c, r)
+	if tu.is_empty():
+		return
+	var n: int = tu.n
+	var s := posmod(S.t + int(tu.off), n)
+	var right := float(tu.d) > 0.0
+	if not _has_sheet("turret"):
+		draw_rect(Rect2(p + Vector2(1, 2), Vector2(14, 13)), DrawUtil.GRAY)
+		var eye := DrawUtil.WHITE if n - s <= 18 or s < 6 else DrawUtil.DARK
+		draw_rect(Rect2(p + Vector2(11 if right else 2, 6), Vector2(3, 3)), eye)
+		return
+	if n - s <= 18:
+		sh.draw_anim(self, "turret", "tell", (18 - (n - s)) / 60.0, p, right)
+	elif s < 10 and S.t >= s:
+		sh.draw_anim(self, "turret", "fire", s / 60.0, p, right)
+	else:
+		sh.draw_anim(self, "turret", "idle", clock + c * 0.3, p, right)
+
+
+func _draw_bolts() -> void:
+	for bo in L.bolts(S.t):
+		var bx: float = bo[0]
+		if not _on_screen(bx):
+			continue
+		var right := float(L.turrets[int(bo[2]) - 1].d) > 0.0
+		if _has_sheet("bolt"):
+			# the art's head sits 1 px in from its leading edge, 3 px down
+			var lead := Vector2(bx + 6.0 - 14.0, float(bo[1]) - 3.0) if right else Vector2(bx - 6.0 - 1.0, float(bo[1]) - 3.0)
+			sh.draw_anim(self, "bolt", "fly", clock, lead.floor(), right)
+		else:
+			var y: float = bo[1]
+			var h := DrawUtil.hash2(int(bx), int(clock * 20.0))
+			draw_line(Vector2(floorf(bx - 6.0), y + float(h % 3) - 1.0), Vector2(floorf(bx), y), DrawUtil.GRAY, 1.0)
+			draw_line(Vector2(floorf(bx), y), Vector2(floorf(bx + 6.0), y + float((h >> 3) % 3) - 1.0), DrawUtil.WHITE, 1.0)
+
+
+## Echoes: pale wisps that drift after the Spark while it looks away and hide
+## their faces when it turns round.
+func _draw_echoes() -> void:
+	for n in L.echoes.size():
+		var ep: Array = S.echo_pos[n]
+		var at := Vector2(floorf(float(ep[0])) - 8.0, floorf(float(ep[1])) - 8.0)
+		if not _on_screen(at.x):
+			continue
+		var face_right := S.x > float(ep[0])
+		if S.echo_killed.has(n):
+			var ka := (S.t - int(S.echo_killed[n])) / 60.0
+			if ka < 0.4 and _has_anim("echo", "knocked"):
+				sh.draw_anim(self, "echo", "knocked", ka, at, face_right)
+			continue
+		var seen: bool = S.face * (S.x - float(ep[0])) < 0.0 and absf(S.x - float(ep[0])) < 150.0
+		var bob := roundf(sin(clock * 3.0 + n) * 1.5)
+		if not _has_sheet("echo"):
+			draw_rect(Rect2(at + Vector2(3, 2 + bob), Vector2(10, 12)), Color(DrawUtil.GRAY, 0.8))
+			if not seen:
+				draw_rect(Rect2(at + Vector2(5, 6 + bob), Vector2(2, 2)), DrawUtil.BG)
+				draw_rect(Rect2(at + Vector2(9, 6 + bob), Vector2(2, 2)), DrawUtil.BG)
+			continue
+		sh.draw_anim(self, "echo", "hide" if seen and not S.echo_moving[n] else "drift", clock + n * 0.2,
+			at + Vector2(0, bob), face_right, Color(1, 1, 1, 0.85))
+
+
+## The wall of static: a band of crawling stripes from its edge to the far
+## side of the screen, with the Howl's face pushing through at the front.
+func _draw_static_wall() -> void:
+	if L.static_wall.is_empty():
+		return
+	var front: float = L.static_front(S.static_base, S.t)
+	var cam := Vector2(floorf(cam_x), floorf(cam_y))
+	var up := str(L.static_wall.dir) == "up"
+	if up:
+		var top := front - 8.0
+		if top > cam.y + 270.0:
+			return
+		for xx in range(int(floorf(cam.x / T) * T), int(cam.x + vw + 16.0), 16):
+			_static_tile("edge_up", Vector2(xx, top), xx)
+			var yy := top + 16.0
+			while yy < cam.y + 270.0:
+				if yy + 16.0 > cam.y:
+					_static_tile("body", Vector2(xx, yy), xx)
+				yy += 16.0
+		if _has_sheet("howl") and top < cam.y + 250.0:
+			# the Howl rising with it, peering out just under the crest
+			var hp := Vector2(floorf(cam.x + vw / 2.0 - 96.0), floorf(front - 40.0))
+			draw_set_transform(world_off + hp, 0.0, Vector2(2, 2))
+			sh.draw_anim(self, "howl", "idle", clock, Vector2.ZERO, false, Color(1, 1, 1, 0.8))
+			draw_set_transform(world_off)
+	else:
+		var ex := front - 8.0
+		if ex < cam.x - 16.0:
+			return
+		for yy in range(int(floorf(cam.y / T) * T), int(cam.y + 286.0), 16):
+			_static_tile("edge_right", Vector2(ex, yy), yy)
+			var xx := ex - 16.0
+			while xx > cam.x - 16.0:
+				_static_tile("body", Vector2(xx, yy), yy)
+				xx -= 16.0
+		if _has_sheet("howl"):
+			# the Howl inside the front of the wall, chasing
+			var hp2 := Vector2(floorf(front - 180.0), floorf(cam.y + 70.0))
+			draw_set_transform(world_off + hp2, 0.0, Vector2(2, 2))
+			sh.draw_anim(self, "howl", "speak" if int(clock) % 4 == 0 else "idle", clock, Vector2.ZERO)
+			draw_set_transform(world_off)
+
+
+func _static_tile(anim: String, at: Vector2, k: int) -> void:
+	if _has_sheet("static_wall"):
+		sh.draw_anim(self, "static_wall", anim, clock, at.floor())   # one clock, so edges meet the body
+	else:
+		var h := DrawUtil.hash2(int(at.x) + int(clock * 30.0), int(at.y))
+		draw_rect(Rect2(at.floor(), Vector2(16, 16)), DrawUtil.GRAY if h % 3 == 0 else DrawUtil.DARK)
+
+
+## The last level's goal: the ring of Sparks around the cracked heart of the line.
+func _draw_ring(p: Vector2) -> void:
+	var at := Vector2(p.x + 8.0 - 48.0, p.y + 16.0 - 64.0)
+	if not _has_sheet("ring"):
+		for k in 8:
+			var a := TAU * k / 8.0 + PI
+			var dp := at + Vector2(48, 32) + Vector2(cos(a), sin(a)) * 18.0
+			if k > 0 or state in ["clear", "done"]:
+				J.spark(self, dp + Vector2(0, 4), 1, 0.4, 0.4)
+		return
+	if state == "clear" and state_t >= 1.0:
+		var ca := state_t - 1.0
+		sh.draw_anim(self, "ring", "close" if ca < sh.length("ring", "close") else "lit", ca, at)
+	else:
+		sh.draw_anim(self, "ring", "wait", clock, at)
+
+
+func _deep_sounds(prev_t: int) -> void:
+	for tu in L.turrets:
+		if not _on_screen(float(tu.c) * T):
+			continue
+		var n: int = tu.n
+		var a := posmod(prev_t + int(tu.off), n)
+		var b := posmod(S.t + int(tu.off), n)
+		if b == n - 18 or (a < n - 18 and b > n - 18):
+			_play("turret_charge", 0.0, -8.0)
+		if b < a and S.t >= b:
+			_play("turret_fire", 0.0, -6.0)
+		# a bolt that reached the wall this frame
+		var f := S.t - int(tu.life)
+		if f >= 0 and posmod(f + int(tu.off), n) == 0 and int(tu.life) > 0:
+			var wx: float = float(tu.x0) + float(tu.d) * float(tu.speed) * int(tu.life) / 60.0
+			if _on_screen(wx):
+				_play("bolt_hit", 0.0, -8.0)
+				_fx("bolt_pop", Vector2(wx, float(tu.y)), "r" if float(tu.d) > 0.0 else "")
+	if not L.static_wall.is_empty():
+		var delay := float(L.static_wall.delay)
+		if prev_t / 60.0 < delay and S.t / 60.0 >= delay:
+			_play("static_rise")
+			shake = maxf(shake, 4.0)
+			if str(L.static_wall.dir) == "right":
+				_play("howl_roar", 0.4)
+		var front: float = L.static_front(S.static_base, S.t)
+		var near := front < cam_x + vw + 40.0 and front > cam_x - 40.0 if str(L.static_wall.dir) == "right" \
+			else front < cam_y + 310.0
+		if near and state == "play" and not static_hum.playing and static_hum.stream != null:
+			static_hum.play()
+		elif (not near or state != "play") and static_hum.playing:
+			static_hum.stop()
 
 
 # ================================================================ World 3 wind
@@ -1962,6 +2229,8 @@ func _draw_objects() -> void:
 				sh.draw_anim(self, "sweep_arm", "dot", t + float(a.i) * 0.1, (d - Vector2(8, 8)).floor())
 			else:
 				draw_rect(Rect2((d - Vector2(3, 3)).floor(), Vector2(6, 6)), DrawUtil.WHITE)
+	_draw_bolts()
+	_draw_echoes()
 	# walkers and hoppers
 	for n3 in L.walkers.size():
 		var w: Dictionary = L.walkers[n3]
@@ -2057,6 +2326,8 @@ func _draw_player() -> void:
 		pose = "run"
 	if state == "clear" and state_t < 1.0:
 		pose = "slide"
+	if state == "clear" and _ring_goal() and state_t >= 1.0:
+		return   # the Spark has taken its place in the ring
 	if handoff >= 0.0 and handoff < 1.1:
 		J.spark(self, feet, 1, 1.2, 0.6, "lie", 0.0, -1)   # lying in the grass, eyes shut
 		return
@@ -2093,7 +2364,7 @@ func _draw_crack(c: int, r: int, p: Vector2) -> void:
 		var open_l: bool = not Level.SOLID.contains(L.at(c - 1, r))
 		var open_r: bool = not Level.SOLID.contains(L.at(c + 1, r))
 		var col := 3 if open_l and open_r else (0 if open_l else (2 if open_r else 1))
-		sh.draw_frame(self, "crack", "w" + (wn if wn in ["2", "3"] else "1"), col, p)
+		sh.draw_frame(self, "crack", "w" + (wn if wn in ["2", "3", "4"] and _has_anim("crack", "w" + wn) else "1"), col, p)
 		return
 	draw_rect(Rect2(p, Vector2(16, 16)), DrawUtil.GRAY)
 	draw_rect(Rect2(p, Vector2(16, 16)), DrawUtil.DARK, false, 1.0)
@@ -2103,7 +2374,7 @@ func _draw_crack(c: int, r: int, p: Vector2) -> void:
 
 ## The Arc is learned by clearing World 1, and always there from World 2 on.
 func _has_arc() -> bool:
-	return items.get("arc", false) or flags.has("w1_clear") or _world() in ["2", "3"]
+	return items.get("arc", false) or flags.has("w1_clear") or _world() in ["2", "3", "4"]
 
 
 func _draw_fx() -> void:
@@ -2145,6 +2416,10 @@ func _draw_fx() -> void:
 			"light":
 				sh.draw_anim(self, "fx_light", "ring", age, pos - Vector2(24, 24))
 				life = 0.5
+			"bolt_pop":
+				if _has_anim("bolt", "pop"):
+					sh.draw_anim(self, "bolt", "pop", age, pos - Vector2(8, 4), f[4] == "r")
+				life = 0.15
 			"pip_break":
 				sh.draw_anim(self, "pip", "break", age, pos)
 				life = 0.25
@@ -2271,13 +2546,15 @@ func _draw_overlay() -> void:
 			_center("WORLD %s CLEAR" % w, 96, DrawUtil.WHITE, 2)
 			if w == "1":
 				_center("YOU LIT THE GATE, AND THE CALL GROWS LOUDER", 128, DrawUtil.GRAY)
-				if state_t > 1.6:
+				if state_t > 1.6 and flags.has("seen_gate1"):
 					_center("YOU LEARNED THE ARC", 160, DrawUtil.WHITE, 2)
 					_center("PRESS %s TO THROW IT . IT KNOCKS OUT ANY ENEMY AND BREAKS CRACKED WALLS" % GameInput.action_label("attack"), 186, DrawUtil.GRAY)
 			elif w == "2":
 				_center("THE RELAY CAN REST . NOW THE LINE CLIMBS INTO THE AERIALS", 128, DrawUtil.GRAY)
+				_center("FAR BELOW, THE HOWL IS LISTENING", 146, DrawUtil.GRAY)
 			else:
-				_center("YOU LIT THE SPIRE . WORLD 4, DEAD AIR, IS COMING SOON", 128, DrawUtil.GRAY)
+				_center("YOU LIT THE SPIRE, AND FAR BELOW THE HOWL IS RISING", 128, DrawUtil.GRAY)
+				_center("THE LINE RUNS ON, DOWN INTO DEAD AIR", 146, DrawUtil.GRAY)
 
 
 # ================================================================ village and people
@@ -2291,6 +2568,10 @@ func _is_hub() -> bool:
 
 func _has_sheet(name: String) -> bool:
 	return sh.tex.has(name)
+
+
+func _has_anim(sheet: String, anim: String) -> bool:
+	return sh.tex.has(sheet) and (Sheets.Data.SHEETS[sheet].anims as Dictionary).has(anim)
 
 
 ## "met_wren&!w1_clear": every term must hold, "!" means not, "" is always true.
@@ -2372,6 +2653,50 @@ func _use(u: Dictionary) -> void:
 			_set_state("pause")
 
 
+## A story cutscene (scripts/story/cutscene.gd). The game saves in Last Relay
+## first, so when it ends the game carries on there.
+func _play_cutscene(id: String, continue_at := "village") -> void:
+	if not flags.has("seen_" + id):
+		flags.append("seen_" + id)
+	_write_save(continue_at)
+	var cut = load("res://scripts/story/cutscene.gd")
+	cut.play = id
+	cut.replay = false
+	cut.pips = [_pips_home(), _pips_total()]
+	if is_inside_tree():
+		get_tree().change_scene_to_file.call_deferred("res://scenes/cutscene.tscn")
+
+
+## The last level's goal is the ring of Sparks, not a mast.
+func _ring_goal() -> bool:
+	return str(L.meta.get("goal", "")) == "ring"
+
+
+## Reaching the ring: the Spark drifts into the empty place, the ring closes,
+## and the ending plays. There is no mast bonus here.
+func _ring_clear_frame(base: float) -> void:
+	var spot := Vector2(L.goal.x * T + 8.0 - RING_SLOT.x, base + 7.0 - RING_SLOT.y)
+	if state_t < 1.0:
+		S.x = lerpf(S.x, spot.x, 0.12)
+		S.y = lerpf(S.y, spot.y, 0.12)
+		S.face = 1
+	elif not clear_paid:
+		clear_paid = true
+		clear_bonus = "THE RING IS WHOLE"
+		_play("ring_close")
+		shake = maxf(shake, 3.0)
+		_fx("light", spot)
+		if not best.has(level_id) or run_time < float(best[level_id]):
+			best[level_id] = run_time
+		if not flags.has("clear_" + level_id):
+			flags.append("clear_" + level_id)
+		_save_progress()
+	elif state_t > 4.2:
+		if not flags.has("w4_clear"):
+			flags.append("w4_clear")
+		_play_cutscene("ending")
+
+
 ## The first level you haven't cleared yet, in order. The training yard is optional.
 func _next_level() -> String:
 	for id in ORDER:
@@ -2386,6 +2711,8 @@ func _start_talk(n: Dictionary, fixed: Array = []) -> void:
 	if fixed.is_empty():
 		var who: Dictionary = story.get(str(n.id), {})
 		for e in who.get("talk", []):
+			if e.has("at") and str(e.at) != level_id:
+				continue   # a line meant for one level only
 			if _cond(str(e.get("when", ""))):
 				entry = e
 				break
@@ -2527,6 +2854,8 @@ func _draw_people() -> void:
 			sh.draw_anim(self, "switchboard", "idle", clock, Vector2(v.x * T - 8, v.y * T - 16))
 		if level_id == "village":
 			_draw_pip_crowd(v)
+	if level_id == "village" and flags.has("w4_clear"):
+		_draw_visitors()
 	if _has_sheet("village_props"):
 		for ch in ["b", "c", "n", "g"]:
 			var frame: int = {"b": 0, "c": 2, "n": 4, "g": 1}[ch]
@@ -2550,6 +2879,17 @@ func _draw_people() -> void:
 			sh.draw_anim(self, "bubble", "prompt", clock, at.floor())
 		else:
 			DrawUtil.text_shadow(self, at.floor(), "V", DrawUtil.WHITE)
+
+
+## After the ending, Sparks from all along the line visit Last Relay: a few
+## wander about in the middle of the village.
+func _draw_visitors() -> void:
+	for k in 4:
+		var home := (18.0 + k * 7.0) * T
+		var x := home + sin(clock * 0.6 + k * 1.7) * 40.0
+		var hop := absf(sin(clock * 3.0 + k)) * 3.0 if int(clock * 0.5 + k) % 3 == 0 else 0.0
+		var face := 1 if cos(clock * 0.6 + k * 1.7) > 0.0 else -1
+		J.spark(self, Vector2(floorf(x), 14.0 * T - hop), face, 0.75, 0.75, "run" if hop == 0.0 else "air", clock * 2.0)
 
 
 ## Characters get a one-pixel dark outline so they stand out from any wall or

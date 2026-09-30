@@ -1,4 +1,4 @@
-"""Generates every World 1, World 2 and World 3 sprite sheet in assets/world1/.
+"""Generates every World 1 to World 4 sprite sheet in assets/world1/.
 
 Run from the project root:  python assets/world1/src/make_sheets.py
 Writes <name>.png sheets, sheets.json (frame size, rows, timing) and a 3x
@@ -5188,7 +5188,7 @@ def crack_tile(style, left=False, right=False):
     """A cracked wall that sits flush inside a wall of `style`: the deep tile of
     that ground with the crack drawn over it. Edge columns come from the ground
     tile, so the lit left edge and the dark right edge still line up."""
-    make = {'w1': ground, 'w2': ground_w2, 'w3': ground_w3}[style]
+    make = {'w1': ground, 'w2': ground_w2, 'w3': ground_w3, 'w4': ground_w4}[style]
     base = make(left=left, right=right, depth=2)
     c = base.copy()
     c = _crack_overlay(c)
@@ -5316,6 +5316,9 @@ def build_arc():
         A('break', [crack_break(f) for f in range(4)], [0.04, 0.06, 0.08, 0.1], loop=False,
           note='the Arc breaks it: flare, split, burst, dust. Same for every world. Spawn 4 brick_debris '
                'chunks on frame 1 if you want pieces flying clear of the tile'),
+        A('w4', [crack_tile('w4', left=True), crack_tile('w4'), crack_tile('w4', right=True),
+                 crack_tile('w4', left=True, right=True)], 0,
+          note='World 4 ground_w4: left, fill, right, column. After break, so the older rows keep their places'),
     ], 'Cracked wall the Arc breaks. Each is the deep tile of that world\'s ground with a crack over it, so it '
        'sits flush in a wall. Pick the row by world and the column by open sides, like ground. There is no '
        'top-lip version: keep a normal ground tile on top of a cracked stack.')
@@ -6410,6 +6413,464 @@ def build_intro():
        'Spark sits on.')
 
 
+# =================================================================== the Howl
+
+# The antagonist: the howling noise that once filled the line, every voice it
+# swallowed fed back on itself, pooled deep underground after the line was
+# cut. It is intro_static grown vast: a heap of billows rising from below,
+# each billow with the same crust of WHITE and DARK stripes and teeth along
+# its top, a dimmer GRAY and DARK body that darkens inward, torn strands and
+# cut wire poking out, and a dark hollow where the face sits, so the two
+# WHITE eyes glow. The billows at the back are a step dimmer than the front.
+
+HOWL_W, HOWL_H = 96, 64
+HOWL_EYES = ((36, 29), (59, 29))         # eye centres, the same in every frame
+HOWL_MOUTH = (47.5, 43)                  # centre of the mouth gap
+
+_HOWL_BLOBS = (                          # the silhouette: (cx, cy, rx, ry, wobble phase)
+    (26, 18, 12, 9, 0.4), (41, 12, 12, 6, 1.9), (57, 11, 13, 6, 3.1), (72, 17, 12, 9, 4.4),
+    (13, 31, 8, 9, 5.6), (83, 30, 8, 9, 0.9),
+    (48, 68, 30, 50, 0.0), (48, 29, 30, 14, 1.1), (18, 35, 11, 8, 1.3), (78, 35, 11, 8, 2.6),
+    (24, 50, 9, 8, 4.1), (72, 51, 9, 8, 5.3),
+)
+
+_HOWL_BILLOWS = (                        # billows inside the heap whose lit tops show
+    (31, 24, 11, 7, 0.9), (48, 19, 11, 6, 2.2), (65, 23, 11, 7, 3.5),
+    (16, 40, 10, 8, 1.3), (80, 40, 10, 8, 2.6),
+    (26, 56, 12, 8, 4.1), (70, 57, 12, 8, 5.3), (48, 60, 10, 6, 0.3),
+)
+
+_HOWL_WIRES = (                          # from inside the heap out to the cut tip
+    ((19, 42), (10, 46), (5, 44), (3, 39)),
+    ((77, 42), (86, 46), (91, 44), (93, 39)),
+    ((24, 16), (16, 11), (10, 8), (6, 3)),
+    ((72, 15), (82, 10), (88, 8), (92, 3)),
+    ((26, 54), (16, 57), (11, 55), (6, 58), (3, 62)),
+    ((70, 54), (80, 58), (86, 56), (91, 60)),
+)
+
+_HOWL_SLIT = ((0, 1), (1, 2), (2, 2), (3, 3), (4, 3), (5, 3), (6, 3), (7, 3), (8, 2), (9, 2), (10, 1))
+
+_HOWL_FLECKS = ((4, 20, 3), (89, 18, 3), (18, 8, 3), (78, 7, 3), (8, 13, 2), (91, 11, 2))
+
+_HOWL_EYE = (                            # the left eye, centre at column 5, row 2
+    'www........',
+    'wwwwwww....',
+    'wwwwwwwwww.',
+    '.wwwwwwwwww',
+    '...wwwwww..',
+)
+
+
+def _line_pts(x0, y0, x1, y1):
+    pts = []
+    dx, dy = abs(x1 - x0), -abs(y1 - y0)
+    sx, sy = (1 if x0 < x1 else -1), (1 if y0 < y1 else -1)
+    err = dx + dy
+    while True:
+        pts.append((x0, y0))
+        if x0 == x1 and y0 == y1:
+            return pts
+        e2 = 2 * err
+        if e2 >= dy:
+            err += dy
+            x0 += sx
+        if e2 <= dx:
+            err += dx
+            y0 += sy
+
+
+def _howl_mask(blobs, w, h, f, n, grow=0.0, sink=0.0, seed=0, tear=6):
+    """One layer's silhouette: the union of wobbling ellipses, its edge
+    roughened per frame and a few rows slid sideways (sync tears). Returns a
+    set of (x, y)."""
+    ph = 2 * math.pi * f / n
+    bs = []
+    for (cx, cy, rx, ry, p) in blobs:
+        bs.append((cx + math.cos(ph + p) * 0.9, cy + sink + math.sin(ph + p) * 1.3,
+                   rx + grow + math.sin(ph + p * 2) * 0.9, ry + grow / 2 + math.cos(ph + p) * 0.9))
+    m = set()
+    for y in range(h):
+        hh = hash2(y * 5 + seed, f + 40)
+        sh = (hh % 5 - 2) if hh % tear == 0 else 0
+        for x in range(w):
+            xx = x - sh
+            v = max(1 - ((xx + .5 - cx) / rx) ** 2 - ((y + .5 - cy) / ry) ** 2 for (cx, cy, rx, ry) in bs)
+            v += ((hash2(xx // 2, y * 3 + f * 97 + seed) % 100) / 100 - 0.5) * 0.08
+            if v > 0:
+                m.add((x, y))
+    return m
+
+
+def _howl_depth(mask, h):
+    """Steps from each mask pixel to the outside. The bottom edge counts as
+    inside: the heap carries on below the frame."""
+    d, q = {}, []
+    for (x, y) in mask:
+        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            if y + dy < h and (x + dx, y + dy) not in mask:
+                d[(x, y)] = 0
+                q.append((x, y))
+                break
+    i = 0
+    while i < len(q):
+        x, y = q[i]
+        i += 1
+        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            p = (x + dx, y + dy)
+            if p in mask and p not in d:
+                d[p] = d[(x, y)] + 1
+                q.append(p)
+    return d
+
+
+def _howl_body(c, mask, depth, f, lit, fade=46, seed=0, hollow=None, seam=False):
+    """Colour one billow layer: a striped crust like intro_static (two bright
+    rows to one DARK row, with DARK tears), GRAY and DARK stripes inside that
+    darken toward the core, snow dashes that jump every frame, and a fade to
+    black toward the bottom. lit 2 is awake, 1 is a step dimmer (asleep, or
+    the back billows), 0 dimmer again. hollow is (cx, cy, rx, ry), a darker
+    patch for the face. seam puts a black line where this layer's edge lies
+    over an earlier one."""
+    hi, mid = ((G, D), (G, D), (W, G))[lit]
+    for (x, y) in mask:
+        d = depth[(x, y)]
+        s = (y + f) % 3
+        crust = 3 if y < 30 else 2 if y < 44 else 1
+        torn = ((x + f * 3 + y * 5 + seed) % 9) < 2
+        if seam and d == 0 and c.get(x, y)[3]:
+            c.px(x, y, K)
+            continue
+        if d < crust:
+            col = hi if s and not torn else D
+        elif d < crust + 3:
+            col = mid if s and not torn else D
+        elif d < crust + 8:
+            col = mid if s == 1 and not torn else D
+        else:
+            col = D if s else K
+            if s == 1 and hash2(x + seed, y * 7 + f * 131) % 7 == 0:
+                col = mid
+        # snow: short dashes that jump every frame
+        if d >= crust and hash2(x // 3 + y * 13 + seed, f * 17 + y) % 19 == 0:
+            col = hi if d < crust + 8 else mid
+        if hollow:
+            hx, hy, hrx, hry = hollow
+            e = ((x + .5 - hx) / hrx) ** 2 + ((y + .5 - hy) / hry) ** 2
+            if e < 1 and d >= crust and bayer(x, y) < int((1 - e) * 26):
+                col = D if s == 1 else K
+                if s == 1 and hash2(x * 3 + seed, y + f * 53) % 11 == 0:
+                    col = G
+        if y >= fade and bayer(x, y) < (y - fade):
+            col = D if col in (W, G) else K
+        if y >= fade + 8 and bayer(x, y) < (y - fade - 8) * 2:
+            col = K
+        c.px(x, y, col)
+
+
+def _howl_teeth(c, mask, f, seed, col, amount=5, top=40):
+    """Teeth along a layer's top edge, leaning like intro_static's: col at
+    the root, GRAY above."""
+    tops = {}
+    for (x, y) in mask:
+        if x not in tops or y < tops[x]:
+            tops[x] = y
+    for x, y in tops.items():
+        if y > top:
+            continue
+        hh = hash2(x * 7 + seed, f) % 8
+        if hh >= 7 - amount // 2:
+            for k in range(1, 2 + hh % 3):
+                c.px(x - k // 2, y - k, col if k == 1 else G)
+
+
+def _howl_strands(c, mask, w, h, f, seed, lit, count=8, reach=6):
+    """Torn strands streaming off the sides."""
+    rows = {}
+    for (x, y) in mask:
+        a, b = rows.get(y, (w, -1))
+        rows[y] = (min(a, x), max(b, x))
+    for k in range(count):
+        y = 14 + hash2(k + seed, f * 3) % (h - 26)
+        if y not in rows:
+            continue
+        side = -1 if k % 2 == 0 else 1
+        x = (rows[y][0] if side < 0 else rows[y][1]) + side * (2 + hash2(k, f + 9) % 2)
+        ln = 2 + hash2(k + seed, f + 4) % reach
+        col = (W if lit >= 2 else G) if k % 3 else G
+        for i in range(ln):
+            if 0 < x + side * i < w - 1:
+                c.px(x + side * i, y, col)
+        if ln > 3 and 0 < x + side * (ln + 1) < w - 1:
+            c.px(x + side * (ln + 1), y, G)
+
+
+def _howl_wire(c, pts, mask, f, n, k, lit):
+    """A cut wire: a black tangle where it runs through the static, GRAY with
+    DARK joins outside, a frayed tip that sparks WHITE when awake."""
+    ph = 2 * math.pi * f / n
+    m = len(pts) - 1
+    sway = [(round(x + (i / m) ** 2 * math.sin(ph + k * 1.9) * 1.6),
+             round(y + (i / m) ** 2 * math.cos(ph + k * 1.9) * 1.1)) for i, (x, y) in enumerate(pts)]
+    line = []
+    for i in range(m):
+        seg = _line_pts(*sway[i], *sway[i + 1])
+        line += seg if not line else seg[1:]
+    for i, (x, y) in enumerate(line):
+        if (x, y) in mask:
+            c.px(x, y, K)
+        else:
+            c.px(x, y, D if i % 4 == 0 else G)
+    (tx, ty), (px_, py_) = line[-1], line[-3]
+    dx, dy = tx - px_, ty - py_
+    for (ax, ay) in ((dx - dy, dy + dx), (dx + dy, dy - dx)):   # two strands splay 45 degrees
+        c.px(tx + (ax > 0) - (ax < 0), ty + (ay > 0) - (ay < 0), G)
+    if lit >= 2 and (f + k) % 2 == 0:
+        c.px(tx + (dx > 0) - (dx < 0), ty + (dy > 0) - (dy < 0), W)
+
+
+def _howl_eyes(c, open_, col=W, pupil=True, wide=False):
+    """open_ 0 is a 1 px slit, 1 half open, 2 full. A ring one step dimmer
+    than the eye surrounds it, so it reads as glowing out of the dark face."""
+    eye = set()
+    if open_ == 0:                           # shut: a slanted lid line in a black band
+        for side, (cx, cy) in zip((1, -1), HOWL_EYES):
+            for (i, r) in _HOWL_SLIT:
+                eye.add((cx + side * (i - 5), cy + r - 2))
+        for (x, y) in eye:
+            for dx in (-2, -1, 0, 1, 2):
+                for dy in (-2, -1, 0, 1, 2):
+                    c.px(x + dx, y + dy, K)
+        for (x, y) in eye:
+            c.px(x, y, col)
+        return
+    for side, (cx, cy) in zip((1, -1), HOWL_EYES):
+        for r, row in enumerate(_HOWL_EYE):
+            if abs(r - 2) > open_:
+                continue
+            for i, ch in enumerate(row):
+                if ch == 'w':
+                    eye.add((cx + side * (i - 5), cy + r - 2))
+        if wide and open_ >= 2:              # flare: the eye stretches a row taller
+            for i in range(3, 9):
+                eye.add((cx + side * (i - 5), cy + 3))
+    ring = set()
+    for (x, y) in eye:
+        for dx in (-1, 0, 1):
+            for dy in (-1, 0, 1):
+                if (x + dx, y + dy) not in eye:
+                    ring.add((x + dx, y + dy))
+    for (x, y) in ring:
+        c.px(x, y, G if col == W else D)
+    for (x, y) in eye:
+        c.px(x, y, col)
+    if pupil and open_ >= 1 and col == W:
+        for side, (cx, cy) in zip((1, -1), HOWL_EYES):
+            c.px(cx + side, cy, K)
+            c.px(cx + side, cy + 1, K)
+
+
+def _howl_mouth(c, f, amt):
+    """A jagged gap of static: a black maw with a ragged WHITE top lip and a
+    GRAY bottom lip, jagged teeth of noise (WHITE root, GRAY tip, like the
+    teeth on the crust) and a few torn scanlines, the swallowed voices,
+    jumping inside."""
+    cx, cy = HOWL_MOUTH
+    hw = 9 + amt * 6
+    gap = {}
+    for x in range(int(cx - hw), int(cx + hw) + 2):
+        u = (x + .5 - cx) / hw
+        if abs(u) >= 1:
+            continue
+        half = 0.5 + amt * 4.5 * math.sqrt(1 - u * u)
+        y0 = int(round(cy - half * 0.8)) + (x + f) % 2
+        y1 = int(round(cy + half)) - (x + f + 1) % 2
+        gap[x] = (y0, max(y0, y1))
+    for x, (y0, y1) in gap.items():
+        for y in range(y0 - 2, y1 + 3):
+            c.px(x, y, K)
+    for x, (y0, y1) in gap.items():
+        c.px(x, y0 - 1, W)                     # the lips
+        c.px(x, y1 + 1, G)
+    for x, (y0, y1) in gap.items():
+        open_ = y1 - y0
+        j = (x - int(cx - hw)) % 3
+        tl = (0, 1, 2 + hash2(x // 3, f * 7) % 2)[j] if open_ > 1 else 0
+        for k in range(min(tl, open_ - 1)):     # teeth hanging from the top lip
+            c.px(x, y0 + k, W if k == 0 else G)
+        bl = (1 + hash2(x // 3, f * 7 + 3) % 2, 0, 0)[j] if open_ > 3 else 0
+        for k in range(bl):                     # shorter ones rising from the bottom lip
+            c.px(x, y1 - k, G)
+    for k in range(2):                          # the voices: torn scanlines inside
+        y = int(cy) + 1 + k * 2 - (f % 2)
+        x0 = int(cx) - 6 + hash2(k, f * 5) % 6
+        for x in range(x0, x0 + 2 + hash2(k + 3, f) % 5):
+            if x in gap and gap[x][0] + 2 < y < gap[x][1] - 1:
+                c.px(x, y, G if k else W)
+
+
+def _howl_sparks(c, mask, w, h, f, seed, count, lit):
+    """Flecks flung off the edge."""
+    edge = sorted(p for p in mask if p[1] < h - 20 and any(
+        (p[0] + dx, p[1] + dy) not in mask for dx, dy in ((1, 0), (-1, 0), (0, -1))))
+    if not edge:
+        return
+    for k in range(count):
+        x, y = edge[hash2(k + seed, f * 13) % len(edge)]
+        ox = x + (-1 if x < w // 2 else 1) * (2 + hash2(k, f + 3) % 4)
+        oy = y - 1 - hash2(k + 5, f) % 4
+        if (ox, oy) not in mask:
+            c.px(ox, oy, (W if lit >= 2 else G) if k % 2 == 0 else G)
+
+
+def _howl_billows(c, mask, depth, billows, f, n, lit, sink=0.0, grow=0.0, seed=0, hollow=None, fade=46):
+    """The lit tops of billows inside the heap: a black seam over a short
+    crust of the same stripes as the outer edge, so the mass reads as roiling
+    lumps. Skipped where it would cross the face."""
+    ph = 2 * math.pi * f / n
+    hi = W if lit >= 2 else G
+    for (cx, cy, rx, ry, p) in billows:
+        cx += math.cos(ph + p) * 0.9
+        cy += sink + math.sin(ph + p) * 1.3 - grow / 2
+        for x in range(int(cx - rx), int(cx + rx) + 1):
+            u = (x + .5 - cx) / rx
+            if abs(u) >= 0.9:
+                continue
+            ye = int(round(cy - ry * math.sqrt(1 - u * u)))
+            if hollow:
+                hx, hy, hrx, hry = hollow
+                if ((x + .5 - hx) / hrx) ** 2 + ((ye + .5 - hy) / hry) ** 2 < 1.1:
+                    continue
+            if depth.get((x, ye - 1), 0) < 2:
+                continue
+            c.px(x, ye - 1, K)
+            for k in range(3 if abs(u) < 0.6 else 2):
+                y = ye + k
+                if (x, y) not in mask:
+                    break
+                s = (y + f) % 3
+                col = hi if s and ((x + f * 3 + y * 5 + seed) % 9) >= 2 else D
+                if y >= fade and bayer(x, y) < (y - fade):
+                    col = D if col in (W, G) else K
+                c.px(x, y, col)
+
+
+def _howl_heap(c, layers, w, h, f, n, lit, grow=0.0, sink=0.0, seed=0, hollow=None, fade=46,
+               teeth=5, face_layer=-1):
+    """Draw the billow layers back to front, each with teeth on its top edge.
+    The back layer (when there is more than one) is dimmer: GRAY crust over
+    a DARK body. Returns the union mask."""
+    union = set()
+    for i, blobs in enumerate(layers):
+        back = i == 0 and len(layers) > 1
+        m = _howl_mask(blobs, w, h, f, n, grow, sink, seed + i * 17)
+        d = _howl_depth(m, h)
+        _howl_body(c, m, d, f, 0 if back else lit, fade, seed + i,
+                   hollow if i == face_layer % len(layers) else None, seam=i > 0)
+        _howl_teeth(c, m, f, seed + 11 + i, G if back or lit < 2 else W, amount=teeth)
+        union |= m
+    return union
+
+
+def _howl_flecks(c, mask, f, lit, count):
+    """Chunks of static torn off the top, drifting up and dimming over the
+    loop: two stripes, the lower one DARK."""
+    for k, (x, y, w) in enumerate(_HOWL_FLECKS[:count]):
+        t = (f + k) % 4
+        yy = y - t * 2
+        col = (W, W, G, D)[t] if lit >= 2 else (G, G, D, D)[t]
+        for i in range(w - (t > 1)):
+            if (x + i, yy) not in mask:
+                c.px(x + i + t % 2, yy, col)
+            if (x + i, yy + 1) not in mask and i < w - 1:
+                c.px(x + i + t % 2, yy + 1, D)
+
+
+def howl(mode, f):
+    """96x64. sleep: dim and settled 2 px low, the eyes GRAY slits. wake:
+    the eyes light and open, the heap rises and flares, the last frame is
+    idle 0. idle: awake, eyes WHITE. speak: idle with the mouth gap."""
+    n = 4
+    lit, sink, grow, eyes, eye_col, wide, sparks, teeth, reach, pupil = 2, 0, 0.0, 2, W, False, 3, 5, 6, True
+    mouth, flecks, strands = 0.0, 4, 8
+    if mode == 'sleep':
+        lit, sink, eyes, eye_col, sparks, teeth, reach, flecks = 1, 2, 0, G, 0, 3, 4, 2
+    elif mode == 'wake':
+        if f == 5:
+            return howl('idle', 0)
+        flecks, strands = (2, 4, 6, 6, 5)[f], (8, 8, 10, 14, 10)[f]
+        lit, sink, grow, eyes, eye_col, wide, sparks, teeth, reach, pupil = (
+            (1, 2, 0.0, 0, W, False, 1, 3, 4, False),
+            (2, 1, 0.5, 1, W, False, 3, 5, 6, True),
+            (2, 0, 1.2, 2, W, True, 6, 7, 8, True),
+            (2, 0, 2.0, 2, W, True, 10, 9, 10, True),
+            (2, 0, 1.0, 2, W, False, 5, 6, 7, True),
+        )[f]
+    elif mode == 'speak':
+        mouth = (0.35, 0.8, 1.0, 0.6)[f]
+        reach = 8
+    ph = f % n
+    c = C(HOWL_W, HOWL_H)
+    ex = (HOWL_EYES[0][0] + HOWL_EYES[1][0]) / 2 + .5
+    hollow = (ex, 35, 22, 12)
+    mask = _howl_heap(c, (_HOWL_BLOBS,), HOWL_W, HOWL_H, ph, n, lit, grow, sink, seed=3, hollow=hollow,
+                      teeth=teeth)
+    _howl_billows(c, mask, _howl_depth(mask, HOWL_H), _HOWL_BILLOWS, ph, n, lit, sink, grow, seed=5,
+                  hollow=hollow)
+    for k, wire in enumerate(_HOWL_WIRES):
+        _howl_wire(c, wire, mask, ph, n, k, lit)
+    _howl_strands(c, mask, HOWL_W, HOWL_H, ph, 23, lit, count=strands, reach=reach)
+    _howl_flecks(c, mask, ph, lit, flecks)
+    c.outline(K)
+    _howl_eyes(c, eyes, eye_col, pupil=pupil, wide=wide)
+    if mouth:
+        _howl_mouth(c, f, mouth)
+    _howl_sparks(c, mask, HOWL_W, HOWL_H, ph, 31, sparks, lit)
+    return c
+
+
+_HOWL_FAR_BLOBS = (
+    (16, 29, 11, 17, 0.0), (9, 18, 5, 4, 2.1), (23, 17, 5, 4, 4.2), (16, 13, 5, 3, 1.0),
+)
+HOWL_FAR_EYES = ((12, 16), (13, 16), (19, 16), (20, 16))
+
+
+def howl_far(f):
+    """32x24: the Howl far off, a smudge of static peeking up out of the dark
+    with two WHITE eye pixels. The eyes dip to GRAY on frame 2."""
+    c = C(32, 24)
+    _howl_heap(c, (_HOWL_FAR_BLOBS,), 32, 24, f, 4, 1, seed=8, hollow=(16.5, 17, 7, 3), fade=18, teeth=4)
+    c.outline(K)
+    for (x, y) in HOWL_FAR_EYES:
+        c.px(x, y, G if f == 2 else W)
+    return c
+
+
+def build_howl():
+    sheet('howl', HOWL_W, HOWL_H, [
+        A('sleep', [howl('sleep', f) for f in range(4)], 0.14,
+          note='asleep, dim and settled 2 px low: the static churns, the edges flicker, the eyes are GRAY slits'),
+        A('wake', [howl('wake', f) for f in range(6)], 0.1, loop=False,
+          note='the slits light WHITE and open, the heap rises and flares outward (widest on 3), then settles. '
+               'Frame 5 is idle 0'),
+        A('idle', [howl('idle', f) for f in range(4)], 0.12,
+          note='awake: two WHITE eyes glowing out of the dark face, the static churning, mouth closed'),
+        A('speak', [howl('speak', f) for f in range(4)], 0.08,
+          note=f'idle with a jagged black gap for a mouth, WHITE and GRAY teeth of noise on its lips, opening and '
+               f'closing, centred on frame ({HOWL_MOUTH[0]:g}, {HOWL_MOUTH[1]})'),
+    ], f'The Howl, the antagonist: the noise that once filled the line, every voice it swallowed fed back on '
+       f'itself, grown vast underground. The same striped static as intro_static, heaped up in billows and '
+       f'rising from below. Eye centres are frame {HOWL_EYES[0]} and {HOWL_EYES[1]} in every frame. The heap '
+       f'runs off the bottom edge and fades to black there, so draw it with its bottom row on or below the floor '
+       f'or a dark band. It faces the viewer, so it needs no mirrored copy.')
+    sheet('howl_far', 32, 24, [
+        A('watch', [howl_far(f) for f in range(4)], 0.2,
+          note='a smudge of static peeking up out of the dark, the eyes two WHITE pixel pairs at frame x 12-13 '
+               'and 19-20 on row 16. The eyes dip to GRAY on frame 2'),
+    ], 'The Howl far off, watching from the dark, for cutscenes. Its bottom rows fade to black, so it can sit '
+       'on a dark horizon or in a pit.')
+
+
 # =================================================================== title key art
 
 # The Spark on a cliff at the right of the title, looking out over the land
@@ -6827,6 +7288,991 @@ def build_keyart():
        'after the poles and wire (it hides them where they pass behind it) and before the logo and menu.')
 
 
+# =================================================================== World 4: Dead Air
+
+# The deep telephone exchange under the whole network, where every cut line
+# ends. No wind, no daylight, dead equipment everywhere: switching racks,
+# cable trays, switchboards nobody answers. Eerie and quiet, never gory. The
+# game tints each world's four greys, so everything here uses the same four.
+# Danger reads from shape and motion, not colour: the turret's eye, the
+# jagged bolt, the ghost's face and the crawling wall of static.
+
+W4_LAMP_X = (3, 11)      # left column of each 4x4 dead lamp on a deep rack panel, 8 px apart
+W4_LAMP_Y = 4            # their top row
+
+
+def _w4_lamp(c, x, y, glint=G, lens=K):
+    """4x4 indicator lamp: a round bezel round a dark lens, one glint on the glass."""
+    c.art(x, y, ['.dd.', 'dkkd', 'dkkd', '.dd.'])
+    c.rect(x + 1, y + 1, 2, 2, lens)
+    if glint is not None:
+        c.px(x + 1, y + 1, glint)
+
+
+def _w4_tray(c, y0, n, steel, cut=None):
+    """A cable tray from row y0: n cables of 2 px (a lit top with the twist of
+    the strands, a dark underside), bound by a tie every 8 px, lying on a
+    slotted side rail. It runs the full width, so trays join across tiles.
+    cut is (cable, x0, x1): that cable is cut away between x0 and x1."""
+    for k in range(n):
+        y = y0 + k * 2
+        hi, lo = (steel, D) if k % 2 == 0 else (D, K)
+        c.rect(0, y, 16, 1, hi)
+        c.rect(0, y + 1, 16, 1, lo)
+        for x in range((k * 3 + 1) % 4, 16, 4):
+            c.px(x, y + 1, K if k % 2 == 0 else D)
+    for x in (6, 14):                           # cable ties: a band round the bundle
+        c.rect(x, y0, 1, n * 2, D)
+        c.px(x, y0, steel)
+    if cut:
+        k, x0, x1 = cut
+        c.rect(x0, y0 + k * 2, x1 - x0 + 1, 2, K)
+    ry = y0 + n * 2
+    c.rect(0, ry, 16, 1, steel)                 # side rail: lit edge, slots below
+    c.rect(0, ry + 1, 16, 1, D)
+    for x in range(2, 16, 4):
+        c.px(x, ry + 1, K)
+    return ry + 2
+
+
+def ground_w4(left=False, right=False, top=False, bottom=False, depth=0, alt=0):
+    """Exchange floor: a riveted tread plate on top with a cable tray slung
+    under it, a second tray in the row below, then rack panels with rows of
+    dead indicator lamps. Every row below the top starts on the same steel
+    rail and a post runs down the left of every tile, so any depth stacks on
+    any other and every tile joins its neighbours."""
+    c = C(16, 16)
+    c.rect(0, 0, 16, 16, K)
+    lit = depth < 2
+    steel = G if lit else D
+    if not top:                                 # the rail each row hangs from, with bolt holes
+        c.rect(0, 0, 16, 2, D)
+        c.rect(0, 0, 16, 1, steel)
+        for x in (5, 13):
+            c.px(x, 1, K)
+    if top:
+        _w4_tray(c, 7, 2, steel)
+    elif depth == 1:
+        _w4_tray(c, 4, 3, steel, cut=(1, 8, 10) if alt == 2 else None)
+        if alt == 2:                            # a cut cable: one end droops out of the tray, frayed
+            c.px(11, 6, G)                      # the far end, cut clean
+            c.art(6, 6, ['gd', '.d', '.d', '.d', '.d', 'd.', 'd.', 'dg', 'g.'])
+    else:
+        # a rack panel: a row of dead indicator lamps over a row of label slots
+        c.rect(2, 3, 14, 11, D)
+        c.dith(2, 4, 14, 10, K, 3)
+        c.rect(2, 13, 14, 1, K)
+        for lx in W4_LAMP_X:
+            _w4_lamp(c, lx, W4_LAMP_Y + 1)
+            c.rect(lx, 10, 4, 1, K)
+            c.rect(lx, 11, 4, 1, D)
+        for x in (2, 15):                       # rivets at the panel's corners
+            c.px(x, 3, D)
+            c.px(x, 12, K)
+        if alt == 1:                            # a panel pulled out: a dark slot, loose wires
+            c.rect(10, 3, 6, 10, K)
+            c.line(11, 3, 12, 9, D)
+            c.line(14, 3, 13, 7, D)
+            c.px(12, 10, G)
+            c.px(13, 8, G)
+    # a dark post down the left of every tile, bolt holes up it (like ground_w3)
+    c.rect(0, 0, 2, 16, D)
+    for y in range(3, 16, 5):
+        c.px(1, y, K)
+    if top:
+        # deck: the white lip you stand on, then a tread plate with rivets
+        c.rect(0, 0, 16, 1, W)
+        c.rect(0, 1, 16, 1, G)
+        c.rect(0, 2, 16, 3, D)
+        for x in range(0, 16, 8):
+            c.px(x + 2, 2, G)                   # raised treads, leaning in turn
+            c.px(x + 3, 3, G)
+            c.px(x + 6, 3, G)
+            c.px(x + 7, 2, G)
+        for x in (0, 8):                        # rivets where the plates butt
+            c.px(x, 4, G)
+            c.px(x + 1, 4, K)
+        c.rect(0, 5, 16, 1, K)                  # shadow under the deck edge
+        if alt == 1:                            # grating: slots through the plate
+            c.rect(2, 2, 12, 3, D)
+            for x in range(3, 13, 2):
+                c.rect(x, 2, 1, 3, K)
+        elif alt == 3:                          # a dead floor lamp set in the plate
+            c.rect(9, 2, 5, 3, K)
+            c.art(9, 2, ['.dd.', 'dkgd', '.dd.'])
+    if left:
+        for y in range(16):
+            c.px(0, y, G if (y + (0 if top else 1)) % 3 else D)
+    if right:
+        c.rect(15, 0, 1, 16, K)
+        c.dith(14, 0, 1, 16, K, 8)
+    if top:
+        if left:
+            c.px(0, 0, T)
+            c.px(0, 1, G)
+        if right:
+            c.px(15, 0, T)
+            c.px(15, 1, G)
+    if bottom:
+        # the underside: a riveted flange, and a cable slung along beneath it
+        c.rect(0, 12, 16, 2, D)
+        c.rect(0, 12, 16, 1, steel)
+        for x in (4, 12):
+            c.px(x, 13, K)
+        c.rect(0, 14, 16, 2, K)
+        for x in range(16):
+            c.px(x, 14 + (1 if 5 <= x <= 10 else 0), D)
+        c.rect(0, 15, 5, 1, T)
+        c.rect(11, 15, 5, 1, T)
+        c.px(7, 15, G)
+        if left:
+            c.px(0, 14, T)
+        if right:
+            c.px(15, 14, T)
+    return c
+
+
+def block_w4(lip=True, kind=0):
+    """Relay rack panel: a steel front between two rack ears with screw holes.
+    Along its top a dead lamp and a label, below them a small perforated
+    grille (or louvres, or a stencil)."""
+    c = C(16, 16)
+    c.rect(0, 0, 16, 16, D)
+    c.rect(15, 0, 1, 16, K)
+    c.rect(0, 15, 16, 1, K)
+    c.rect(0, 0, 1, 15, G)
+    oy = 2 if lip else 0
+    for y in (2 + oy, 12):                      # the rack ears' screw holes
+        for ex in (2, 13):
+            c.px(ex, y, K)
+    c.rect(3, oy, 1, 15 - oy, K)                # the front sits between the ears
+    c.rect(12, oy, 1, 15 - oy, K)
+    c.rect(4, oy, 8, 15 - oy, D)
+    c.rect(4, oy, 8, 1, G if not lip else D)
+    ty = 2 + oy                                 # the top row: dead lamp on the left, label beside it
+    if kind == 2:
+        c.art(4, ty - 1, ['.g.', 'gwg', '.g.'])  # the one live lamp on the panel
+    else:
+        c.art(4, ty - 1, ['.d.', 'dkd', '.g.'])
+        c.px(5, ty, K)
+    c.rect(8, ty, 3, 1, G)
+    c.rect(8, ty + 1, 3, 1, K)
+    gy = ty + 3
+    if kind == 1:                               # louvres
+        for k in range(3 if lip else 4):
+            c.rect(5, gy + k * 2, 6, 1, K)
+            c.rect(5, gy + k * 2 + 1, 6, 1, G if k == (2 if lip else 3) else D)
+    elif kind == 3:                             # stencilled handset, standing on end
+        c.art(6, gy, ['.gg', 'gg.', 'g..', 'gg.', '.gg'] if lip else ['.gg', 'gg.', 'g..', 'g..', 'gg.', '.gg'])
+    else:                                       # perforated grille
+        for yy in range(gy, 13):
+            for xx in range(5, 11):
+                if (xx + yy) % 2 == 0:
+                    c.px(xx, yy, K)
+    if lip:
+        c.rect(0, 0, 16, 1, W)
+        c.rect(0, 1, 16, 1, G)
+        c.rect(15, 0, 1, 2, G)
+    return c
+
+
+# ------------------------------------------------------------------ Dead Air backdrop
+
+W4_TRAY_Y = 24       # the overhead cable tray meets every piece edge at this row
+W4_FLOOR_Y = 116     # the far floor's top row, the same across every piece
+
+
+def _w4_far_tray(c, x0, x1, y, bundle=True):
+    """A far ladder tray from x0 to x1 at row y: two rails, a rung wherever x
+    is a multiple of 6 (so trays line up across piece edges), and a dithered
+    bundle of cable lying in it."""
+    c.rect(x0, y, x1 - x0 + 1, 1, D)
+    c.rect(x0, y + 3, x1 - x0 + 1, 1, D)
+    for x in range(x0, x1 + 1):
+        if x % 6 == 0:
+            c.rect(x, y, 1, 4, D)
+        if bundle:
+            if bayer(x, y - 1) < 10:
+                c.px(x, y - 1, D)
+            if bayer(x, y - 2) < 3:
+                c.px(x, y - 2, D)
+
+
+def _w4_floor(c):
+    """The far floor: a hard edge at W4_FLOOR_Y, then a dither that thickens
+    toward the bottom. The same in every piece."""
+    c.rect(0, W4_FLOOR_Y, 96, 1, D)
+    for y in range(W4_FLOOR_Y + 1, 128):
+        for x in range(96):
+            if bayer(x, y) < 2 + (y - W4_FLOOR_Y) // 2:
+                c.px(x, y, D)
+
+
+def _w4_sag(c, x0, y0, x1, y1, sag, col=D, thick=1, dith=16):
+    """A hanging cable from (x0, y0) to (x1, y1), sagging `sag` px at the middle."""
+    for x in range(min(x0, x1), max(x0, x1) + 1):
+        u = (x - x0) / max(1, x1 - x0)
+        y = int(round(y0 + (y1 - y0) * u + sag * 4 * u * (1 - u)))
+        for t in range(thick):
+            if bayer(x, y + t) < dith:
+                c.px(x, y + t, col)
+
+
+def _w4_frayed(c, x, y0, y1, glint=True):
+    """A cut cable hanging straight down from y0, splayed into strands at y1."""
+    c.rect(x, y0, 1, y1 - y0, D)
+    c.px(x - 1, y1, D)
+    c.px(x + 1, y1, D)
+    c.px(x - 1, y1 + 1, D)
+    c.px(x + 2, y1 + 1, D)
+    c.px(x, y1 + 1, G if glint else D)
+
+
+def _w4_rack(c, x, w, top, glints=()):
+    """A far rack cabinet standing on the floor: side rails, a cap, and shelves
+    of relays every 6 px. glints are (shelf, relay) that catch a little light."""
+    c.rect(x, top, w, W4_FLOOR_Y - top, D)
+    c.rect(x - 1, top, w + 2, 2, D)
+    c.rect(x + 2, top + 3, w - 4, W4_FLOOR_Y - top - 5, K)
+    for k, y in enumerate(range(top + 8, W4_FLOOR_Y - 3, 6)):
+        c.rect(x + 2, y, w - 4, 1, D)           # the shelf
+        for xx in range(x + 3, x + w - 3, 2):   # relays standing on it
+            c.px(xx, y - 1, D)
+            if bayer(xx, y - 2) < 8:
+                c.px(xx, y - 2, D)
+        for (sk, r) in glints:
+            if sk == k:
+                c.px(x + 3 + r * 2, y - 2, G)
+
+
+def backdrop_w4(piece):
+    """96x128 far shapes of the exchange, dark and dither only, with a few
+    GRAY glints. Every piece carries the same overhead tray and the same floor
+    line at its edges, so any piece joins any other."""
+    c = C(96, 128)
+    if piece == 0:    # a bank of switching racks, all one height, and a dimmer bank behind
+        for x in range(1, 95, 11):
+            for yy in range(58, W4_FLOOR_Y):
+                for xx in range(x, x + 10):
+                    if bayer(xx, yy) < (6 if xx in (x, x + 9) or yy < 60 else 3):
+                        c.px(xx, yy, D)
+        for i, (x, gl) in enumerate(((5, ((1, 2),)), (19, ()), (33, ((4, 1), (0, 3))), (47, ()),
+                                     (68, ((2, 3),)), (82, ()))):
+            _w4_rack(c, x, 12, 44, glints=gl)
+            if i % 2 == 0:
+                c.rect(x + 6, W4_TRAY_Y + 4, 1, 44 - W4_TRAY_Y - 4, D)   # a cable up to the tray
+        c.rect(61, 40, 1, W4_FLOOR_Y - 40, D)    # a rolling ladder in the aisle
+        c.rect(65, 44, 1, W4_FLOOR_Y - 44, D)
+        for y in range(46, W4_FLOOR_Y, 5):
+            c.rect(61, y, 5, 1, D)
+        c.px(61, 39, D)
+    elif piece == 1:  # drooping bundles of cut cable under the tray
+        _w4_sag(c, 4, W4_TRAY_Y + 4, 42, W4_TRAY_Y + 4, 34, thick=2)
+        _w4_sag(c, 30, W4_TRAY_Y + 4, 74, W4_TRAY_Y + 4, 52, thick=2)
+        _w4_sag(c, 58, W4_TRAY_Y + 4, 92, W4_TRAY_Y + 4, 26, thick=2)
+        _w4_sag(c, 14, W4_TRAY_Y + 4, 64, W4_TRAY_Y + 4, 64, thick=1, dith=10)
+        for (x, y1, gl) in ((22, 70, True), (48, 96, False), (81, 62, True), (36, 52, False)):
+            _w4_frayed(c, x, W4_TRAY_Y + 4, y1, gl)
+        # a cable drum on the floor with a cut end trailing off it
+        c.ellipse(70, W4_FLOOR_Y - 9, 9, 9, D)
+        c.ellipse(70, W4_FLOOR_Y - 9, 6, 6, K)
+        c.ellipse(70, W4_FLOOR_Y - 9, 2.5, 2.5, D)
+        c.dith(62, W4_FLOOR_Y - 16, 16, 12, D, 5, only=K)
+        _w4_sag(c, 70, W4_FLOOR_Y - 1, 90, W4_FLOOR_Y - 1, -2)
+        c.px(91, W4_FLOOR_Y - 2, G)
+        # a dead lamp hung on a flex
+        c.rect(12, W4_TRAY_Y + 4, 1, 36, D)
+        c.art(9, W4_TRAY_Y + 40, ['.ddddd.', 'ddddddd', '.dkkkd.', '..kgk..'])
+    elif piece == 2:  # the dead switchboard wall: rows of jack holes, empty stools
+        c.rect(6, 36, 84, 64, D)
+        c.rect(5, 34, 86, 2, D)
+        c.rect(10, 42, 76, 50, K)
+        for y in range(44, 90, 4):
+            for x in range(12, 85, 3):
+                c.px(x, y, D)                    # jack bezel
+                if hash2(x, y) % 23 == 0:
+                    c.px(x, y + 1, G)            # a jack that catches a little light
+            if (y // 4) % 3 == 0:
+                c.dith(11, y + 2, 74, 1, D, 6)   # a strip of dead lamps
+        for x in range(14, 86, 12):              # label plates along the cornice
+            c.rect(x, 38, 8, 2, K)
+        for (a, b, s) in ((18, 36, 12), (48, 57, 7), (66, 80, 10)):   # cords left plugged in
+            _w4_sag(c, a, 60, b, 72, s, dith=12)
+        c.rect(4, 100, 88, 3, D)                 # the desk and its legs
+        c.dith(4, 100, 88, 1, G, 3)
+        for x in (8, 86):
+            c.rect(x, 103, 2, W4_FLOOR_Y - 103, D)
+        for x in range(16, 84, 9):               # plugs waiting on the desk
+            c.rect(x, 98, 2, 2, D)
+        for sx in (26, 58):                      # two empty stools
+            c.rect(sx, 106, 9, 2, D)
+            c.rect(sx + 4, 108, 1, W4_FLOOR_Y - 108, D)
+            c.rect(sx + 1, W4_FLOOR_Y - 1, 7, 1, D)
+    else:             # a stair of cable trays climbing from the floor to the overhead run
+        steps = ((2, 30, 98), (22, 50, 80), (42, 70, 62), (62, 90, 44))
+        for i, (x0, x1, y) in enumerate(steps):
+            _w4_far_tray(c, x0, x1, y)
+            for sx in (x0 + 2, x1 - 2):          # stands down to the floor, further back
+                for yy in range(y + 4, W4_FLOOR_Y):
+                    if bayer(sx, yy) < (16 if i == 0 else 9):
+                        c.px(sx, yy, D)
+            if i:                                 # the cables drop a step at each bend
+                px_ = steps[i - 1][1]
+                c.line(x0 + 1, y - 1, px_ - 3, steps[i - 1][2] - 1, D)
+                c.line(x0 + 2, y - 1, px_ - 2, steps[i - 1][2] - 1, D)
+        c.rect(88, W4_TRAY_Y + 4, 1, 40, D)       # hangers from the overhead run to the top step
+        c.rect(91, W4_TRAY_Y + 4, 1, 40, D)
+        c.px(89, 60, G)
+        _w4_frayed(c, 56, 66, 88, True)           # a cable cut off a step
+    _w4_far_tray(c, 0, 95, W4_TRAY_Y)
+    for x in range(0, 96, 24):
+        c.px(x + 3, W4_TRAY_Y, G)                # a glint on the rail every 24 px
+    _w4_floor(c)
+    return c
+
+
+# ------------------------------------------------------------------ relay turret
+
+TURRET_EYE = (3, 8)       # centre of the eye lens, box at rest
+TURRET_MUZZLE = (0, 8)    # the bolt leaves here, just in front of the eye
+
+
+def _turret_box(eye, lens_glow=False):
+    """The turret body on its own canvas: a riveted steel box with a hood over
+    the eye and cooling slits. eye is the lens colours (ring, centre)."""
+    b = C(16, 16)
+    b.rect(4, 2, 11, 11, D)
+    b.rect(4, 2, 11, 1, G)                    # lit top edge
+    b.rect(14, 3, 1, 10, K)                   # shadowed back
+    b.rect(4, 12, 11, 1, K)
+    b.rect(1, 3, 5, 2, D)                     # the hood jutting over the eye
+    b.rect(1, 3, 5, 1, G)
+    b.px(1, 4, K)
+    for (x, y) in ((6, 4), (12, 4), (6, 10), (12, 10)):
+        b.px(x, y, G)
+        b.px(x + 1, y + 1, K)
+    for y in (6, 8):                          # cooling slits
+        b.rect(8, y, 4, 1, K)
+        b.rect(8, y + 1, 4, 1, G if y == 8 else D)
+    # the eye: a round socket on the left face
+    cx, cy = TURRET_EYE
+    b.art(cx - 2, cy - 2, ['.ddd.', 'dkkkd', 'dkkkd', 'dkkkd', '.ddd.'])
+    ring, mid = eye
+    b.rect(cx - 1, cy - 1, 3, 3, ring)
+    b.px(cx, cy, mid)
+    if lens_glow:                             # the socket rim catches the glow
+        for (x, y) in ((cx - 1, cy - 2), (cx, cy - 2), (cx + 1, cy - 2), (cx - 2, cy), (cx - 1, cy + 2),
+                       (cx, cy + 2), (cx + 1, cy + 2)):
+            b.px(x, y, G)
+    b.outline(K)
+    return b
+
+
+def turret(mode, f=0):
+    """16x16 relay turret bolted to the floor, facing left: one round eye on
+    its left face, which the bolt leaves from. The mount stays put, and the
+    box kicks 1 px back (right) when it fires."""
+    c = C(16, 16)
+    # the mount plate, bolted down
+    c.rect(3, 13, 13, 3, D)
+    c.rect(3, 13, 13, 1, G)
+    c.rect(3, 15, 13, 1, K)
+    for x in (5, 13):
+        c.px(x, 14, G)
+        c.px(x + 1, 14, K)
+    c.outline(K)
+    dx, glow = 0, False
+    if mode == 'idle':
+        eye = ((K, D), (K, G))[f]
+    elif mode == 'tell':
+        eye = ((D, G), (G, W), (W, W))[f]
+        glow = f == 2
+    else:
+        eye = ((W, W), (G, W))[f]
+        dx, glow = 1, f == 0
+    c.paste(_turret_box(eye, glow), dx, 0)
+    ex, ey = TURRET_EYE[0] + dx, TURRET_EYE[1]
+    if mode == 'idle' and f == 0:
+        c.px(ex - 1, ey - 1, D)               # a faint glint on the dead glass
+    if mode == 'tell' and f == 2:
+        c.px(0, ey, G)                         # the glow spills out in front
+    if mode == 'fire':
+        # the recoil flash: a jagged star of signal at the muzzle
+        pts = (((0, ey, W), (1, ey, W), (1, ey - 1, W), (1, ey + 1, W), (0, ey - 2, G), (0, ey + 2, G),
+                (1, ey - 3, D), (1, ey + 3, D), (2, ey - 2, G), (2, ey + 2, G)),
+               ((0, ey, G), (1, ey - 1, G), (1, ey + 1, D), (0, ey - 3, D), (0, ey + 2, D)))[f]
+        for (x, y, col) in pts:
+            c.px(x, y, col)
+    return c
+
+
+# ------------------------------------------------------------------ the bolt
+
+BOLT_HEAD = (1, 3)       # the centre of the bright tip, travelling left
+BOLT_TIP = ['.w.', 'www', '..w']                       # a twisted, jagged tip, 3 px tall
+BOLT_Y = (3, 3, 2, 2, 3, 4, 4, 3, 2, 2, 3, 4, 4)       # the zigzag's row for x = 3 to 15
+BOLT_GAPS = ({9, 13}, {8, 11, 14}, {10, 13, 15}, {9, 12})
+
+
+def bolt_shot(mode, f=0):
+    """16x8 shot of signal travelling left: a bright jagged tip 3 px tall and
+    a thin zigzag tail of short runs that breaks up and flickers. pop: it
+    bursts into dots against a wall on its left."""
+    c = C(16, 8)
+    if mode == 'fly':
+        hx, hy = BOLT_HEAD
+        tip = BOLT_TIP if f % 2 == 0 else [r[::-1] for r in BOLT_TIP[::-1]]
+        c.art(hx - 1, hy - 1, tip)
+        for i, y in enumerate(BOLT_Y):
+            x = 3 + i
+            if x in BOLT_GAPS[f]:
+                continue
+            if x > 11 and (x + f) % 2:
+                y += -1 if y > 3 else 1      # the far tail jitters
+            col = W if x < 5 else G if x < 10 else D
+            c.px(x, y, col)
+        c.px(5 + f % 2, 3 + (1 if f < 2 else -1), G)   # a spark jumping off the first kink
+        c.outline(K)
+    else:
+        spots = (((1, 3, W), (0, 3, W), (2, 3, W), (1, 2, W), (1, 4, W), (0, 1, G), (3, 1, G), (0, 5, G),
+                  (3, 5, G), (4, 3, G), (6, 2, D), (7, 4, D)),
+                 ((2, 1, W), (1, 5, W), (4, 2, G), (4, 5, G), (0, 3, G), (6, 3, G), (3, 0, D), (2, 7, D),
+                  (8, 3, D)),
+                 ((4, 0, G), (3, 6, G), (7, 1, D), (7, 5, D), (1, 7, D), (9, 3, D)))[f]
+        for (x, y, col) in spots:
+            c.px(x, y, col)
+        if f == 0:
+            c.outline(K)
+    return c
+
+
+# ------------------------------------------------------------------ echo, the static ghost
+
+ECHO_EYES = ((4, 5), (7, 5))     # top pixel of each 1x2 eye, facing left, at rest
+ECHO_MOUTH = (5, 8)              # top-left of the 2x2 open mouth
+ECHO_MITT = ['w.w', 'www', 'www', '.g.']   # a hand held up, fingers first; both hands use it
+
+
+def _echo_body(f, dx=0, dy=0, low=0, n=4, crown=True):
+    """The ghost before its outline: a round GRAY head with a WHITE crown, a
+    ragged hem, three tail wisps that trail off to the lower right and wave,
+    one torn scanline and a couple of specks. Returns a canvas."""
+    c = C(16, 16)
+    ph = 2 * math.pi * f / n
+    cx, cy, r = 7.5 + dx, 6.5 + dy + low, 5.4 - low * 0.4
+    body = set()
+    for y in range(16):
+        for x in range(16):
+            if math.hypot(x + .5 - cx, (y + .5 - cy) * (1.0 + low * 0.08)) <= r:
+                body.add((x, y))
+    # ragged hem: the bottom edge frays, a different column each frame
+    for x in range(16):
+        col = [y for (xx, y) in body if xx == x]
+        if not col:
+            continue
+        bot = max(col)
+        if (x + f) % 3 == 0:
+            body.discard((x, bot))
+        elif (x * 2 + f) % 5 == 0 and bot < 15:
+            body.add((x, bot + 1))
+    for (x, y) in body:
+        c.px(x, y, G)
+    # the crown catches the light
+    for x in range(int(4 + dx), int(11 + dx) if crown else 0):
+        top = min((y for (xx, y) in body if xx == x), default=None)
+        if top is not None:
+            c.px(x, top, W)
+            if 8 + dx <= x <= 9 + dx:
+                c.px(x, top + 1, W)
+    # tail wisps: tapering, waving, DARK toward the tips, broken near the end
+    wisps = (((11.5, 8.5), (14.0, 9.5), (15.6, 11.0), 1.2), ((10.5, 10.5), (13.0, 12.0), (14.8, 13.6), 1.0),
+             ((7.5, 11.5), (9.0, 13.0), (10.6, 14.2), 0.7))
+    for k, (p0, p1, p2, amp) in enumerate(wisps):
+        for i in range(10):
+            t = i / 9
+            x = (1 - t) ** 2 * p0[0] + 2 * t * (1 - t) * p1[0] + t * t * p2[0] + dx
+            y = (1 - t) ** 2 * p0[1] + 2 * t * (1 - t) * p1[1] + t * t * p2[1] + dy + low
+            y += math.sin(ph + t * 3 + k) * amp * t
+            xi, yi = int(round(x - .5)), int(round(y - .5))
+            if t > 0.75 and (i + f + k) % 3 == 0:
+                continue                         # the tip breaks up
+            c.px(xi, yi, G if t < 0.5 else D)
+            if k < 2 and t < 0.55:
+                c.px(xi, yi + 1, G if t < 0.3 else D)   # the wisps are thicker at the root
+    # one torn scanline crawling down the back of the body
+    ty = int(cy) + 3 + (0, 1, 2, 1)[f % 4]
+    for x in range(int(cx) + 1, 16):
+        if c.get(x, ty) == G and (x + f) % 3 != 0:
+            c.px(x, ty, D)
+    # specks of static: one on the body, one shed off a wisp
+    sx, sy = int(cx) + 3 + f % 2, int(cy) + 1 + (f * 3) % 3
+    if c.get(sx, sy) == G:
+        c.px(sx, sy, W)
+    return c
+
+
+def _echo_face(c, dx=0, dy=0):
+    for (ex, ey) in ECHO_EYES:
+        c.rect(ex + dx, ey + dy, 1, 2, K)
+    mx, my = ECHO_MOUTH
+    c.rect(mx + dx, my + dy, 2, 2, K)
+
+
+def echo(mode, f=0):
+    """16x16 ghost of static, facing left. drift: face out, O mouth, tail
+    wisps trailing, bobbing. hide: both wispy hands over its face,
+    shivering. knocked: it tears apart and scatters into specks."""
+    if mode == 'drift':
+        dy = (0, -1, -1, 0)[f]
+        c = _echo_body(f, 0, dy)
+        c.px(1, 8 + dy, G)                      # a little arm held out in front
+        c.px(2, 8 + dy, G)
+        c.px(1, 7 + dy + f % 2, G)
+        c.outline(K)
+        _echo_face(c, 0, dy)
+        return c
+    if mode == 'hide':
+        dx = (0, 1, 0, -1)[f]
+        c = _echo_body(f, dx, 0, low=1, crown=False)
+        for k, hx in enumerate((2, 7)):         # two pale hands over the eyes, body showing between
+            rows = list(ECHO_MITT)
+            if (f + k) % 2:                     # the fingers tremble
+                rows[0] = '.w.'
+            c.art(hx + dx, 6, rows)
+        c.outline(K)
+        return c
+    # knocked: the shape tears into slices, then scatters into specks of static
+    c = C(16, 16)
+    base = _echo_body(0)
+    _echo_face(base)
+    pts = [(x, y, base.get(x, y)) for y in range(16) for x in range(16) if base.get(x, y)[3]]
+    if f == 0:
+        for (x, y, col) in pts:
+            sh = (1, 1, -1, -1, 2, 2, -1, -1)[(y // 2) % 8]
+            c.px(x + sh, y, D if col == G and (x + y) % 4 == 0 else col)
+        c.outline(K)
+        return c
+    keep = (3, 4, 6, 10)[f - 1]
+    spread = (1.35, 1.8, 2.25, 2.6)[f - 1]
+    for (x, y, col) in pts:
+        h = hash2(x * 3 + 1, y * 5 + 2)
+        if h % keep:
+            continue
+        nx = int(round(8 + (x + .5 - 8) * spread + (h % 3 - 1)))
+        ny = int(round(8 + (y + .5 - 8) * spread - f))
+        speck = ((W if h % 8 == 0 else G) if col != D else D, G if h % 3 == 0 else D,
+                 G if h % 5 == 0 else D, D)[f - 1]
+        c.px(nx, ny, speck)
+        if f == 1 and h % 2 == 0:
+            c.px(nx + 1, ny, D)                 # torn scanline bits
+    return c
+
+
+# ------------------------------------------------------------------ the wall of static
+
+SW_ROWS = 'BKMDBDKMBKDMBDKD'     # each row's look: Bright, Mid, Dark, blacK scan gap. Lit rows sit between dark ones
+SW_RUNS = {                      # per look: (colour, shortest run, longest run), taken in turn
+    'B': ((G, 4, 8), (D, 1, 3), (G, 2, 5), (K, 1, 2)),
+    'M': ((G, 2, 4), (D, 2, 5), (G, 1, 3), (D, 3, 5)),
+    'D': ((D, 4, 8), (G, 1, 2), (D, 2, 5), (K, 1, 2)),
+    'K': ((K, 3, 7), (D, 2, 4)),
+}
+SW_REACH = {'B': 2, 'M': 1, 'D': -1, 'K': -2}   # how far each look juts out past a wall's front
+
+
+def _sw_row(y):
+    """A row of static as 16 colours: runs of each colour in turn, their
+    lengths and starting point picked by a hash of the row, wrapped round
+    the 16 px so it tiles."""
+    runs = SW_RUNS[SW_ROWS[y]]
+    row = []
+    k = 0
+    while len(row) < 16:
+        col, lo, hi = runs[k % len(runs)]
+        row += [col] * (lo + hash2(k * 7 + 3, y * 11 + 5) % (hi - lo + 1))
+        k += 1
+    row = row[:16]
+    if row[15] == runs[0][0]:
+        row[15] = runs[1][0]                   # keep a break where the row wraps
+    off = hash2(y, 29) % 16
+    return row[off:] + row[:off]
+
+
+SW_ROW_COLS = [_sw_row(y) for y in range(16)]
+
+
+def _sw_dir(y):
+    return 1 if hash2(y % 16, 9) % 2 else -1
+
+
+def _sw_px(x, y, f):
+    """The colour of the living static at (x, y) on frame f, wrapped to 16 px
+    both ways. Each row crawls 4 px a frame, left or right by a hash, so it
+    comes round to where it started after 4 frames."""
+    x, y = x % 16, y % 16
+    col = SW_ROW_COLS[y][(x - _sw_dir(y) * 4 * f) % 16]
+    if col == G and hash2(x * 5 + f * 31, y * 3 + f * 17) % 19 == 0:
+        col = W                               # flecks that jump every frame
+    return col
+
+
+def _sw_edge(a, f, mid):
+    """Where the solid static ends at position a along its edge on frame f:
+    three slow waves plus a per-position kick. Wraps every 16 px."""
+    ph = f * math.pi / 2
+    e = (mid + 0.8 * math.sin(2 * math.pi * a / 16 + ph + 0.7)
+         + 1.2 * math.sin(2 * math.pi * 2 * a / 16 - ph + 2.1)
+         + 0.9 * math.sin(2 * math.pi * 3 * a / 16 + 2 * ph + 4.0))
+    return e + (hash2(a, f + 3) % 3) - 1
+
+
+def static_wall(mode, f):
+    """16x16 living static. body tiles both ways. edge_up is the ragged crest
+    of a rising wall: solid below, torn streaks floating above it, clear at the
+    top. edge_right is the ragged front of a wall moving right: the lit rows
+    jut out further than the dark ones, streak heads lead, clear beyond."""
+    c = C(16, 16)
+    for y in range(16):
+        for x in range(16):
+            col = _sw_px(x, y, f)
+            if mode == 'body':
+                c.px(x, y, col)
+                continue
+            if mode == 'edge_up':
+                top = max(6, min(11, int(round(_sw_edge(x, f, 8.5)))))
+                d = y - top                           # rows below the crest
+                if d < 0:
+                    # above the crest only lit streaks survive, torn into pieces
+                    u = (x - _sw_dir(y) * 4 * f) % 16
+                    reach = 1 + hash2(u // 3, y * 5 + 1) % 4
+                    if col in (G, W) and -d <= reach:
+                        c.px(x, y, col if -d < reach else D)
+                    continue
+                if d == 0:
+                    col = W if hash2(x + y * 16, f) % 4 == 0 else G   # the lit rim of the crest
+                elif d == 1 and col in (D, K):
+                    col = G if col == D else D
+            else:
+                front = int(round(_sw_edge(y, f, 8.5) + SW_REACH[SW_ROWS[y]]))
+                front = max(5, min(12, front))
+                d = front - x                         # columns behind the front
+                if d < 0:
+                    # one more torn piece of a lit row a little ahead of the front
+                    if SW_ROWS[y] in 'BM' and 2 <= -d <= 3 + hash2(y, f) % 2 and col in (G, W) and x < 15:
+                        c.px(x, y, G if -d == 2 else D)
+                    continue
+                if d == 0:
+                    col = W if SW_ROWS[y] == 'B' else G if SW_ROWS[y] == 'M' else col
+            c.px(x, y, col)
+    return c
+
+
+# ------------------------------------------------------------------ the heart of the line
+
+RING_W, RING_H = 96, 64
+RING_CORE = (48, 29)             # centre of the cracked glass core
+RING_CORE_R = 13.5               # 27 px across
+RING_R = 19                      # the Sparks sit on a circle 38 px across
+RING_ANGLES = (180, 225, 270, 315, 0, 45, 90, 135)   # clockwise from the empty place on the left
+RING_PLACES = [(RING_CORE[0] + int(round(RING_R * math.cos(math.radians(a)))),
+                RING_CORE[1] + int(round(RING_R * math.sin(math.radians(a))))) for a in RING_ANGLES]
+RING_EMPTY = RING_PLACES[0]      # where the player's Spark joins
+RING_CRACK = ((48, 16), (46, 20), (49, 24), (47, 28), (50, 32), (48, 36), (49, 42))
+RING_BRANCHES = (((47, 28), (43, 31)), ((50, 32), (54, 34)), ((49, 24), (52, 21)))
+RING_LEAKS = ((48, 14, 0, -1), (49, 44, 0, 1), (45, 16, -1, -1), (52, 19, 1, -1))   # (x, y, dx, dy) off the ends
+
+
+def _ring_spark(c, cx, cy, col=W, tip=W, eyes=True, ghost=False):
+    """A small Spark of the line centred on (cx, cy): a 7x5 body rounded at
+    every corner, a little bigger than a Pip, two dot eyes and a one-pixel
+    antenna. ghost draws only a faint dotted outline: the empty place."""
+    x0, y0 = cx - 3, cy - 2
+    if ghost:
+        for (x, y) in ((x0 + 1, y0 - 1), (x0 + 3, y0 - 1), (x0 + 5, y0 - 1), (x0 - 1, y0 + 1),
+                       (x0 - 1, y0 + 3), (x0 + 7, y0 + 1), (x0 + 7, y0 + 3), (x0 + 1, y0 + 5),
+                       (x0 + 3, y0 + 5), (x0 + 5, y0 + 5)):
+            c.px(x, y, D)
+        return
+    s = C(RING_W, RING_H)
+    s.rect(x0 + 1, y0, 5, 5, col)
+    s.rect(x0, y0 + 1, 7, 3, col)
+    if eyes:
+        s.px(cx - 1, cy, K)
+        s.px(cx + 1, cy, K)
+    s.px(cx, y0 - 1, G if col == W else col)
+    s.px(cx, y0 - 2, tip)
+    s.outline(K)
+    c.paste(s, 0, 0)
+
+
+def _ring_crack_pts():
+    crack = set()
+    for (x0, y0), (x1, y1) in zip(RING_CRACK, RING_CRACK[1:]):
+        crack |= set(_line_pts(x0, y0, x1, y1))
+    for (p0, p1) in RING_BRANCHES:
+        crack |= set(_line_pts(*p0, *p1))
+    return crack
+
+
+def _ring_core(c, state, f):
+    """The glass core. state: 'cracked' (dark glass, the crack glowing dimly
+    and static seeping out of it), 'flare' (the crack full of light as it
+    seals), 'whole' (sealed, lit from inside)."""
+    cx, cy = RING_CORE
+    r = RING_CORE_R
+    disc = {(x, y) for y in range(RING_H) for x in range(RING_W)
+            if math.hypot(x + .5 - cx, y + .5 - cy) <= r}
+    wall = {(x, y) for (x, y) in disc if any((x + dx, y + dy) not in disc
+                                             for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)))}
+    whole = state == 'whole'
+    for (x, y) in disc:
+        c.px(x, y, K)
+    for (x, y) in disc - wall:
+        d = math.hypot(x + .5 - cx, y + .5 - cy)
+        if whole:                              # lit from inside: brightest at the heart
+            if bayer(x, y) < max(0, int(17 - d * 1.25)):
+                c.px(x, y, G)
+            if d < 2.6 or (d < 4.2 and bayer(x, y) < 8):
+                c.px(x, y, W)
+        else:                                  # dark glass, a slow swirl of trapped static
+            a = math.atan2(y + .5 - cy, x + .5 - cx)
+            if (a * 2 + d * 0.45 - f * 0.9) % (2 * math.pi) < 1.1 and bayer(x, y) < 5 and d > 3:
+                c.px(x, y, D)
+    for (x, y) in wall:                        # the glass wall, lit from the top left
+        up = (x + .5 - cx) + (y + .5 - cy) < 0
+        c.px(x, y, W if whole else (G if up else D))
+    c.outline(K)
+    for (x, y) in ((cx - 9, cy - 5), (cx - 9, cy - 4), (cx - 8, cy - 7), (cx - 7, cy - 8), (cx - 6, cy - 9),
+                   (cx - 5, cy - 9), (cx - 7, cy - 3)):
+        c.px(x, y, W)                          # shine on the glass
+    c.px(cx + 8, cy + 6, W if whole else G)
+    if whole:
+        return
+    crack = _ring_crack_pts()
+    if state == 'flare':
+        for (x, y) in crack:
+            for (dx, dy) in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                if (x + dx, y + dy) in disc and (x + dx, y + dy) not in crack:
+                    c.px(x + dx, y + dy, G)
+        for (x, y) in crack:
+            c.px(x, y, W)
+        return
+    # cracked: a dim glow in the split, brighter at the kinks
+    main = set()
+    for (x0, y0), (x1, y1) in zip(RING_CRACK, RING_CRACK[1:]):
+        main |= set(_line_pts(x0, y0, x1, y1))
+    for (x, y) in crack:
+        c.px(x, y, G if (x, y) in main else D)
+    for (x, y) in RING_CRACK[1:-1]:
+        c.px(x, y, W if (x + y + f) % 4 == 0 else G)
+    for (x, y) in RING_CRACK[::2]:
+        c.px(x, y + 1, G)
+    # static seeping out: torn dashes leave the crack, drift out and up, and fade
+    for k, (x, y) in enumerate(sorted(crack)[1::4]):
+        t = (f + k) % 4
+        side = -1 if k % 2 else 1
+        if t == 3:
+            continue
+        sx, sy = x + side * (2 + t * 2), y - t
+        for i in range(2 if t < 2 else 1):
+            c.px(sx + side * i, sy, (G, G, D)[t] if i == 0 else D)
+    for k, (x, y, dx, dy) in enumerate(RING_LEAKS):   # and out of the ends of the crack
+        t = (f + k * 2) % 4
+        if t < 3:
+            c.px(x + dx * t, y + dy * t, G if t == 0 else D)
+
+
+def _ring_stand(c):
+    """The insulator pin the core sits on, its base plate on the floor, and the
+    cut lines that run in along the floor and end here."""
+    cx = RING_CORE[0]
+    top = RING_CORE[1] + 13
+    c.rect(cx - 5, top, 10, 3, D)              # collar
+    c.rect(cx - 5, top, 10, 1, G)
+    c.rect(cx - 3, top + 3, 6, 58 - top - 3, D)   # pin
+    c.rect(cx - 3, top + 3, 1, 58 - top - 3, G)
+    c.rect(cx + 2, top + 3, 1, 58 - top - 3, K)
+    c.rect(cx - 16, 58, 32, 6, D)               # base plate
+    c.rect(cx - 16, 58, 32, 1, G)
+    c.rect(cx - 16, 63, 32, 1, K)
+    for x in (cx - 13, cx - 6, cx + 5, cx + 12):
+        c.px(x, 60, G)
+        c.px(x + 1, 61, K)
+    for side in (-1, 1):                       # cut lines running in along the floor
+        x0 = 6 if side < 0 else 89
+        x1 = cx - 17 if side < 0 else cx + 16
+        for x in range(min(x0, x1), max(x0, x1) + 1):
+            c.px(x, 61, D)
+            c.px(x, 62, K)
+            if x % 5 == 0:
+                c.px(x, 61, G)
+        c.px(x0 - side, 60, G)                  # frayed ends
+        c.px(x0 - side, 62, D)
+    c.outline(K)
+
+
+def _ring_circle(c, upto=None, col=G, head=W, faint=False):
+    """The circle the Sparks sit on. faint draws it as a dark dither. upto is
+    how far round the light has run, in degrees clockwise from the empty place."""
+    cx, cy = RING_CORE
+    pts = []
+    for i in range(0, 720):
+        a = 180 + i / 2
+        x = int(math.floor(cx + RING_R * math.cos(math.radians(a))))
+        y = int(math.floor(cy + RING_R * math.sin(math.radians(a))))
+        if not pts or pts[-1][:2] != (x, y):
+            pts.append((x, y, i / 2))
+    for (x, y, deg) in pts:
+        if c.get(x, y) not in (T, K):
+            continue
+        if faint:
+            if bayer(x, y) < 6:
+                c.px(x, y, D)
+        elif upto is None or deg <= upto:
+            c.px(x, y, head if upto is not None and upto - 20 < deg <= upto else col)
+
+
+def line_heart(mode, f):
+    """96x64: the heart of the line, the goal of the last level. A cracked glass
+    core on an insulator pin, seven small Sparks round it and one empty place
+    on the left where the player joins. Its base sits on the frame's bottom row."""
+    c = C(RING_W, RING_H)
+    _ring_stand(c)
+    lit_sparks = 0                               # how many places, from the empty one, are lit
+    core, circle, rays = 'cracked', 'faint', 0
+    if mode == 'close':
+        core = ('cracked', 'cracked', 'cracked', 'flare', 'whole', 'whole')[f]
+        lit_sparks = (1, 3, 6, 8, 8, 8)[f]
+        circle = (None, 90, 225, 360, 'full', 'full')[f]
+        rays = (0, 0, 0, 0, 3, 6)[f]
+    elif mode == 'lit':
+        core, lit_sparks, circle, rays = 'whole', 8, 'full', (3, 5, 4, 6)[f]
+    _ring_core(c, core, f)
+    if circle == 'faint':
+        _ring_circle(c, faint=True)
+    elif circle == 'full':
+        _ring_circle(c)
+    elif circle is not None:
+        _ring_circle(c, upto=circle)
+    for i, (px_, py_) in enumerate(RING_PLACES):
+        if i == 0 and mode == 'wait':
+            _ring_spark(c, px_, py_, ghost=True)  # the empty place: a faint dotted outline
+            continue
+        if i < lit_sparks:
+            _ring_spark(c, px_, py_, W, tip=W if (mode != 'lit' or (f + i) % 2 == 0) else G)
+        else:                                     # weak: GRAY, one or two dipping to DARK
+            weak = (i + f) % 4 == 0 or (i * 3 + f) % 7 == 0
+            _ring_spark(c, px_, py_, D if weak else G, tip=D if weak else G, eyes=not weak or f % 2 == 0)
+    if mode == 'close' and f == 0:               # the new Spark arrives with a flash
+        ex, ey = RING_EMPTY
+        for (dx, dy) in ((-6, 0), (-5, -4), (-5, 4), (0, -6), (0, 7), (-7, -2), (-7, 2)):
+            if c.get(ex + dx, ey + dy) == T:
+                c.px(ex + dx, ey + dy, G if abs(dx) + abs(dy) > 6 else W)
+    if rays:
+        cx, cy = RING_CORE
+        angles = [a + 22.5 for a in range(0, 360, 45) if a not in (45, 90)]
+        long_ = [a for k, a in enumerate(angles) if (k + f) % 2 == 0]
+        _rays(c, cx, cy, RING_R + 5, RING_R + 5 + rays, G, tip=W, angles=[a for a in angles if a not in long_])
+        _rays(c, cx, cy, RING_R + 5, RING_R + 7 + rays, G, tip=W, angles=long_)
+    return c
+
+
+def build_dead_air():
+    rows = [
+        A('top', [ground_w4(left=True, top=True), ground_w4(top=True), ground_w4(right=True, top=True),
+                  ground_w4(left=True, right=True, top=True)], 0,
+          note='top-left, top, top-right, one-wide column top'),
+        A('mid', [ground_w4(left=True, depth=1), ground_w4(depth=1), ground_w4(right=True, depth=1),
+                  ground_w4(left=True, right=True, depth=1)], 0, note='second row down: left, fill, right, column'),
+        A('deep', [ground_w4(left=True, depth=2), ground_w4(depth=2), ground_w4(right=True, depth=2),
+                   ground_w4(left=True, right=True, depth=2)], 0, note='third row and below'),
+        A('bottom', [ground_w4(left=True, bottom=True, depth=2), ground_w4(bottom=True, depth=2),
+                     ground_w4(right=True, bottom=True, depth=2),
+                     ground_w4(left=True, right=True, top=True, bottom=True)], 0,
+          note='underside for ceilings and floating ground. The last one is a single tile'),
+        A('alt', [ground_w4(top=True, alt=1), ground_w4(top=True, alt=3), ground_w4(depth=1, alt=2),
+                  ground_w4(depth=2, alt=1)], 0, note='drop-in swaps for variety, pick by hash of world tile x,y'),
+    ]
+    sheet('ground_w4', 16, 16, rows,
+          'Dead Air ground `#`: a riveted tread-plate floor on top with a cable tray slung under it, a second '
+          'tray below that, then rack panels with rows of dead indicator lamps. Same layout as `ground`. '
+          'Variants: floor grating, a dead floor lamp, a cut cable drooping out of its tray, a pulled rack panel.')
+    sheet('block_w4', 16, 16, [
+        A('lip', [block_w4(True, 0), block_w4(True, 1), block_w4(True, 2), block_w4(True, 3)], 0,
+          note='top of a stack: plain, vent, live pip, stencil'),
+        A('stacked', [block_w4(False, 0), block_w4(False, 1), block_w4(False, 2), block_w4(False, 3)], 0,
+          note='a block with another block above it'),
+    ], 'Dead Air block `=`: relay rack panels, each with a small grille and a dead lamp. Same layout as `block`. '
+       'Use the live pip (the one lit lamp) rarely.')
+    sheet('backdrop_w4', 96, 128, [
+        A('pieces', [backdrop_w4(k) for k in range(4)], 0,
+          note='0 banks of switching racks, 1 drooping bundles of cut cable, 2 a dead switchboard wall with '
+               'empty stools, 3 a stair of cable trays'),
+    ], f'Dead Air far shapes, like `backdrop_w3`: far layer, parallax 0.2x, 70% opacity, every bottom on one '
+       f'horizon line. Lay the pieces edge to edge, one every 96 px, with no gaps: every piece carries the same '
+       f'overhead cable tray (row {W4_TRAY_Y}) and the same floor line (row {W4_FLOOR_Y}) at its edges, so they '
+       f'join in any order. DARK with a few GRAY glints, so it sits far back. Never put the same piece twice '
+       f'in a row.')
+    sheet('turret', 16, 16, [
+        A('idle', [turret('idle', f) for f in range(2)], 0.3,
+          note='faces left, flip for right. The eye is dim, with a faint flicker'),
+        A('tell', [turret('tell', f) for f in range(3)], 0.1, loop=False,
+          note='0.3 s before each shot: the eye brightens to WHITE and the socket rim catches the glow'),
+        A('fire', [turret('fire', f) for f in range(2)], 0.08, loop=False,
+          note=f'a jagged flash at the muzzle and the box kicks 1 px back. Spawn the bolt on frame 0 at frame '
+               f'pixel {TURRET_MUZZLE}. The mount does not move'),
+    ], f'Relay turret: a steel box bolted to the floor that fires a bolt of signal out of the round eye on its '
+       f'left face. Top-left on the tile top-left, the mount plate on the bottom three rows. Eye centre at frame '
+       f'pixel {TURRET_EYE}, and the bolt leaves from {TURRET_MUZZLE}. Mirrored, those are '
+       f'({15 - TURRET_EYE[0]}, {TURRET_EYE[1]}) and ({15 - TURRET_MUZZLE[0]}, {TURRET_MUZZLE[1]}).')
+    sheet('bolt', 16, 8, [
+        A('fly', [bolt_shot('fly', f) for f in range(4)], 0.05,
+          note='travelling left, flip for right. The head stays put, the broken tail flickers'),
+        A('pop', [bolt_shot('pop', f) for f in range(3)], 0.05, loop=False,
+          note='it hits a wall on its left and bursts into dots. Play it where the head stopped'),
+    ], f'The turret\'s bolt: a short jagged streak of signal, a bright head 3 px tall and a thin broken tail, '
+       f'so it never reads as a white blob or as the Spark. The head\'s centre is frame pixel {BOLT_HEAD}: '
+       f'draw at top-left = head - {BOLT_HEAD}, and keep the head on the turret\'s muzzle row when it spawns. '
+       f'A fair hitbox is frame x 0 to 6, y 2 to 4.')
+    sheet('echo', 16, 16, [
+        A('drift', [echo('drift', f) for f in range(4)], 0.12,
+          note='faces left, flip it to face the player. Face out, open O mouth, tail wisps trailing. It drifts '
+               'toward the player while the player looks away'),
+        A('hide', [echo('hide', f) for f in range(4)], 0.15,
+          note='the player is looking at it: both wispy hands over its face, the body shivers 1 px'),
+        A('knocked', [echo('knocked', f) for f in range(5)], 0.07, loop=False,
+          note='hit by the Arc: it tears into slices, then scatters into specks of static and is gone'),
+    ], 'Echo: a ghost made of static, pale and ragged, with a round face. Like a Boo, it creeps up while the '
+       'player looks away and hides its face when looked at. Round and GRAY with a WHITE sheen, two eyes and '
+       'an O mouth, no legs and no antenna, so it never reads as the Spark or a walker. The body sits in frame '
+       'x 2 to 13, y 1 to 12, the tail trails to (15, 14).')
+    sheet('static_wall', 16, 16, [
+        A('body', [static_wall('body', f) for f in range(4)], 0.08,
+          note='dense crawling static. Tiles seamlessly both ways: fill the wall with it'),
+        A('edge_up', [static_wall('edge_up', f) for f in range(4)], 0.08,
+          note='the ragged crest on top of a rising wall. Its lower rows match body, clear above the crest'),
+        A('edge_right', [static_wall('edge_right', f) for f in range(4)], 0.08,
+          note='the ragged front of a wall moving right. Its left columns match body, clear to the right'),
+    ], 'Wall of living static that rises up a shaft or chases from the left. Play all three rows on the same '
+       'clock so the edges line up with the body. Rows 13 to 15 of edge_up match body exactly, and so do '
+       'columns 0 to 4 of edge_right. The top 4 rows of edge_up and the last column of edge_right stay clear.')
+    sheet('ring', RING_W, RING_H, [
+        A('wait', [line_heart('wait', f) for f in range(4)], 0.2,
+          note=f'seven weak Sparks flicker round the cracked core, static seeping from the crack. The empty place '
+               f'is centred on frame pixel {RING_EMPTY}'),
+        A('close', [line_heart('close', f) for f in range(6)], 0.12, loop=False,
+          note='a Spark fills the empty place, a line of light runs round the circle, the crack flares and '
+               'seals, everything brightens. Then play lit'),
+        A('lit', [line_heart('lit', f) for f in range(4)], 0.1,
+          note='whole and bright, short rays pulsing out'),
+    ], f'The heart of the line, the goal of the last level: a cracked glass core like a big insulator on its '
+       f'pin, seven small Sparks on a circle round it and one empty place on the left where the player joins. '
+       f'Its base plate is on the bottom row, so draw it with top-left = (centre x - 48, floor y - 64). Core '
+       f'centre {RING_CORE}, the Sparks on a circle of radius {RING_R} round it. The empty place is centred on '
+       f'{RING_EMPTY}: hide the player\'s Spark there when close starts. It faces the viewer, so it needs no '
+       f'mirrored copy.')
+
+
 def contact():
     items = []
     for name, s in SHEETS.items():
@@ -6889,7 +8335,9 @@ def main():
     build_title()
     build_arc()
     build_intro()
+    build_howl()
     build_keyart()
+    build_dead_air()
     with open(os.path.join(OUT, 'sheets.json'), 'w', encoding='utf-8') as fh:
         json.dump(SHEETS, fh, indent=1)
     # the same manifest as a GDScript constant, so Godot needs no JSON at runtime
@@ -6908,7 +8356,7 @@ def main():
                                          'npc': readme.VILLAGE, 'ground_w3': readme.WORLD3,
                                          'title_logo': readme.TITLE, 'arc': readme.ARC,
                                          'intro_npc': readme.STORY,
-                                         'title_hero': readme.KEYART})
+                                         'title_hero': readme.KEYART, 'ground_w4': readme.WORLD4})
     contact()
     print(f'{len(SHEETS)} sheets written to {OUT}')
 

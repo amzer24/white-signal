@@ -1,6 +1,6 @@
 # WHITE SIGNAL: game design document
 
-Living document. Last updated 26 Sep 2026. This replaces `js-original/GDD.md`, which describes the earlier exploration and card-draft designs. That file is kept in git under the tag `legacy-archive`.
+Living document. Last updated 30 Sep 2026. This replaces `js-original/GDD.md`, which describes the earlier exploration and card-draft designs. That file is kept in git under the tag `legacy-archive`.
 
 ## 1. The game in one line
 
@@ -25,17 +25,20 @@ It is a classic Mario-style platformer: short levels, lives, a timer, shards to 
 | World 1: The Flats | Built and proven. 4 levels, a bonus room and the training yard |
 | World 2: The Switchyard | Built and proven. 4 levels, boss |
 | World 3: The Aerials | Built and proven. 4 levels, a tall finale |
-| World 4: Dead Air | Planned only |
-| The ending | Not written |
+| World 4: Dead Air | Built and proven. 4 levels, ending with the Howl chasing you to the ring |
+| The ending | Built. The ring closes, the ending cutscene and credits play, and Last Relay fills with visitors |
 | Pips | Built. Tiny sparks trapped in glass in every level. Dot keeps them in Last Relay and gives gifts as they come home |
+| The Howl and cutscenes | The Howl is the antagonist. Cutscenes C1 (the first Gate), C5 (into Dead Air) and C6 (the ending) are built. C2 to C4 are planned |
 
 The earlier exploration mode and the Classic arcade run were removed from the project on 27 Sep 2026. Git keeps them under the tag `legacy-archive`.
 
 ## 3. Story
 
-The full arc, the style guide for game text and the proposals for World 4 are in `docs/story/story-arc.md`.
+The full arc, World 4, the ending and the style guide for game text are in `docs/story/story-arc.md`.
 
 **The world.** One line once ran across the whole land, relay to relay, gate to gate, and it carried everyone's voices. Then a howling noise came down the line. The crews cut the line apart, one station at a time, to stop it spreading. The noise stopped, and so did the voices. The years since are called the Quiet.
+
+**The Howl.** The noise has a name: the crews called it the Howl, because it swallowed every voice it touched. It is a feedback loop of all those voices, scrambled together, and after the cut it pooled deep underground in Dead Air. When the first Gate lights, the Howl wakes and hears the Spark. It is the antagonist: dangerous, never evil, and in the end mended rather than destroyed.
 
 **The Spark.** A tiny spark of living signal lies asleep at the end of a cut wire. One night the dead line rings three times. The Spark wakes and follows the wire to Last Relay, the last station that still hums. Gates only open for signal, so Old Mast sends it down the line to find out who is calling.
 
@@ -46,8 +49,8 @@ The full arc, the style guide for game text and the proposals for World 4 are in
 | 1 The Flats | It's words, not static. Then a name starting S-P | The Quiet was a choice, made to keep people safe |
 | 2 The Switchyard | SPARK, COME HOME | The call is for the Spark |
 | 3 The Aerials | SPARK, COME HOME. WE KEPT YOUR PLACE | There are many callers, below in Dead Air, and the static is rising |
-| 4 Dead Air (proposal) | THE RING WON'T CLOSE WITHOUT YOU | The callers are the other Sparks, holding the noise down in a ring with one empty place |
-| Ending (proposal) | Three rings, from the Sparks | The Spark closes the ring, the line lights up again, and home is everywhere the line goes |
+| 4 Dead Air | THE RING WON'T CLOSE WITHOUT YOU | The callers are the other Sparks, holding the Howl down in a ring with one empty place |
+| Ending | Three rings, from the Sparks | The Spark closes the ring, the Howl comes apart into voices, the line lights up again, and home is everywhere the line goes |
 
 **Theme.** Cutting yourself off can keep you safe, but it also keeps you alone.
 
@@ -55,7 +58,7 @@ The full arc, the style guide for game text and the proposals for World 4 are in
 
 | Who | Where you meet them | What they do |
 |---|---|---|
-| Old Mast | Last Relay, first thing | Finds the Spark and sets the goal. After World 1 he explains the Arc. After World 3 he warns about Dead Air |
+| Old Mast | Last Relay, first thing | Finds the Spark and sets the goal. After World 1 he explains the Arc. After World 3 he warns about Dead Air, and before 4-4 he asks the Spark to come back up |
 | Tally | Tally's shop in Last Relay | The trader. Counts everything and sells for shards |
 | Wren | 1-2 | Works out that the call is words, then tunes it in world by world |
 | Brace | 1-4 | Worked on the crews that cut the lines, and explains why |
@@ -90,7 +93,7 @@ Every key can be remapped in Settings.
 | Lives | Start with 5. Game over sends you back to Last Relay |
 | Timer | 300 seconds a level. Run out and you lose a life |
 | Shards | Collected everywhere. They are Tally's currency, so passing 100 no longer resets them. Every 100 collected also gives a free life, with a message on screen. A game over empties them |
-| Pips | 3 in most levels (2 in 2-2, 2-3 and 2-4), plus one in the training yard and one in the bonus room: 35 in all. A Pip is a tiny spark of signal trapped in a glass insulator. It calls out when you are near, and touching the glass sets it free. Kept across new games |
+| Pips | 3 in most levels (2 in 2-2, 2-3 and 2-4), plus one in the training yard and one in the bonus room: 47 in all. A Pip is a tiny spark of signal trapped in a glass insulator. It calls out when you are near, and touching the glass sets it free. Kept across new games |
 | CHARGE | The one power-up. Survives one hit, and breaks bricks when you bump them |
 | Blocks | Bump blocks give shards, CHARGE or a life. Hidden blocks give lives or 5 shards. Bumping a block knocks out an enemy standing on it |
 | Checkpoint | One midway beacon per level |
@@ -113,7 +116,7 @@ A warm village, the last station on the line that still hums. **Look:** warm win
 |---|---|
 | The street | Old Mast, the switchboard (pick any level you've reached), the signpost (next level), Spire after World 3 |
 | Tally's | The shop: extra life 40, charged start 25, lantern 60 (see further in the dark) |
-| Dot | Keeps the Pips beside the switchboard, where they gather as a crowd. Gifts, each given once: an extra life (5 Pips), the Pip tuner that points to the nearest trapped Pip (10), one more starting life (18), another (27), and a thank-you that sets up the ending (all 35) |
+| Dot | Keeps the Pips beside the switchboard, where they gather as a crowd. Gifts, each given once: an extra life (5 Pips), the Pip tuner that points to the nearest trapped Pip (10), one more starting life (18), another (27), and a thank-you that sets up the ending (all 47) |
 | The radio shack | Wren and the listeners you've met, and the call as it's pieced together |
 
 No timer and no lives lost here. Design: `docs/levels/village.md`.
@@ -158,9 +161,18 @@ Broadcast masts high above the drowned city, at dawn. Wind carries the signal. *
 
 Design: `docs/levels/world-3.md`.
 
-### World 4: Dead Air (planned)
+### World 4: Dead Air
 
-The deep exchange under the network. The caller is close. **Planned new ideas:** relay turrets that fire along the line, listeners in the dark, and a shaft of rising static. **Planned levels:** 4-1 turrets and emitters, 4-2 listeners in the dark, 4-3 the rising static shaft, 4-4 the last Gate. Nothing is built. Source: `docs/research/traps-enemies-2026-09-25.md`.
+The deep exchange under the network, where every cut line ends, and where the Howl lives. **Look:** cold sea green, underground, one screen tall with a ceiling of cables. **Teaches:** reading threats that react to you. **Ends at:** the ring of Sparks.
+
+| Level | Name | New idea | Notes |
+|---|---|---|---|
+| 4-1 | Relay Turrets | Turrets that fire bolts along their row | Brace waits at the start |
+| 4-2 | Echoes in the Dark | Echoes that drift after you while you look away | Mostly dark, lit by lamps |
+| 4-3 | The Rising Static | A wall of static rising up a shaft | Four screens tall |
+| 4-4 | The Last Gate | Everything, with the Howl chasing you | Ends at the ring and the ending |
+
+Design: `docs/levels/world-4.md`.
 
 ### Hidden things in every world
 
@@ -183,9 +195,9 @@ Levels are text files, one character per tile (legend in `tools/levels/levelkit.
 ## 9. Open decisions
 
 - **Q1 What do big shards do?** Decided 29 Sep 2026: they became the Pips, kept by Dot (see above).
-- **Q2 One caller or many?** One design note says the last world ends with "the other spark". Wren's last line says there's more than one of them. World 4 must settle it.
-- **Q3 World 4.** The design needs approval before it's built.
-- **Q4 The ending.** What happens at the last Gate.
+- **Q2 One caller or many?** Decided 30 Sep 2026: many. The callers are the Sparks of the line, holding the Howl down in a ring.
+- **Q3 World 4.** Decided and built 30 Sep 2026 (see above).
+- **Q4 The ending.** Decided and built 30 Sep 2026: the Spark closes the ring and the Howl comes apart into the voices it swallowed.
 - **Q5 Pip counts.** 2-2, 2-3 and 2-4 have 2 Pips, not 3.
 - **Q6 Name.** White Signal is kept for now. "The Signal" was considered and set aside because it's hard to find in searches.
 

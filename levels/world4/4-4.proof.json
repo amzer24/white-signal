@@ -1,0 +1,27 @@
+{
+ "finished": true,
+ "route_seconds": 14.5,
+ "nodes": 7854,
+ "shards": {
+  "49,5": true,
+  "128,5": true,
+  "166,9": true
+ },
+ "small_shards": {
+  "total": 22,
+  "reachable": 22,
+  "missing": []
+ },
+ "blocks": {
+  "total": 2,
+  "reachable": 2,
+  "missing": []
+ },
+ "cracks": {
+  "total": 1,
+  "reachable": 1,
+  "missing": []
+ },
+ "solve_seconds": 6.1,
+ "line": "180 tiles (2880px, 6 screens)  .  FINISHABLE  .  fastest proven route 14.5s  .  big shards reachable 3/3  .  small shards reachable 22/22  .  blocks hittable 2/2  .  cracked walls breakable 1/1  .  23 shards  .  owns: everything World 4 has, with the Howl behind you"
+}

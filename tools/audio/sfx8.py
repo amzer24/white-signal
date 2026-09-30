@@ -3231,6 +3231,637 @@ def _(s):
               glide="lin")
 
 
+# ---- the Howl and the first Gate (the Gate cutscene). The Howl is the noise that once filled the
+# line: every voice it swallowed, fed back on itself and scrambled together, pooled deep
+# underground. It is intro_noise's static grown up, so it lives low and in D minor: long-mode
+# rumble, two low pulses beating against each other like feedback, and broken syllables of the
+# voices it swallowed. Menacing, never a scream. The Gate waking is the line's answer, in D major.
+
+def _garble(v: Voice, t: float, d: float, f0: float, f1: float, level: float = 1.0,
+            duties: tuple[int, ...] = (12, 25, 50, 25)) -> None:
+    """One syllable of a swallowed voice: a short note bending f0 to f1 and wobbling a semitone
+    each way every tick, its pulse width sliding through `duties` like a mouth opening and
+    closing on a vowel. It cuts whatever the voice was playing, which comes back after it."""
+    v.put(t, d, f0, f1, venv=[6, 10, 12, 11, 9, 6, 3], level=level, arp=[0, 1, 0, -1],
+          arp_ticks=1, duty=duties[0])
+    a = int(round(t * TICK_HZ))
+    b = min(a + max(1, int(round(d * TICK_HZ))), len(v.duty))
+    idx = (np.arange(b - a) * len(duties)) // max(b - a, 1)
+    v.duty[a:b] = [DUTY[duties[i]] for i in idx]
+
+
+@sfx("howl_wake", 2.6, "story", "Gate cutscene: far below, the Howl stirs awake (plays before its "
+     "garbled speech types out)", fade=0.3)
+def _(s):
+    # a low long-mode rumble swelling from the bottom setting and rising as it builds
+    s.noi.put(0, 1.5, 15, 12, v0=3, v1=11, vcurve=1.4, glide="lin")
+    # two low pulses on D2 climbing slowly to F2, pulse 2 a little sharp. The gap between them
+    # widens as they climb, so their beating speeds up from about 1.5 to 3.5 a second, like
+    # feedback taking hold
+    s.p1.put(0.05, 1.5, N("D2"), N("F2"), v0=4, v1=12, vcurve=1.5, duty=50, gcurve=1.6)
+    s.p2.put(0.05, 1.5, st(N("D2"), 0.35), st(N("F2"), 0.7), v0=3, v1=9, vcurve=1.5, duty=25,
+             gcurve=1.6)
+    # the triangle drops in under the top of the swell, rising from A1 to D2
+    s.tri.put(1.1, 0.4, N("A1"), N("D2"), gcurve=1.2)
+    # syllables of swallowed voices smeared through it, each breaking through with a crackle of
+    # static, louder and closer together as it swells
+    for t, d, a, b, lvl in [(0.4, 0.07, "A3", "F3", 0.6), (0.62, 0.05, "C4", "D4", 0.7),
+                            (0.8, 0.09, "F3", "D3", 0.8), (0.98, 0.06, "D4", "A3", 0.9),
+                            (1.1, 0.05, "E4", "F4", 1.0), (1.25, 0.08, "A3", "E3", 1.1),
+                            (1.4, 0.06, "C4", "A3", 1.1)]:
+        _garble(s.p2, t, d, N(a), N(b), lvl)
+        s.noi.put(t, 2 / TICK_HZ, 3, venv=[round(5 * lvl) + 1], short=True)
+    # it settles: the pulses sink back to D2 and throb slowly against each other, the triangle
+    # sinks a fourth to A1 and stops, the rumble drops lower and fades, and one last syllable
+    # mutters under it
+    s.p1.put(1.55, 0.2, N("F2"), N("D2"), v0=12, v1=8, duty=50)
+    s.p1.put(1.75, 0.85, N("D2"), venv=dec(8, 51, 1.6), duty=50, vib=(1.5, 0.1))
+    s.p2.put(1.55, 0.2, st(N("F2"), 0.7), st(N("D2"), 0.25), v0=9, v1=6, duty=25)
+    s.p2.put(1.75, 0.85, st(N("D2"), 0.25), venv=dec(6, 51, 1.6), duty=25)
+    _garble(s.p2, 1.95, 0.1, N("F3"), N("C#3"), 0.9)
+    s.tri.put(1.5, 0.1, N("D2"))
+    s.tri.put(1.6, 0.25, N("D2"), N("A1"))
+    s.noi.put(1.5, 1.1, 12, 14, venv=dec(11, 66, 1.4), glide="lin")
+
+
+@sfx("voice_howl", 0.08, "voices", "The Howl speaks (its garbled text in the Gate cutscene): one "
+     "blip every two letters", trim_db=-3.0, fade=0.008)
+def _(s):
+    # the lowest and roughest voice, under Hum: a raspy 25% pulse sagging E2 to C#2 and wobbling
+    # most of a semitone either way, a faint 12.5% copy an octave up and a quarter-tone sharp
+    # wobbling the other way so the two grind, and low long-mode hiss for grit
+    s.p1.put(0, 0.075, N("E2"), N("C#2"), venv=[12, 14, 14, 12, 9, 5], duty=25, vib=(25, 0.8))
+    s.p2.put(0, 0.07, st(N("E3"), 0.5), st(N("C#3"), 0.5), venv=[4, 5, 5, 4, 2], duty=12,
+             vib=(25, -0.8))
+    s.noi.put(0, 0.07, 10, 12, venv=[10, 9, 7, 5, 2], glide="lin")
+
+
+@sfx("gate_wake", 2.0, "story", "Gate cutscene: the first Gate wakes and its light races down "
+     "the line into the Spark", fade=0.15)
+def _(s):
+    # the tower powering up: voice_hum's coil buzz (a 50% pulse fluttering a semitone every
+    # tick) climbing two octaves from D2 as it swells, a thin 12.5% whine a fifth above it
+    # climbing faster, and crackle rising on short-mode noise
+    s.p2.put(0, 0.5, N("D2"), N("D4"), v0=2, v1=10, vcurve=1.3, arp=[0, 1], arp_ticks=1,
+             duty=50, gcurve=1.5)
+    s.p1.put(0.12, 0.38, N("A3"), N("A5"), v0=1, v1=9, vcurve=1.2, duty=12, gcurve=1.8,
+             vib=(14, 0.15))
+    s.noi.put(0, 0.5, 9, 2, v0=2, v1=10, vcurve=1.5, short=True, glide="lin", arp=[0, 2, 1],
+              arp_ticks=1)
+    # it blooms into a D major chord: pulse 2 rolls D, F#, A, D every frame over a triangle D3,
+    # with a soft cymbal
+    s.p2.put(0.5, 0.5, N("D5"), arp=[0, 4, 7, 12], arp_ticks=FRAME, venv=dec(12, 30, 1.2),
+             duty=25)
+    s.tri.put(0.5, 0.25, N("D3"))
+    s.noi.put(0.5, 0.6, 3, 9, venv=dec(12, 36, 0.8), glide="lin")
+    # the light races down the line: FIRST LIGHT's opening (A D D E F#) squashed into a run of
+    # pulses that zips on up to A6 and a ringing D7, echoed on pulse 2 once the chord has gone
+    run = ["A5", "D6", "D6", "E6", "F#6", "A6"]
+    for i, n in enumerate(run):
+        s.p1.put(0.56 + i * 0.045, 0.04, N(n), venv=[13, 12, 11], duty=25)
+    t = 0.56 + len(run) * 0.045
+    s.p1.put(t, 1.2, N("D7"), venv=dec(13, 72, 1.6), duty=50, vib=(5.5, 0.12))
+    s.echo(s.p1, s.p2, 0.07, 0.4, duty=12)
+    s.tri.put(t, 0.3, N("D4"))
+    # the line fizzing faintly round the held note (the family of arc_learn and spark_flare)
+    s.noi.put(t, 0.8, 1, venv=[4, 2, 3, 1, 2, 1, 2, 1, 1, 1, 1, 1, 0], short=True)
+
+
+# ---- World 4, Dead Air: the deep exchange under the network, where every cut line ends. No wind
+# and no light: dead equipment humming, water dripping, relay turrets that fire at any signal,
+# echoes (scraps of the Howl) that drift after you, a shaft of rising static, and at the bottom
+# the ring of Sparks. Eerie and lonely, never horror. The Howl lives low and in D minor, as in
+# howl_wake. The ring closing, like every hopeful thing here, is in D major.
+
+@sfx("turret_charge", 0.3, "enemies", "A relay turret's eye brightens: play when its 0.3 s charge "
+     "starts, it ends as the shot leaves (then turret_fire)", trim_db=-2.0, fade=0.006)
+def _(s):
+    # a thin 12.5% blip climbing an octave, D5 to D6, faster near the top, swelling as it climbs
+    # and glinting up to its fifth every other tick, a quieter 25% copy an octave down, and faint
+    # metallic crackle rising under it
+    swell = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 12, 13, 13, 14, 14, 15, 15, 15]
+    s.p1.put(0, 0.3, N("D5"), N("D6"), venv=swell, duty=12, gcurve=1.6, arp=[0, 7], arp_ticks=2)
+    s.p2.put(0, 0.3, N("D4"), N("D5"), venv=swell, level=0.4, duty=25, gcurve=1.6)
+    s.noi.put(0, 0.3, 9, 3, venv=[1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9],
+              glide="lin", short=True)
+
+
+@sfx("turret_fire", 0.16, "enemies", "A relay turret fires its bolt (plays as turret_charge ends)",
+     trim_db=-1.0, fade=0.02)
+def _(s):
+    # the zap: a bright metallic snap and a 12.5% pulse diving two octaves, D7 to D5, flickering
+    # to the tritone every tick so it buzzes like a live wire, a 25% shadow a fifth under it,
+    # and a small thump
+    s.noi.put(0, 0.03, 0, 2, venv=[15, 11, 5], glide="lin", short=True)
+    s.p1.put(0, 0.14, N("D7"), N("D5"), venv=[15, 14, 12, 10, 8, 6, 4, 2, 1], duty=12,
+             gcurve=0.45, arp=[0, 6], arp_ticks=1)
+    s.p2.put(0.01, 0.12, N("G6"), N("G4"), venv=[8, 7, 6, 4, 3, 2, 1], duty=25, gcurve=0.45)
+    s.tri.put(0, 0.04, N("D4"), N("D3"))
+
+
+@sfx("bolt_hit", 0.12, "enemies", "A turret's bolt hits a wall and pops", trim_db=-2.0, fade=0.02)
+def _(s):
+    # a small pop (a burst of hiss over a tiny thump), then the bolt crackling out in three short
+    # metallic ticks, with a thin blip falling a fifth
+    s.noi.put(0, 0.025, 2, venv=[14, 9])
+    s.tri.put(0, 0.03, N("A3"), N("D3"))
+    for t, p, v in [(0.03, 1, 9), (0.055, 3, 6), (0.085, 2, 4)]:
+        s.noi.put(t, 0.02, p, venv=[v, v // 3], short=True)
+    s.p1.put(0, 0.05, N("A6"), N("D6"), venv=[10, 7, 4, 2], duty=12)
+
+
+@sfx("echo_whine", 0.6, "enemies", "An echo starts drifting toward the player (it only moves while "
+     "they look away)", trim_db=-4.0, fade=0.08)
+def _(s):
+    # a faint, ghostly whine: a thin 12.5% pulse climbing a fifth, A4 to E5, slowly at first and
+    # wavering, and a 25% copy a quarter-tone flat beating against it, both swelling in and
+    # fading, with a breath of high hiss under them
+    env = [1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 6, 6, 6, 6, 6, 5, 5, 5, 5, 4, 4, 4, 3, 3, 3, 2, 2, 2,
+           1, 1, 1, 1, 1, 0]
+    s.p1.put(0, 0.6, N("A4"), N("E5"), venv=env, duty=12, gcurve=1.5, vib=(6, 0.2))
+    s.p2.put(0.02, 0.58, st(N("A4"), -0.5), st(N("E5"), -0.5), venv=[max(v - 2, 0) for v in env],
+             duty=25, gcurve=1.5, vib=(5, 0.2))
+    s.noi.put(0, 0.6, 2, venv=[0, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+                               1, 1, 1, 1, 1, 1, 0])
+
+
+@sfx("echo_hide", 0.2, "enemies", "An echo covers its face (the player turned to look at it)",
+     trim_db=-4.0, fade=0.03)
+def _(s):
+    # a soft shush: bright long-mode hiss breathing in and out, and a faint 25% sigh falling a
+    # fourth under it
+    s.noi.put(0, 0.2, 1, 3, venv=[3, 6, 8, 8, 7, 6, 5, 4, 3, 2, 1, 1, 0], glide="lin")
+    s.p2.put(0.02, 0.15, N("E5"), N("B4"), venv=[1, 2, 2, 2, 2, 1, 1, 1, 0], duty=25)
+
+
+@sfx("echo_knock", 0.3, "enemies", "The player's Arc scatters an echo (play with arc_hit)",
+     trim_db=-1.0, fade=0.03)
+def _(s):
+    # the echo breaks apart: its whine (echo_whine's E5) splintering down an octave in a spray
+    # of notes, a 25% copy splintering further, and metallic crackle scattering outward, each
+    # burst quieter and further from the last
+    s.p1.put(0, 0.2, N("E5"), N("E4"), venv=[13, 12, 10, 8, 6, 4, 3, 2, 1, 0], duty=12,
+             arp=[0, 7, 12, 3], arp_ticks=1, gcurve=0.7)
+    s.p2.put(0.01, 0.18, st(N("E5"), -0.5), st(N("A3"), -0.5), venv=[6, 6, 5, 4, 3, 2, 1, 0],
+             duty=25, arp=[0, 5, 10], arp_ticks=1)
+    for i, (t, v) in enumerate([(0.0, 14), (0.035, 11), (0.075, 9), (0.12, 7), (0.17, 5),
+                                (0.23, 3)]):
+        s.noi.put(t, 0.025, (1, 3, 0, 4, 2, 5)[i], venv=[v, v // 2, v // 3], short=True)
+
+
+@sfx("static_rise", 1.5, "traps", "A wall of static starts rising or chasing (then static_loop "
+     "while it's on screen)", fade=0.15)
+def _(s):
+    # a low rumble swelling up: long-mode noise climbing from the bottom setting and churning as
+    # it grows, a low 50% pulse buzzing up a fifth (D2 to A2, fluttering a semitone every tick),
+    # a 25% pulse a quarter-tone above it so the two churn, and the triangle climbing an octave
+    # under the top of the swell
+    s.noi.put(0, 1.5, 15, 8, v0=3, v1=15, vcurve=1.2, glide="lin", arp=[0, 1], arp_ticks=2)
+    s.p1.put(0, 1.45, N("D2"), N("A2"), v0=2, v1=12, vcurve=1.3, duty=50, arp=[0, 1],
+             arp_ticks=1, gcurve=1.3)
+    s.p2.put(0.05, 1.4, st(N("D2"), 0.5), st(N("A2"), 0.5), v0=1, v1=8, vcurve=1.3, duty=25,
+             gcurve=1.3)
+    s.tri.put(0.7, 0.8, N("D2"), N("D3"), gcurve=1.2)
+
+
+STATIC_LOOP = 2.0
+# the buzz under it swaps between D2 (a shade flat) and D#2 every tick. They sit on period
+# registers 1527 and 1437, picked so a pass holds a whole number of cycles and lock_phase's
+# pitch trim stays tiny (on the nearest registers it would be 2 cents)
+BUZZ_LO, BUZZ_HI = CPU / (16 * 1528), CPU / (16 * 1438)
+
+
+@sfx("static_loop", STATIC_LOOP, "traps",
+     "The wall of static is on screen: a crackling bed. LOOPS (the file loops by itself in "
+     "Godot, no click at the seam)", trim_db=-3.0, loop=True, lock=True)
+def _(s):
+    # static_crawl grown into a wall: long-mode hiss and short-mode crackle swapping at random
+    # every frame, the pitch jumping round the bright half and the volume flickering, over a
+    # low 50% buzz on D2 fluttering a semitone every tick (the Howl's feedback in it). Fixed
+    # patterns, one per pass.
+    lt = int(round(STATIC_LOOP * TICK_HZ))
+    frames = lt // FRAME
+    rs = np.random.RandomState(83)
+    pit = rs.choice([0, 1, 2, 3, 4, 5, 7], frames).repeat(FRAME)
+    vol = rs.choice([5, 7, 8, 9, 10, 11, 12], frames).repeat(FRAME)
+    crackle = (rs.rand(frames) < 0.3).repeat(FRAME)
+    buzz = rs.choice([2, 3, 3, 4, 5], frames).repeat(FRAME)
+    n = len(s.noi.vol)
+    tile = lambda a: np.tile(a, n // lt + 1)[:n]
+    s.noi.freq[:] = tile(pit)
+    s.noi.vol[:] = tile(vol)
+    s.noi.short[:] = tile(crackle)
+    s.p1.freq[:] = np.where(tile(np.arange(lt) % 2) == 1, BUZZ_HI, BUZZ_LO)
+    s.p1.vol[:] = tile(buzz)
+    s.p1.duty[:] = DUTY[50]
+
+
+@sfx("howl_roar", 2.0, "boss", "The Howl roars as the last chase begins (4-4)", fade=0.3)
+def _(s):
+    # every swallowed voice at once. Both pulses roll the same low D minor chord every tick, pulse
+    # 2 a third of a semitone sharp, each wobbling at its own rate and with its own tone, so
+    # together they sound like a crowd rather than one note. They heave up a minor third and
+    # sink back down past where they started. Long-mode noise roars under them, the triangle
+    # drags down an octave, and broken syllables of voices mutter through the tail. It stays low
+    # throughout, so it growls and never shrieks.
+    roar = [4, 6, 8, 10, 12, 13, 14, 15] + [15] * 40 + dec(15, 72, 1.2)
+    up, down = roar[:48], roar[48:]
+    s.p1.put(0, 0.8, N("D3"), N("F3"), venv=up, duty=50, arp=[0, 3, 7], arp_ticks=1,
+             vib=(5.5, 0.35), gcurve=0.8)
+    s.p1.put(0.8, 1.2, N("F3"), N("C3"), venv=down, duty=50, arp=[0, 3, 7], arp_ticks=1,
+             vib=(5.5, 0.35), gcurve=1.3)
+    s.p2.put(0.02, 0.8, st(N("D3"), 0.35), st(N("F3"), 0.35), venv=up, level=0.7, duty=25,
+             arp=[7, 0, 3], arp_ticks=1, vib=(4.2, 0.45), gcurve=0.8)
+    s.p2.put(0.82, 1.18, st(N("F3"), 0.35), st(N("C3"), 0.35), venv=down, level=0.7, duty=25,
+             arp=[7, 0, 3], arp_ticks=1, vib=(4.2, 0.45), gcurve=1.3)
+    for t, d, a, b in [(1.25, 0.08, "A3", "F3"), (1.45, 0.06, "C4", "A3"), (1.62, 0.1, "F3", "D3")]:
+        _garble(s.p2, t, d, N(a), N(b), 0.7)
+    s.noi.put(0, 0.8, 11, 8, venv=up, level=0.6, glide="lin", arp=[0, 1], arp_ticks=2)
+    s.noi.put(0.8, 1.2, 8, 13, venv=down, level=0.6, glide="lin", arp=[0, 1], arp_ticks=2)
+    s.tri.put(0.15, 1.3, N("D3"), N("D2"), gcurve=1.2)
+
+
+@sfx("ring_close", 2.5, "story", "The Spark takes its place and the ring of Sparks closes (the end "
+     "of 4-4)", fade=0.3)
+def _(s):
+    # the ring swelling shut: pulse 2 rolls a D major chord (D F# A D) every frame, swelling from
+    # nothing for a second over a soft cymbal rising the same way and the triangle waiting on A.
+    # Then it closes: the triangle lands on D, pulse 1 runs up the scale to the chime, a bell
+    # struck on its fifth then its octave (checkpoint's A then D, two octaves up, ringing on
+    # D7), and pulse 2 echoes the bell once the chord has faded
+    swell = [int(round(1 + 11 * (i / 59) ** 1.4)) for i in range(60)]
+    s.p2.put(0, 1.0, N("D5"), arp=[0, 4, 7, 12], arp_ticks=FRAME, venv=swell, duty=25)
+    s.p2.put(1.0, 0.9, N("D5"), arp=[0, 4, 7, 12], arp_ticks=FRAME, venv=dec(12, 54, 1.2), duty=25)
+    s.noi.put(0, 1.0, 7, 2, venv=[int(round(1 + 8 * (i / 59) ** 1.6)) for i in range(60)],
+              glide="lin")
+    s.noi.put(1.0, 1.3, 3, 9, venv=dec(11, 78, 0.8), glide="lin")
+    s.tri.put(0.4, 0.6, N("A2"))
+    s.tri.put(1.0, 0.6, N("D3"))
+    s.tri.put(1.6, 0.3, N("D4"))
+    for i, n in enumerate(["A5", "B5", "C#6", "D6", "E6", "F#6"]):
+        s.p1.put(0.76 + i * 0.04, 0.04, N(n), venv=[10, 11, 11], duty=25)
+    s.p1.put(1.0, 0.1, N("A6"), venv=[15, 13, 12, 11, 10, 9], duty=25)
+    s.p1.put(1.1, 1.4, N("D7"), venv=dec(14, 84, 1.6), duty=25, vib=(5.5, 0.12))
+    s.echo(s.p1, s.p2, 0.09, 0.4, duty=12)
+
+
+AMB_W4_LOOP = 16.0          # twice amb_w3's length, so the distant howl only comes now and then
+# the hum's D2 sits on period register 1521 (a hair sharp), so a pass holds a whole number of
+# cycles and lock_phase's pitch trim stays tiny (on the nearest register it would be 0.6 cent)
+HUM_D2 = CPU / (16 * 1522)
+
+
+@sfx("amb_w4", AMB_W4_LOOP, "ambience",
+     "World 4 (Dead Air) ambience under the music: the deep hum of dead equipment, far-off drips, "
+     "and now and then a distant low howl. LOOPS (the file loops by itself in Godot, no click at "
+     "the seam)", trim_db=-8.0, loop=True, lock=True)
+def _(s):
+    L = AMB_W4_LOOP
+    lt = int(round(L * TICK_HZ))
+    t = np.arange(lt) / TICK_HZ
+
+    def tile(keys):
+        kt, kv = zip(*keys)
+        one = np.round(np.interp(t, kt, kv))
+        return np.tile(one, len(s.p1.vol) // lt + 1)[: len(s.p1.vol)]
+
+    # the hum: a low 50% pulse on D2 breathing between two volume steps twice a pass, a faint
+    # 12.5% buzz on A3 over it, and a deep long-mode rumble under both. Lower than any other
+    # world's air: there is no wind down here.
+    s.p2.freq[:] = HUM_D2
+    s.p2.vol[:] = tile([(0, 2), (4.0, 3), (8.0, 2), (12.0, 3), (L, 2)])
+    s.p2.duty[:] = DUTY[50]
+    s.p1.freq[:] = N("A3")
+    s.p1.vol[:] = 1
+    s.p1.duty[:] = DUTY[12]
+    s.noi.freq[:] = tile([(0, 13), (5.0, 14), (10.0, 13), (13.0, 14), (L, 13)])
+    s.noi.vol[:] = tile([(0, 2), (3.0, 1), (6.0, 2), (11.0, 1), (L, 2)])
+
+    # far-off drips: a short round 50% blip gliding up a fourth, like a drop landing in a pool,
+    # and the cave answering it a moment later. Pulse 1 leaves its buzz while one sounds.
+    def drips(o):
+        for t0, a, b, v in [(0.9, "C6", "F6", 4), (2.6, "A5", "D6", 3), (4.1, "D6", "G6", 5),
+                            (4.32, "D6", "G6", 2), (6.3, "F6", "Bb6", 3), (12.2, "E6", "A6", 4),
+                            (14.0, "A5", "D6", 3), (14.9, "C6", "F6", 2)]:
+            s.p1.put(o + t0, 0.04, N(a), N(b), venv=[v, v, v - 1, 1], duty=50, gcurve=0.5)
+            s.p1.put(o + t0 + 0.21, 0.035, N(a), N(b), venv=[max(v // 2, 1), 1, 1], duty=50,
+                     gcurve=0.5)
+
+    # the distant howl, once a pass: a hollow 50% pulse moaning up a minor third from D3 and
+    # sinking back past it, wavering slowly, while the rumble lifts and swells under it
+    def howl(o):
+        t0, rise, fall = o + 8.4, 1.1, 1.7
+        up, down = int(round(rise * 60)), int(round(fall * 60))
+        s.p1.put(t0, rise, N("D3"), N("F3"), venv=[int(round(5 * (i / (up - 1)) ** 1.2))
+                                                   for i in range(up)],
+                 duty=50, vib=(4.5, 0.25), gcurve=0.8)
+        s.p1.put(t0 + rise, fall, N("F3"), N("C3"), venv=dec(5, down, 1.0), duty=50,
+                 vib=(4.5, 0.25), gcurve=1.3)
+        s.noi.put(t0, rise + fall, 13, 11, glide="lin",
+                  venv=[int(round(2 + math.sin(math.pi * i / (up + down)))) for i in range(up + down)])
+
+    _every_loop(s, L, drips)
+    _every_loop(s, L, howl)
+
+
+# ---- World 4 music. Every track uses the Dead Air motif: 5 8 b7 b6 5 in FIRST LIGHT's rhythm
+# (short LONG short short LONG), in D minor A D C Bb A. It starts with FIRST LIGHT's opening leap
+# (A D) and then falls back down instead of climbing on. In m_4_4 it turns round at last and
+# climbs as FIRST LIGHT itself (A D D E F# D), and m_ending resolves that into D major.
+
+# m_4_1 RELAY TURRETS: old defences that fire at any signal. D minor, 100 BPM, 20 bars. Low and
+# sparse over a steady mechanical pulse: the triangle pumps low octaves on every eighth, the
+# drums tick and clank, and a turret's eye blips on pulse 2 at the end of every bar.
+
+RT_N, RT_BARS = 36, 20
+RT_LOOP = _loop_len(RT_BARS, RT_N)                           # 48.0 s
+RT_CHORDS = ("Dm Dm Gm A  Dm Dm Bb A  Gm Gm Dm Dm  Bb C A A  "
+             "Dm Dm Gm A")
+# The motif, then a bar of silence with a small rising answer. The middle walks down in long
+# notes and ends on repeated notes like a turret charging, and the motif comes back.
+RT_HOOK = """
+A4:.5 D5:1 C5:.5 Bb4:.5 A4:1.5 | -:2 F4:.5 G4:.5 A4:1 |
+D5:.5 G5:1 F5:.5 Eb5:.5 D5:1.5 | -:2 E5:.5 D5:.5 C#5:1 |"""
+RT_MELODY = RT_HOOK + """
+A4:.5 D5:1 C5:.5 Bb4:.5 A4:1.5 | -:2 F4:.5 G4:.5 A4:1 |
+F4:.5 Bb4:1 A4:.5 G4:.5 F4:1.5 | -:2 G4:.5 F4:.5 E4:1 |
+Bb4:1.5 A4:.5 G4:1 D5:1 | D5:1.5 C5:.5 Bb4:1 A4:1 |
+A4:1.5 G4:.5 F4:1 A4:1 | E4:1.5 F4:.5 E4:1 -:1 |
+D5:1.5 C5:.5 Bb4:1 F5:1 | E5:1.5 D5:.5 C5:1 G5:1 |
+A4:.5 -:.5 A4:.5 -:.5 C#5:.5 -:.5 E5:1 | A4:.5 -:.5 A4:.5 -:.5 A4:.5 -:.5 A4:.5 -:.5 |""" + RT_HOOK
+
+
+@sfx("m_4_1", RT_LOOP, "music",
+     "Level 4-1 RELAY TURRETS music, on the Music bus. Low, sparse and tense over a steady "
+     "mechanical pulse, D minor, 100 BPM, 20 bars; opens with the Dead Air motif. LOOPS (the "
+     "file loops by itself in Godot, no click at the seam)", trim_db=2.2, loop=True, lock=True)
+def _(s):
+    bpm, bar = _bpm(RT_N), 4 * 60 / _bpm(RT_N)
+    chords = RT_CHORDS.split()
+    ch = lambda a, b: " ".join(chords[a:b])
+    melody = _tune(RT_MELODY)
+    pump = _comp(RT_CHORDS, "R:.5 8:.5 R:.5 8:.5 R:.5 8:.5 R:.5 8:.5", "C2")
+    eye = "-:3 5:.25 -:.25 8:.25 -:.25"                    # the call's two notes, tiny and high
+    pulse, charge = "k.i.m.i.k.i.m.i.", "k.i.m.i.k.i.xxxx"
+    low, low_charge = "k.i...i.k.i...i.", "k.i...i.k.i.xxxx"
+    drums = [pulse] * 3 + [charge] + [pulse] * 3 + [charge] + [low] * 3 + [low_charge] \
+        + [low] * 3 + [low_charge] + [pulse] * 3 + [charge]
+
+    def one_pass(o):
+        for a, b, duty in ((0, 8, 50), (8, 16, 25), (16, 20, 50)):
+            _part(s, s.p1, o + a * bar, bpm, melody[_bar_index(melody, a):_bar_index(melody, b)],
+                  b - a, duty=duty, venv=LEAD_ENV, gate=0.85)
+        _part(s, s.p2, o, bpm, _comp(ch(0, 8), eye, "G4"), 8, duty=12, venv=[5, 4, 2], gate=0.9)
+        _part(s, s.p2, o + 8 * bar, bpm, _comp(ch(8, 16), "5:2 3:2", "D3"), 8, duty=25,
+              venv=[2, 3, 4, 4, 4, 4, 4, 3], gate=0.95)
+        _part(s, s.p2, o + 16 * bar, bpm, _comp(ch(16, 20), eye, "G4"), 4, duty=12,
+              venv=[5, 4, 2], gate=0.9)
+        _part(s, s.tri, o, bpm, pump, RT_BARS, gate=1.0)
+        _drums(s, o, bpm, drums, level=0.7)
+        _hiss(s, o, RT_LOOP, 71, (0,) * 14 + (2, 3), (0, 1, 2, 3))      # the odd pop of static
+
+    _every_loop(s, RT_LOOP, one_pass)
+
+
+# m_4_2 ECHOES IN THE DARK: echoes drift after you while you look away. B minor, 80 BPM, 16 bars.
+# The quietest track: a hollow 50% lead plays the motif and falls silent for a bar, and pulse 2
+# answers it a bar later, fainter, like an echo. In the middle the lead keeps going and the echo
+# trails it in a canon. Open fifths on the triangle, a breath of low noise, the odd drip.
+
+EC_N, EC_BARS = 45, 16
+EC_LOOP = _loop_len(EC_BARS, EC_N)                           # 48.0 s
+EC_CHORDS = "Bm Bm G G  Em Em F# F#  G A Bm Bm  Em Em Bm Bm"
+EC_MELODY = """
+F#4:.5 B4:1 A4:.5 G4:.5 F#4:1.5 | -:4 | D5:.5 G5:1 F#5:.5 E5:.5 D5:1.5 | -:4 |
+B4:.5 E5:1 D5:.5 C#5:.5 B4:1.5 | -:4 | C#5:.5 F#5:1 E5:.5 D5:.5 C#5:1.5 | -:4 |
+D5:1.5 E5:.5 D5:1 B4:1 | C#5:1.5 D5:.5 C#5:1 A4:1 | B4:1.5 C#5:.5 D5:1 F#5:1 | E5:2 D5:1 C#5:1 |
+B4:.5 E5:1 D5:.5 C#5:.5 B4:1.5 | -:4 | F#4:.5 B4:1 A4:.5 G4:.5 F#4:1.5 | -:4
+"""
+EC_ENV = [4, 6, 7, 7, 6, 6, 6, 6, 5, 5, 5, 5, 5, 4, 4, 4, 4, 4, 3]
+
+
+@sfx("m_4_2", EC_LOOP, "music",
+     "Level 4-2 ECHOES IN THE DARK music, on the Music bus. The quietest track: hollow and eerie, "
+     "with lots of space and a faint lead that answers itself, B minor, 80 BPM, 16 bars; opens "
+     "with the Dead Air motif. LOOPS (the file loops by itself in Godot, no click at the seam)",
+     trim_db=1.8, loop=True, lock=True)
+def _(s):
+    bpm, bar = _bpm(EC_N), 4 * 60 / _bpm(EC_N)
+    hollow = _comp(EC_CHORDS, "R:3 5:1", "E2")
+    quiet = "................"
+    drips = [quiet] * 3 + ["..........i....."] + [quiet] * 2 + ["...i............"] + [quiet] * 4 \
+        + ["............i..."] + [quiet] * 2 + [".....i.........."] + [quiet]
+
+    def one_pass(o):
+        _part(s, s.p1, o, bpm, _tune(EC_MELODY), EC_BARS, duty=50, venv=EC_ENV, gate=0.92,
+              vib=(4, 0.12))
+        _part(s, s.tri, o, bpm, hollow, EC_BARS, gate=0.95)
+        _drums(s, o, bpm, drips, level=0.6)
+        _wind(s, o, bpm, [(0, 1, 12), (2, 2, 11), (4, 1, 12), (6, 2, 11), (8, 1, 12), (10, 2, 11),
+                          (12, 1, 12), (14, 2, 11), (16, 1, 12)])
+
+    _every_loop(s, EC_LOOP, one_pass)
+    # pulse 2 is the lead's echo, a bar behind and fainter, so every call is answered
+    s.echo(s.p1, s.p2, bar, scale=0.5, duty=25)
+
+
+# m_4_3 THE RISING STATIC: racing the static up a shaft. E minor, lifting to F# minor at bar 17,
+# 171.4 BPM, 32 bars. The bass climbs a step every bar, eight bars at a time (E F# G A B C D D#,
+# then from F#), under the motif moving up with it, answered by alarm-like repeated notes. In
+# between, long falling notes ride the climb, and hiss rises under the drums through every eight
+# bars. The last two bars hold D# (under B) and lead straight back to E at the bottom.
+
+RS_N, RS_BARS = 21, 32
+RS_LOOP = _loop_len(RS_BARS, RS_N)                           # 44.8 s
+RS_CHORDS = ("Em D G Am B C D B  Em D G Am B C D B  "
+             "F#m E A Bm C# D E C#  F#m E A B C D B B")
+RS_ROOTS = ("E2 F#2 G2 A2 B2 C3 D3 D#3  " * 2
+            + "F#2 G#2 A2 B2 C#3 D3 E3 E#3  F#2 G#2 A2 B2 C3 D3 D#3 D#3").split()
+RS_CLIMB_E = """
+B4:.5 E5:1 D5:.5 C5:.5 B4:1 A4:.5 | A4:.5 A4:.5 A4:.5 D5:.5 F#5:1 D5:1 |
+D5:.5 G5:1 F#5:.5 E5:.5 D5:1 C5:.5 | C5:.5 C5:.5 C5:.5 E5:.5 A5:1 E5:1 |
+F#5:.5 B5:1 A5:.5 G5:.5 F#5:1 E5:.5 | E5:.5 E5:.5 E5:.5 G5:.5 C6:1 G5:1 |
+A5:.5 D6:1 C6:.5 B5:.5 A5:1 G5:.5 | G5:.5 G5:.5 G5:.5 B5:.5 F#5:1 D#5:1 |"""
+RS_RIDE_E = """
+G5:1.5 F#5:1 E5:1.5 | A5:1.5 G5:1 F#5:1.5 | B5:1.5 A5:1 G5:1.5 | C6:1.5 B5:1 A5:1.5 |
+B5:1.5 A5:1 F#5:1.5 | C6:1.5 B5:1 G5:1.5 | D6:1.5 C6:1 A5:1.5 |
+B5:.5 -:.5 B5:.5 -:.5 B5:.5 A5:.5 F#5:.5 D#5:.5 |"""
+RS_CLIMB_FS = """
+C#5:.5 F#5:1 E5:.5 D5:.5 C#5:1 B4:.5 | B4:.5 B4:.5 B4:.5 E5:.5 G#5:1 E5:1 |
+E5:.5 A5:1 G#5:.5 F#5:.5 E5:1 D5:.5 | D5:.5 D5:.5 D5:.5 F#5:.5 B5:1 F#5:1 |
+G#5:.5 C#6:1 B5:.5 A5:.5 G#5:1 F#5:.5 | F#5:.5 F#5:.5 F#5:.5 A5:.5 D6:1 A5:1 |
+B5:.5 E6:1 D6:.5 C#6:.5 B5:1 A5:.5 | A5:.5 A5:.5 A5:.5 C#6:.5 G#5:1 E#5:1 |"""
+RS_RIDE_FS = """
+A5:1.5 G#5:1 F#5:1.5 | B5:1.5 A5:1 G#5:1.5 | C#6:1.5 B5:1 A5:1.5 | B5:1.5 A5:1 F#5:1.5 |
+C6:1.5 B5:1 G5:1.5 | D6:1.5 C6:1 A5:1.5 |
+B5:.5 -:.5 B5:.5 -:.5 B5:.5 A5:.5 F#5:.5 D#5:.5 | D#5:.5 -:.5 D#5:.5 -:.5 D#5:.5 C5:.5 B4:.5 A4:.5
+"""
+RS_MELODY = RS_CLIMB_E + RS_RIDE_E + RS_CLIMB_FS + RS_RIDE_FS
+
+
+@sfx("m_4_3", RS_LOOP, "music",
+     "Level 4-3 THE RISING STATIC music, on the Music bus. Urgent and climbing over a bass that "
+     "rises every bar, E minor lifting to F# minor, 171.4 BPM, 32 bars; opens with the Dead Air "
+     "motif. LOOPS (the file loops by itself in Godot, no click at the seam)", trim_db=2.3,
+     loop=True, lock=True)
+def _(s):
+    bpm, bar = _bpm(RS_N), 4 * 60 / _bpm(RS_N)
+    chords = RS_CHORDS.split()
+    ch = lambda a, b: " ".join(chords[a:b])
+    melody = _tune(RS_MELODY)
+    bass = [(n, 0.5) for r in RS_ROOTS for n in (r, _note(_midi(r) + 12)) * 4]
+    rising = "R:.25 3:.25 5:.25 8:.25 " * 4
+    climbing = "R:.25 3:.25 5:.25 8:.25 3:.25 5:.25 8:.25 10:.25 5:.25 8:.25 10:.25 12:.25 " \
+               "8:.25 10:.25 12:.25 10:.25"
+    drive, start = "k.h.s.hkk.hxs.hx", "z.h.s.hkk.hxs.hx"
+    fill, roll = "k.h.s.hkk.s.ssss", "s.s.s.sss.ssssss"
+    drums = ([start] + [drive] * 6 + [fill] + [start] + [drive] * 6 + [roll]
+             + [start] + [drive] * 6 + [fill] + [start] + [drive] * 5 + ["k.k.k.k.s.s.ssss", roll])
+    static_keys = []
+    for c in range(4):                                   # hiss rising through every eight bars
+        static_keys += [(8 * c, 0, 12), (8 * c + 7.99, 5 if c == 3 else 4, 2)]
+    static_keys.append((RS_BARS, 0, 12))
+
+    def one_pass(o):
+        for i, duty in enumerate((25, 50, 25, 50)):
+            a, b = _bar_index(melody, 8 * i), _bar_index(melody, 8 * i + 8)
+            _part(s, s.p1, o + 8 * i * bar, bpm, melody[a:b], 8, duty=duty, venv=LEAD_ENV,
+                  gate=0.85)
+            pat, look = (rising.strip(), dict(duty=12, venv=[5, 4, 3])) if i % 2 == 0 else \
+                (climbing, dict(duty=25, venv=[4, 4, 3]))
+            _part(s, s.p2, o + 8 * i * bar, bpm, _comp(ch(8 * i, 8 * i + 8), pat, "E3"), 8,
+                  gate=0.9, **look)
+        _part(s, s.tri, o, bpm, bass, RS_BARS, gate=1.0)
+        _drums(s, o, bpm, drums, level=0.8)
+        _wind(s, o, bpm, static_keys)
+
+    _every_loop(s, RS_LOOP, one_pass)
+
+
+# m_4_4 THE LAST GATE: the World 4 finale, the Howl chasing the Spark to the ring. D minor
+# turning to D major at bar 17, 180 BPM, 32 bars. Heroic, not scary: the motif drives in D minor,
+# a galloping middle with the Howl's breath rumbling under it, then the motif turns round and
+# climbs as FIRST LIGHT (A D D E F# D) in D major, and the last section plays it at half speed,
+# the way the intro and the title play it, up to a high D. The last bar sits on A, which leads
+# back to D minor at the top.
+
+LAST_N, LAST_BARS = 20, 32
+LAST_LOOP = _loop_len(LAST_BARS, LAST_N)                     # 42.67 s
+LAST_CHORDS = ("Dm Dm Bb C  Dm Dm Bb A  Gm Gm Dm Dm  Bb C A A  "
+               "D Bm G A  D Bm G A  D Bm G A  Bm G A A")
+LAST_HOOK = """
+A4:.5 D5:1 C5:.5 Bb4:.5 A4:1 G4:.5 | A4:.5 Bb4:1 C5:.5 D5:.5 E5:1.5 |"""
+LAST_FL = """
+A4:.5 D5:1 D5:.5 E5:.5 F#5:1 D5:.5 | E5:.5 F#5:1 E5:.5 D5:.5 B4:1.5 |"""
+LAST_MELODY = LAST_HOOK + """
+D5:.5 F5:1 Eb5:.5 D5:.5 C5:1 Bb4:.5 | C5:.5 D5:1 E5:.5 F5:.5 G5:1.5 |""" + LAST_HOOK + """
+F5:.5 Bb5:1 A5:.5 G5:.5 F5:1 D5:.5 | E5:.5 F5:1 E5:.5 C#5:.5 A4:1.5 |
+D5:.75 D5:.75 G5:.5 F5:1 D5:1 | Bb5:.75 A5:.75 G5:.5 F5:1 D5:1 |
+A4:.75 A4:.75 D5:.5 C5:1 A4:1 | F5:.75 E5:.75 D5:.5 C5:1 A4:1 |
+F5:.75 F5:.75 Bb5:.5 A5:1 F5:1 | G5:.75 G5:.75 C6:.5 Bb5:1 G5:1 |
+A5:.75 G5:.75 E5:.5 C#5:1 A4:1 | E5:.5 -:.5 E5:.5 -:.5 E5:.5 D5:.5 C#5:.5 B4:.5 |""" + LAST_FL + """
+B4:.5 D5:1 D5:.5 E5:.5 G5:1 E5:.5 | A5:.5 G5:1 F#5:.5 E5:.5 F#5:.5 E5:1 |""" + LAST_FL + """
+D5:.5 G5:1 F#5:.5 E5:.5 D5:1 B4:.5 | C#5:.5 E5:1 A5:.5 G5:.5 E5:1.5 |
+A4:1 D5:2 D5:1 | E5:1 F#5:2 D5:1 | B4:1 E5:2 E5:1 | F#5:1 G5:2 A5:1 |
+B5:1.5 A5:.5 F#5:1 D5:1 | G5:1.5 A5:.5 B5:1 D6:1 | C#6:1.5 B5:.5 A5:1 E5:1 |
+A5:.5 -:.5 A5:.5 -:.5 E5:.5 C#5:.5 A4:1
+"""
+
+
+@sfx("m_4_4", LAST_LOOP, "music",
+     "Level 4-4 THE LAST GATE music, the World 4 finale and the Howl's chase, on the Music bus. "
+     "A driving, heroic chase, D minor turning to D major, 180 BPM, 32 bars; the Dead Air motif "
+     "turns round and climbs as FIRST LIGHT. LOOPS (the file loops by itself in Godot, no click "
+     "at the seam)", trim_db=2.2, loop=True, lock=True)
+def _(s):
+    bpm, bar = _bpm(LAST_N), 4 * 60 / _bpm(LAST_N)
+    chords = LAST_CHORDS.split()
+    ch = lambda a, b: " ".join(chords[a:b])
+    melody = _tune(LAST_MELODY)
+    drive = "R:.5 8:.5 R:.5 8:.5 R:.5 8:.5 5:.5 8:.5"
+    gallop = "R:.5 8:.25 5:.25 " * 3 + "8:.5 R:.25 5:.25"
+    bass = _comp(LAST_CHORDS, [drive] * 8 + [gallop] * 24, "E2")
+    p2 = [(0, 8, "-:.5 5:.5 -:.5 8:.5 -:.5 5:.5 -:.5 8:.5", "A3",
+           dict(duty=50, venv=STAB_ENV, gate=0.8)),
+          (8, 16, ("8:.25 5:.25 3:.25 5:.25 " * 4).strip(), "D4", dict(duty=12, venv=ARP_ENV,
+                                                                         gate=0.9)),
+          (16, 32, "3:1.5 5:.5 8:1 5:1", "A3", dict(duty=50, venv=[5, 6, 6, 6, 5, 5, 5, 5, 4],
+                                                     gate=0.9))]
+    groove, fill = "k.h.s.hkk.h.s.h.", "k.h.s.h.s.s.ssss"
+    howl, march = "z..hs.h.kkh.s.hs", "kkh.s.h.kkh.s.hs"
+    push, roll = "k.hks.h.kkh.s.hh", "s.s.s.sss.ssssss"
+    drums = ([groove] * 7 + [fill] + [howl] + [march] * 6 + [roll]
+             + ["c...s.h.kkh.s.hh"] + [push] * 6 + [fill]
+             + ["c..ks.h.kkh.s.hh"] + [push] * 6 + ["s.s.s.s.ssssssss"])
+
+    def one_pass(o):
+        for i, duty in enumerate((25, 50, 25, 50)):
+            a, b = _bar_index(melody, 8 * i), _bar_index(melody, 8 * i + 8)
+            _part(s, s.p1, o + 8 * i * bar, bpm, melody[a:b], 8, duty=duty, venv=LEAD_ENV,
+                  gate=0.9, vib=(5, 0.1 if i == 3 else 0.08))
+        for a, b, pat, base, look in p2:
+            _part(s, s.p2, o + a * bar, bpm, _comp(ch(a, b), pat, base), b - a, **look)
+        _part(s, s.tri, o, bpm, bass, LAST_BARS, gate=1.0)
+        _drums(s, o, bpm, drums, level=0.8)
+        # the Howl's breath, low and rumbling, swelling in the gaps of the chase
+        _wind(s, o + 8 * bar, bpm, [(0, 1, 14), (3.5, 4, 12), (4, 1, 14), (7.5, 5, 11),
+                                    (8, 0, 14)])
+
+    _every_loop(s, LAST_LOOP, one_pass)
+
+
+# m_ending: the ending cutscene. D major, 90 BPM, 20 bars. Every station lighting up and everyone
+# coming home. It opens with FIRST LIGHT at half speed, the way the intro and title_theme sing it,
+# but where they stopped on A it keeps climbing. The middle plays FIRST LIGHT's hook at full
+# speed as m_1_1 does, the half-speed theme comes back, and at bar 17 it resolves: the far
+# caller's two-note call (A then D) rings out as a held high D. The call that nobody answered
+# in title_theme is answered twice a pass here, and the last bar sits on A with title_theme's
+# bass walk (A E A C#), leading back to D at the top.
+
+ED_N, ED_BARS = 40, 20
+ED_LOOP = _loop_len(ED_BARS, ED_N)                           # 53.33 s
+ED_CHORDS = "D Bm G A  D Bm G A  G A Bm G+A  D Bm G A  D Bm G A"
+ED_THEME = """
+A4:1 D5:2 D5:1 | E5:1 F#5:2 D5:1 | B4:1 E5:2 E5:1 | F#5:1 G5:2 E5:1 |"""
+ED_MELODY = ED_THEME + """
+A4:1 D5:2 D5:1 | E5:1 F#5:2 D5:1 | B5:1.5 A5:.5 G5:1 E5:1 | F#5:1.5 E5:.5 E5:1 -:1 |
+D5:.5 G5:1 G5:.5 A5:.5 B5:1 G5:.5 | A5:.5 B5:1 A5:.5 E5:.5 C#5:1.5 |
+F#5:.5 B5:1 B5:.5 C#6:.5 D6:1 B5:.5 | A5:.5 G5:1 F#5:.5 E5:.5 F#5:.5 E5:1 |""" + ED_THEME + """
+A5:.5 D6:3.5 | D6:1.5 C#6:.5 B5:1 F#5:1 | B5:1.5 A5:.5 G5:1 E5:1 | E5:1 C#5:1 A4:1 -:1
+"""
+
+
+@sfx("m_ending", ED_LOOP, "music",
+     "Ending cutscene music, on the Music bus. Warm, hopeful and bright, D major, 90 BPM, 20 bars; "
+     "FIRST LIGHT at half speed, as the intro plays it, climbing on and resolving to a held high "
+     "D. LOOPS (the file loops by itself in Godot, no click at the seam)", trim_db=2.6,
+     loop=True, lock=True)
+def _(s):
+    bpm = _bpm(ED_N)
+    bar, beat = 240 / bpm, 60 / bpm
+    melody = _tune(ED_MELODY)
+    rolls = _comp(ED_CHORDS, INTRO_ROLL, "F#3")
+    walk, last = "R:1.5 5:.5 8:1 5:1", "R:1 5:1 8:1 C#3:1"      # last: up into D at the top
+    bass = _comp(ED_CHORDS, [walk] * (ED_BARS - 1) + [last], "D2")
+    soft, groove = "k.......k.......", "k.h.s.h.k.h.s.h."
+    bright = "k.hhs.h.k.hhs.hh"
+    drums = ([soft] * 4 + [groove] * 3 + ["k.h.s.h.k.s.s.ss"] + [bright] * 3 + ["k.hhs.h.s.s.ssss"]
+             + [groove] * 4 + ["c...h.h.k.h.s.h."] + [groove] * 2 + ["k.h.s.h.k.h....."])
+
+    def one_pass(o):
+        for a, b, duty in ((0, 8, 50), (8, 12, 25), (12, 20, 50)):
+            _part(s, s.p1, o + a * bar, bpm, melody[_bar_index(melody, a):_bar_index(melody, b)],
+                  b - a, duty=duty, venv=TITLE_LEAD_ENV, gate=0.92, vib=(5, 0.1))
+        for b in (7, 19):                                      # the call goes out in the rest,
+            _call(s.p1, o + b * bar + 3 * beat)
+            _call(s.p1, o + b * bar + 3.5 * beat, level=0.6)   # and this time it is answered
+        _part(s, s.p2, o, bpm, rolls, ED_BARS, duty=25, venv=[5, 4, 4, 3, 3, 3, 2], gate=0.85)
+        _part(s, s.tri, o, bpm, bass, ED_BARS, gate=0.9)
+        _drums(s, o, bpm, drums, level=0.5)
+
+    _every_loop(s, ED_LOOP, one_pass)
+
+
 # ---------------------------------------------------------------- build
 
 def build(names: list[str] | None = None) -> list[dict]:

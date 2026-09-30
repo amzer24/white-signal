@@ -35,7 +35,7 @@ Dot stands beside the switchboard. Every Pip you free flies home to her, and the
 | 10 | The Pip tuner: a blinking diamond at the screen edge points to the nearest Pip still trapped |
 | 18 | Every game starts with one more life |
 | 27 | Every game starts with another life |
-| All 35 | Her thanks, and the promise that the Pips will answer the caller with the Spark (for the ending) |
+| All 47 | Her thanks, and the promise that the Pips will answer the caller with the Spark (for the ending) |
 
 ## The people and the story
 

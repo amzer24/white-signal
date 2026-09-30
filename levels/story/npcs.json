@@ -1,9 +1,17 @@
 {
-  "_about": "Who lives where, and what they say. 'show' maps a level to a condition; 'talk' is checked top to bottom and the first entry whose 'when' holds is used. Conditions are flag names joined by '&', with '!' for not. Flags: met_<id> (set by talking), told_arc, w1_clear to w3_clear, clear_<level> (set by the game). A person with 'gifts' keeps the Pips (Dot): each gift is given once when that many Pips are home ('at' -1 means all of them), and a 'progress' line says how many are home ({home}, {total}, {need}). 'set' flags are set when the conversation ends. 'shop' opens the shop after the lines.",
+  "_about": "Who lives where, and what they say. 'show' maps a level to a condition; 'talk' is checked top to bottom and the first entry whose 'when' holds is used. Conditions are flag names joined by '&', with '!' for not. Flags: met_<id> (set by talking), told_arc, told_howl, seen_<cutscene>, w1_clear to w4_clear, clear_<level> (set by the game). An entry with 'at' is only used in that level. A person with 'gifts' keeps the Pips (Dot): each gift is given once when that many Pips are home ('at' -1 means all of them), and a 'progress' line says how many are home ({home}, {total}, {need}). 'set' flags are set when the conversation ends. 'shop' opens the shop after the lines.",
   "mast": {
     "name": "OLD MAST",
     "show": {"village": ""},
     "talk": [
+      {"when": "w4_clear", "lines": [
+        "THE LINE RANG THREE TIMES THIS MORNING, AND WHEN I PICKED UP, EVERY STATION WAS CALLING AT ONCE.",
+        "YOU FOUND WHO WAS CALLING, AND YOU BROUGHT THEM ALL HOME. LAST RELAY ISN'T THE LAST OF ANYTHING NOW."
+      ]},
+      {"when": "clear_4-3", "lines": [
+        "THE GROUND HAS BEEN SHAKING ALL NIGHT, AND THE HOWL SOUNDS CLOSER THAN IT EVER HAS BEFORE.",
+        "WHATEVER IS WAITING DOWN THERE, MAKE SURE YOU COME BACK UP. WE KEPT YOUR PLACE HERE TOO."
+      ]},
       {"when": "!met_mast", "set": ["met_mast"], "lines": [
         "YOU ARRIVED ALONG THE WIRE LAST NIGHT, AFTER THE DEAD LINE RANG, AND YOU'VE BEEN ASLEEP EVER SINCE.",
         "THIS IS *LAST RELAY*, THE ONLY STATION STILL HUMMING ANYWHERE ON THE LINE AFTER ALL THESE YEARS.",
@@ -15,13 +23,14 @@
       {"when": "w1_clear&!told_arc", "set": ["told_arc"], "lines": [
         "WHEN THE GATE LIT UP, SOME OF ITS ENERGY JUMPED ONTO YOU, AND IT'S STILL CRACKLING AROUND YOU NOW.",
         "THAT ENERGY IS AN *ARC*, AND YOU CAN THROW IT TO KNOCK OUT ANY ENEMY AHEAD OF YOU, EVEN SPIKY ONES.",
-        "IT ALSO BREAKS *CRACKED WALLS*, AND PEOPLE HID ALL KINDS OF TREASURE INSIDE THEM DURING THE QUIET."
+        "IT ALSO BREAKS *CRACKED WALLS*, AND PEOPLE HID ALL KINDS OF TREASURE INSIDE THEM DURING THE QUIET.",
+        "BUT I FELT THE GROUND SHIVER WHEN THE GATE LIT. THE OLD CREWS WOULD SAY THE *HOWL* WAS STIRRING DOWN THERE."
       ]},
       {"when": "w3_clear", "lines": [
         "YOU'VE CROSSED THREE WHOLE WORLDS AND TRAVELLED FURTHER DOWN THE LINE THAN ANY LISTENER EVER HAS.",
         "THESE DAYS THE CALL COMES FROM UNDERGROUND, FROM A PLACE THE OLD CREWS NICKNAMED *DEAD AIR*.",
         "NOTHING DOWN THERE MAKES A SOUND, AND NOTHING MAKES ANY LIGHT, SO PLEASE BE VERY CAREFUL.",
-        "THE STATIC GROWS THICKER EVERY NIGHT, AND IF THE NOISE RETURNS, THERE'S NOTHING LEFT TO CUT."
+        "THE HOWL GROWS LOUDER EVERY NIGHT, AND IF IT RISES UP THE LINE AGAIN, THERE'S NOTHING LEFT TO CUT."
       ]},
       {"when": "w2_clear", "lines": [
         "THE RELAY IS FINALLY QUIET, AND LAST NIGHT I SLEPT PEACEFULLY FOR THE FIRST TIME IN YEARS.",
@@ -41,6 +50,9 @@
     "name": "TALLY",
     "show": {"village-shop": ""},
     "talk": [
+      {"when": "w4_clear&met_tally", "shop": true, "lines": [
+        "VISITORS FROM EVERY STATION, AND EVERY SINGLE ONE OF THEM WANTS PARTS! BUSINESS HAS NEVER BEEN BETTER."
+      ]},
       {"when": "!met_tally", "set": ["met_tally"], "shop": true, "lines": [
         "WELL, A CUSTOMER AT LAST, AND A GENUINE SPARK! I'M TALLY, AND I KEEP COUNT OF EVERYTHING.",
         "*SHARDS* ARE PROPER SIGNAL, AND PROPER SIGNAL IS VERY HARD TO FIND THESE DAYS.",
@@ -55,6 +67,15 @@
     "name": "WREN",
     "show": {"1-2": "!met_wren", "village-radio": "met_wren"},
     "talk": [
+      {"when": "w4_clear&met_wren", "lines": [
+        "MY RADIO HASN'T STOPPED ALL DAY. EVERY STATION ON THE LINE IS TALKING AT ONCE, AND I LOVE IT.",
+        "SO THAT'S WHERE HOME IS, FOR SOMETHING LIKE YOU. IT'S EVERYWHERE THE LINE GOES."
+      ]},
+      {"when": "clear_4-2&met_wren", "lines": [
+        "THE CALL CHANGED LAST NIGHT, AND FOR THE VERY FIRST TIME, IT SOUNDED WORRIED.",
+        "THE RING WON'T CLOSE WITHOUT YOU, SPARK. PLEASE HURRY, BECAUSE WE CAN'T HOLD THE NOISE MUCH LONGER.",
+        "A RING WITH A GAP IN IT, AND YOU'RE THE MISSING PIECE. THAT'S WHY THEY KEPT YOUR PLACE."
+      ]},
       {"when": "!met_wren", "set": ["met_wren"], "lines": [
         "A REAL, LIVING SPARK, OUT ON THE FLATS! I'M WREN, AND I'M FOLLOWING THE MYSTERIOUS CALL TOO.",
         "I CAME OUT HERE TO GET CLOSER TO IT, BUT THE FLOOR KEPT CRUMBLING AWAY UNDERNEATH ME.",
@@ -84,13 +105,27 @@
   },
   "brace": {
     "name": "BRACE",
-    "show": {"1-4": "!met_brace", "village-radio": "met_brace"},
+    "show": {"1-4": "!met_brace", "4-1": "!clear_4-1", "village-radio": "met_brace"},
     "talk": [
+      {"when": "w4_clear&met_brace", "lines": [
+        "I PULLED MY HANDLE THE OTHER WAY THIS MORNING, AND FOR THE FIRST TIME IN YEARS, THE LINE IS WHOLE.",
+        "WE CUT IT TO KEEP EVERYONE SAFE, AND YOU JOINED IT BACK TOGETHER. THANK YOU, LITTLE SPARK."
+      ]},
+      {"when": "!clear_4-1", "at": "4-1", "set": ["met_brace"], "lines": [
+        "YOU MADE IT DOWN TO DEAD AIR. I CAME AHEAD OF YOU, BECAUSE I KNOW THESE TUNNELS BETTER THAN ANYONE.",
+        "MY CREW CUT THE WIRE YOU WERE LYING ON, SPARK. NOW I'M HERE TO HELP YOU JOIN IT BACK TOGETHER.",
+        "THOSE BOXES ARE *RELAY TURRETS*. THEY STILL FIRE AT ANY SIGNAL, BECAUSE THEY THINK IT'S THE NOISE.",
+        "WATCH FOR THE EYE THAT LIGHTS UP BEFORE EACH SHOT, AND JUMP OVER THE BOLTS AS THEY COME."
+      ]},
       {"when": "!met_brace", "set": ["met_brace"], "lines": [
         "CAREFUL IN HERE, BECAUSE THE OLD CREWS CUT THESE LINES ON PURPOSE, AND I WAS ONE OF THOSE WORKERS.",
         "WE DIDN'T DO IT TO HURT ANYONE, BUT TO STOP THE NOISE SPREADING FROM STATION TO STATION.",
         "SEE THE HANDLE ON MY BELT? ONE PULL CUTS OFF A LINE, SO ONE PROBLEM CAN'T TAKE DOWN EVERYTHING.",
         "GET THROUGH *THE GATE* AT THE END OF THIS CORRIDOR, AND I'LL MEET YOU AT LAST RELAY AFTERWARDS."
+      ]},
+      {"when": "seen_gate1&!told_howl", "set": ["told_howl"], "lines": [
+        "WE CREWS HAD A NAME FOR THAT NOISE. WE CALLED IT *THE HOWL*, BECAUSE IT SWALLOWED EVERY VOICE IT TOUCHED.",
+        "IF THE HOWL IS STIRRING AGAIN, THEN CUTTING THE LINES ONLY PUT IT TO SLEEP. IT NEVER REALLY WENT AWAY."
       ]},
       {"when": "w2_clear", "lines": [
         "YOU BLEW THE RELAY'S FUSES? GOOD, BECAUSE IT WAS NEVER GOING TO STOP BY ITSELF.",
@@ -113,6 +148,9 @@
         "WHEN THE CREWS CUT THE LINE, MY PIPS WERE CAUGHT IN THE GLASS ON THE OLD POLES, AND THEY'RE STILL THERE.",
         "LISTEN FOR THEM CALLING. TOUCH THE GLASS TO SET ONE FREE, AND IT WILL COME STRAIGHT HOME TO ME.",
         "BRING ENOUGH OF THEM HOME AND I'LL HAVE SOMETHING FOR YOU. MY *SWITCHBOARD* CAN ALSO SEND YOU ANYWHERE YOU'VE BEEN."
+      ]},
+      {"when": "w4_clear&met_dot", "lines": [
+        "BLINK, BLINK, BLINK! EVERY LINE ON MY SWITCHBOARD IS RINGING AT ONCE, AND I'M CONNECTING CALLS AGAIN."
       ]},
       {"when": "w3_clear", "lines": [
         "THE PIPS HAVE BEEN WHISPERING ALL NIGHT. THEY SAY THE CALL COMES FROM A PLACE WITH NO LIGHT AT ALL."
@@ -149,6 +187,10 @@
     "name": "HUM",
     "show": {"2-4": "!met_hum", "village-radio": "met_hum"},
     "talk": [
+      {"when": "w4_clear&met_hum", "lines": [
+        "THE RELAY WOKE UP THIS MORNING, BUT GENTLY THIS TIME, JUST PASSING CALLS ALONG LIKE IT USED TO.",
+        "DID YOU TELL THE CALLERS THAT HUM SAYS HELLO? I THINK THEY HEARD ME ANYWAY."
+      ]},
       {"when": "!met_hum", "set": ["met_hum"], "lines": [
         "HELLO, LITTLE SPARK. FORGIVE ME, BUT I HAVEN'T SLEPT A WINK SINCE THE LINE WAS CUT.",
         "THAT RELAY AHEAD HAS BEEN SWAPPING ITS CHANNELS EVERY FEW SECONDS, NIGHT AND DAY, FOR YEARS.",
@@ -165,6 +207,9 @@
     "name": "SPIRE",
     "show": {"3-2": "!met_spire", "village": "met_spire"},
     "talk": [
+      {"when": "w4_clear&met_spire", "lines": [
+        "EVERY MAST ON THE LINE IS GLOWING TONIGHT, AND NOT ONE OF THEM IS STANDING ALONE ANY MORE."
+      ]},
       {"when": "!met_spire", "set": ["met_spire"], "lines": [
         "HOLD ON TO SOMETHING! UP HERE, THE WIND NEVER ASKS PERMISSION BEFORE IT SHOVES YOU.",
         "I'M SPIRE, AND I KEPT THESE MASTS AND AERIALS STANDING ALL ALONE, ALL THROUGH THE QUIET.",

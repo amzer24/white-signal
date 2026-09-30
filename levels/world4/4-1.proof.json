@@ -1,0 +1,27 @@
+{
+ "finished": true,
+ "route_seconds": 14.3,
+ "nodes": 3175,
+ "shards": {
+  "43,7": true,
+  "78,6": true,
+  "132,3": true
+ },
+ "small_shards": {
+  "total": 19,
+  "reachable": 19,
+  "missing": []
+ },
+ "blocks": {
+  "total": 3,
+  "reachable": 3,
+  "missing": []
+ },
+ "cracks": {
+  "total": 1,
+  "reachable": 1,
+  "missing": []
+ },
+ "solve_seconds": 104.9,
+ "line": "150 tiles (2400px, 5 screens)  .  FINISHABLE  .  fastest proven route 14.3s  .  big shards reachable 3/3  .  small shards reachable 19/19  .  blocks hittable 3/3  .  cracked walls breakable 1/1  .  21 shards  .  owns: relay turrets"
+}

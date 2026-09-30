@@ -20,7 +20,7 @@ const GAP := Vector2(203, 220)   # where the crew cut the line (card 4)
 ## Each card: text, length, when the text comes and goes, and its act (tint).
 const CARDS := [
 	{"lines": ["ONE LINE RAN ACROSS THE WHOLE LAND", "JOINING EVERY RELAY AND EVERY GATE"], "dur": 6.0, "in": 0.8, "out": 5.6, "act": "amber"},
-	{"lines": ["LITTLE PIPS OF SIGNAL CARRIED EVERY VOICE", "SO NO ONE WAS EVER TOO FAR AWAY"], "dur": 6.0, "in": 0.8, "out": 5.6, "act": "amber"},
+	{"lines": ["PIPS OF SIGNAL CARRIED EVERY VOICE", "SO NO ONE WAS EVER TOO FAR AWAY"], "dur": 6.0, "in": 0.8, "out": 5.6, "act": "amber"},
 	{"lines": ["THEN A HOWLING NOISE FILLED THE LINE", "AND SPREAD FROM STATION TO STATION"], "dur": 6.0, "in": 0.8, "out": 5.6, "act": "grey"},
 	{"lines": ["SO THE CREWS CUT THE LINE APART", "ONE STATION AFTER ANOTHER"], "dur": 6.0, "in": 0.8, "out": 5.6, "act": "grey"},
 	{"lines": ["THE NOISE STOPPED . SO DID THE VOICES", "AND THE PIPS WERE CAUGHT IN THE GLASS"], "dur": 7.0, "in": 2.0, "out": 6.4, "act": "grey"},

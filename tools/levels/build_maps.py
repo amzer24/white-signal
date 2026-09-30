@@ -15,7 +15,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 import sim
 from levelkit import parse, ROWS, LEGEND, Objects
-from physics import TILE, HALF_W, HALF_H
+from physics import TILE, HALF_W, HALF_H, DT
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
 S = 2                  # map pixels per game pixel
@@ -178,6 +178,26 @@ def draw_objects(d, lvl, o, ox, c0, c1):
                             px + (gx - px) * b, py + (gy - py) * b - 30 * (1 - (2 * b - 1) ** 2)), fill=ACT, width=2)
             label = 'stays open' if g['open'] == 0 else f"open {g['open']:g}s after release"
             d.text((gx + 8, gy - T * 4), f"gate#{g['i']}: {label}", font=FONT_S, fill=ACT)
+    # World 4: turrets with the stretch their bolts fly, and echoes
+    for tu in o.turrets:
+        if not vis(tu['c'] * TILE):
+            continue
+        x, y = X(tu['c'] * TILE), Y(tu['r'] * TILE)
+        d.rectangle((x, y, x + T - 1, y + T - 1), fill=(120, 40, 40), outline=HAZARD, width=2)
+        eye = x + (T - 8 if tu['d'] > 0 else 4)
+        d.rectangle((eye, y + T // 2 - 3, eye + 4, y + T // 2 + 3), fill=WHITE)
+        far = tu['x0'] + tu['d'] * tu['speed'] * tu['life'] * DT
+        x0, x1 = sorted((X(tu['x0']), X(far)))
+        x0, x1 = max(x0, ox[0]), min(x1, ox[0] + (c1 - c0) * T)
+        yy = Y(tu['y'])
+        for xx in range(int(x0), int(x1), 12):
+            d.line((xx, yy, min(xx + 6, x1), yy), fill=HAZARD, width=2)
+        d.text((x, y - 12), f"t#{tu['i']} {tu['period']:g}s @{tu['phase']:g}", font=FONT_S, fill=HAZARD)
+    for e in o.echoes:
+        if vis(e['x']):
+            x, y = X(e['x']), Y(e['y'])
+            d.ellipse((x - 10, y - 10, x + 10, y + 10), fill=ENEMY, outline=WHITE)
+            d.text((x - 12, y - 24), f"e#{e['i']}", font=FONT_S, fill=ENEMY)
     for (c, r) in lvl.find('W'):
         if vis(c * TILE):
             x, y = X(c * TILE), Y(r * TILE)
@@ -198,6 +218,10 @@ def render(lvl, path, report, out):
     d = ImageDraw.Draw(img)
     d.text((20, 14), f"WORLD {lvl.meta.get('world', '')}  .  {lvl.name}", font=FONT_B, fill=WHITE)
     d.text((20, 40), report['line'], font=FONT, fill=GRAY)
+    if o.static:
+        st = o.static
+        d.text((20, 56), f"a wall of static {'rises from the bottom' if st['dir'] == 'up' else 'chases from the left'}"
+               f" at {st['speed']:g} px/s after {st['delay']:g} s", font=FONT_S, fill=HAZARD)
     frames = []
     for a, fr, run in path:
         for (x, y) in fr:
@@ -283,6 +307,16 @@ def probe(lvl, path, cell, frames=600):
     return False
 
 
+def standing_before(lvl, path, col, row, margin):
+    """Moments on the proven route where a search for a secret can start: the
+    route standing still before it passes column `col - margin`. A shaft (one
+    screen wide, several tall) is climbed rather than crossed, so there it is
+    the route standing at or below the secret's row, before it climbs past."""
+    if len(lvl.screens) == 1 and lvl.rows > ROWS:
+        return [st[2] for st in path if st[2].body.floor and st[2].body.y >= row * TILE]
+    return [st[2] for st in path if st[2].body.floor and st[2].body.x < (col - margin) * TILE]
+
+
 def check_collectables(lvl, path, extra=()):
     """Every small shard must be collectable and every bump block hittable from
     below. Whatever the main route or the big-shard routes pass through counts
@@ -320,7 +354,7 @@ def check_collectables(lvl, path, extra=()):
         legs = parse_via(str(o.get('via', '')))
         if not legs:
             continue
-        before = [st[2] for st in path if st[2].body.floor and st[2].body.x < (legs[0][1] - 1) * TILE]
+        before = standing_before(lvl, path, legs[0][1], legs[0][2], 1)
         run0 = before[-1] if before else None
         ok = True
         for wp in legs:
@@ -339,7 +373,7 @@ def check_collectables(lvl, path, extra=()):
         if k in got:
             continue
         col = k[1]
-        before = [st[2] for st in path if st[2].body.floor and st[2].body.x < (col - 2) * TILE]
+        before = standing_before(lvl, path, col, k[2], 2)
         # cheap searches first; the last, slow one handles skill moves like a stomp chain
         for run0, nodes, wgt in ([(before[-1], 40_000, 2.5)] if before else []) + [(None, 40_000, 2.5)] +                 ([(before[-1], 400_000, 1.2)] if before else []):
             seg, _, ok = sim.solve(lvl, run0=run0, max_nodes=nodes, reach=fn, target=(col, k[2]), weight=wgt,
@@ -370,7 +404,7 @@ def check_cracks(lvl, path):
         if any(fn(x, y) for _, fr, _ in path for x, y in fr):
             got.append((c, r))
             continue
-        before = [st[2] for st in path if st[2].body.floor and st[2].body.x < (c - 2) * TILE]
+        before = standing_before(lvl, path, c, r, 2)
         for run0, nodes in ([(before[-1], 60_000)] if before else []) + [(None, 60_000)]:
             _, _, ok = sim.solve(lvl, run0=run0, max_nodes=nodes, reach=fn, target=(c, r), drop=True)
             if ok:
@@ -460,7 +494,7 @@ def prove(lvl):
         # start from the nearest proven point before the first leg, then further back
         first = legs[0][1]
         screen0 = max(s0 for s0, _, _ in lvl.screens if s0 <= first)
-        before = [st[2] for st in path if st[2].body.floor and st[2].body.x < (first - 1) * TILE]
+        before = standing_before(lvl, path, first, legs[0][2], 1)
         tries = [before[-1] if before else None]
         prev = [s0 for s0, _, _ in lvl.screens if s0 < screen0]
         if prev:

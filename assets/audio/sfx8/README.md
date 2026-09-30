@@ -1,6 +1,6 @@
 # 8-bit sound set (sfx8)
 
-135 sounds for the platformer rework: 53 for World 1, 10 for World 2, 5 for World 3, 7 for ambience, weather, lamps and menus, 15 for the Last Relay hub village, 14 music loops for the levels, 10 for the title screen and its menus, 5 for the Arc, 13 for the story intro and 3 for the Pips (the last nine groups are listed below). Every sound is made only from the four voices of the NES sound chip, so the set hangs together as one machine.
+154 sounds for the platformer rework: 53 for World 1, 10 for World 2, 5 for World 3, 7 for ambience, weather, lamps and menus, 15 for the Last Relay hub village, 14 music loops for the levels, 10 for the title screen and its menus, 5 for the Arc, 13 for the story intro, 3 for the Pips, 3 for the Howl and 16 for World 4 and the ending (the last eleven groups are listed below). Every sound is made only from the four voices of the NES sound chip, so the set hangs together as one machine.
 
 The game, the title screen and the story intro all play these files.
 
@@ -26,9 +26,9 @@ House rules, so new sounds fit in:
 
 Every file is 44.1 kHz, 16-bit, mono WAV. It starts on its first sound and ends with a short fade, so there are no clicks.
 
-Levels are matched by how loud each sound's loudest 50 ms is, aiming at -14.5 dBFS. No file goes above -3 dBFS peak. A few sounds that repeat a lot or should sit underneath (soft landing, warden steps, trap tells, the hopper, the flyer's flap, the relay boss's hum) are deliberately set 2 to 5 dB quieter, the sweep arm's whir 7 dB quieter, the menu cursor blips (`menu_move` and `menu_move_1` to `menu_move_5`) 8 dB quieter, and the intro's static crawl 3 dB quieter. The ambience loops are set 8 dB quieter, so they sit under the music. The seven character voices repeat many times a second, so they sit a few dB under the menu sounds, and they're balanced by ear-weighted level to within about 2 dB of each other. `village_theme` is music for the Music bus, so it's set 3 dB louder than the effects. That puts it at about -14 dBFS overall, level with the World 1 music tracks. That setting is the `trim_db` value in the generator and the manifest.
+Levels are matched by how loud each sound's loudest 50 ms is, aiming at -14.5 dBFS. No file goes above -3 dBFS peak. A few sounds that repeat a lot or should sit underneath (soft landing, warden steps, trap tells, the hopper, the flyer's flap, the relay boss's hum, World 4's turret charge and bolt hit, the echoes' whine and shush, and the static wall's crackle) are deliberately set 2 to 5 dB quieter, the sweep arm's whir 7 dB quieter, the menu cursor blips (`menu_move` and `menu_move_1` to `menu_move_5`) 8 dB quieter, and the intro's static crawl 3 dB quieter. The ambience loops are set 8 dB quieter, so they sit under the music. The eight character voices repeat many times a second, so they sit a few dB under the menu sounds, and they're balanced by ear-weighted level to within about 2 dB of each other. `village_theme` is music for the Music bus, so it's set 3 dB louder than the effects. That puts it at about -14 dBFS overall, level with the World 1 music tracks. That setting is the `trim_db` value in the generator and the manifest.
 
-The fourteen level music loops, `title_theme` and the four story intro loops are matched to `village_theme` by overall level instead, since that's what a listener hears across a whole loop. Each one's `trim_db` (2.0 to 4.0) is set so it averages -14.2 to -14.5 dBFS. A few can't quite reach -14.2 without going over the -3 dBFS peak limit, so they stop at the limit, 0.3 dB short at most.
+The eighteen level music loops, `m_ending`, `title_theme` and the four story intro loops are matched to `village_theme` by overall level instead, since that's what a listener hears across a whole loop. Each one's `trim_db` (1.8 to 4.0) is set so it averages -14.2 to -14.5 dBFS. A few can't quite reach -14.2 without going over the -3 dBFS peak limit, so they stop at the limit, 0.3 dB short at most.
 
 `manifest.json` lists every sound with its file, length, peak, overall RMS, loudest-50 ms RMS, trim and when it should play.
 
@@ -94,6 +94,7 @@ Some trap events come as separate pieces so the game can place them on its own c
 | `amb_w1` | 8.00 s | World 1 ambience under the music. Distant wind over dead wires, with one soft signal blip (and its faint answer) per pass. **This one loops.** |
 | `amb_w2` | 7.00 s | World 2 ambience under the music, for the relay yard. A low transformer hum, three far-off metal clanks per pass, and faint rain. **This one loops.** |
 | `amb_w3` | 8.00 s | World 3 ambience under the music, for the Aerials. Bright high wind in three gusts per pass, two guy wires humming a hair apart so they beat about once a second and sing louder in the gusts, and one distant clank with its echo. **This one loops.** |
+| `amb_w4` | 16.00 s | World 4 ambience under the music, for Dead Air. No wind. The deep hum of dead equipment over a low rumble, far-off drips that the cave answers, and once a pass a distant low howl that moans up and sinks back. It's twice as long as the others, so the howl only comes now and then. **This one loops.** |
 | `lamp_on` | 0.36 s | A signal lamp sputters on. Crackles, then a warm note that climbs as the lamp catches. |
 | `thunder` | 1.20 s | Lightning. A bright crack, then a low rumble that rolls away. |
 | `menu_back` | 0.12 s | Pause menu "back" or cancel. It goes with `menu_move` and `menu_confirm`: the same voice as `menu_confirm`, but falling instead of rising, an octave lower and shorter. |
@@ -136,7 +137,7 @@ One loop per level, for the Music bus. The game plays these, and falls back to t
 
 Every loop is written to be catchy by the rules in `docs/research/music-2026-09-26.md`: a hook in the first bar that comes back at least three times a pass, repeats and answers, notes that lean over the beat, mostly steps, and a lead no wider than an octave and a fifth and no higher than E6. `python tools/audio/music_check.py` measures every loop against those rules.
 
-World 1 shares FIRST LIGHT's hook (scale steps 5 1 1 2 3 1 in the rhythm short LONG short short LONG short). World 2 shares the Switchyard motif (5 b6 5 8 b7 5). World 3 shares the Aerials motif (1 5 9 8 10, two fifths up, a step down, a third up). The level clear, extra life and game over jingles are built from FIRST LIGHT's hook too: fast and bright for the first two, slow and in minor for game over.
+World 1 shares FIRST LIGHT's hook (scale steps 5 1 1 2 3 1 in the rhythm short LONG short short LONG short). World 2 shares the Switchyard motif (5 b6 5 8 b7 5). World 3 shares the Aerials motif (1 5 9 8 10, two fifths up, a step down, a third up). World 4 shares the Dead Air motif (5 8 b7 b6 5, FIRST LIGHT's opening leap falling back down instead of climbing on). The level clear, extra life and game over jingles are built from FIRST LIGHT's hook too: fast and bright for the first two, slow and in minor for game over.
 
 | Sound | Level | Length | Tempo and key | What it sounds like |
 |---|---|---|---|---|
@@ -154,14 +155,19 @@ World 1 shares FIRST LIGHT's hook (scale steps 5 1 1 2 3 1 in the rhythm short L
 | `m_3_2` | 3-2 CARRIER WIND | 41.60 s | 138.5 BPM, A major, 24 bars | Sweeping. Pulse 2 races up and down in sixteenths like gusts, and every fourth bar it holds at the top while a swell of wind peaks. A bright B major chord gives it lift. |
 | `m_3_3` | 3-3 SWEEP ARMS | 44.80 s | 128.6 BPM, F sharp minor, 24 bars | Clockwork. Pulse 2 turns a 12-note pattern against the 16 steps of a bar, so it comes round a quarter-bar later each time, like an arm sweeping. Tick-tock drums, a crisp short-note lead, and a burst of static at the start of each section. |
 | `m_3_4` | 3-4 THE SPIRE | 49.07 s | 156.5 BPM, C major lifting to D major, 32 bars | The World 3 finale. It starts thin over wind and adds more every 8 bars. At bar 17 the whole opening comes back a step higher, and the last section plays the motif at double length at the top. The final chord leads straight back to the start. |
+| `m_4_1` | 4-1 RELAY TURRETS | 48.00 s | 100 BPM, D minor, 20 bars | Low, sparse and tense. The triangle pumps low octaves on every eighth and the drums tick and clank like machinery. A turret's eye blips high at the end of each bar. The middle walks down in long notes and ends on repeated notes, like a turret charging. |
+| `m_4_2` | 4-2 ECHOES IN THE DARK | 48.00 s | 80 BPM, B minor, 16 bars | The quietest track, hollow and eerie, with no drums. A soft 50% lead plays the motif and falls silent for a bar while pulse 2 answers it, fainter, like an echo. In the middle the echo trails the lead a bar behind. Open fifths on the triangle, low breathing noise and the odd drip. |
+| `m_4_3` | 4-3 THE RISING STATIC | 44.80 s | 171.4 BPM, E minor lifting to F sharp minor, 32 bars | Urgent. The bass climbs a step every bar, eight bars at a time, and the motif climbs with it, answered by alarm-like repeated notes. Hiss rises under the drums through every eight bars. It lifts a key at bar 17 and drops back to E at the loop. |
+| `m_4_4` | 4-4 THE LAST GATE | 42.67 s | 180 BPM, D minor turning to D major, 32 bars | The World 4 finale, a chase that is heroic rather than scary. The motif drives in D minor, then comes a galloping middle with the Howl's breath rumbling under it. At bar 17 the motif turns round and climbs as FIRST LIGHT in D major, and the last section plays FIRST LIGHT at half speed, as the intro does, up to a high D. |
 
 The tracks share tunes so each world sounds like one piece:
 
 - World 1 quotes the opening of FIRST LIGHT: the notes D G G A B G in `m_1_1`, in the rhythm short, short, short, short, long, long. It opens `m_training`. It appears at bars 5 and 6 of `m_1_1_bonus`, bars 5 and 17 of `m_1_3`, and bars 17 and 18 of `m_1_4` (there in a major key). In `m_1_2` it comes in half a beat late. `title_theme` plays it at half speed and moved into D (A D D E F# D) at bars 1 and 5.
 - World 2 shares one motif: step up a semitone, back down, leap up to the octave, then fall back (E F E A G E in A minor), in the rhythm short, short, short, long, short, long. It's in every World 2 track and opens `m_2_1`, `m_2_3` and `m_2_4`.
 - World 3 shares one motif built on open fifths: climb two fifths, step down to the octave, then leap up another fifth (F C G F C in `m_3_1`, which is in F major). The rhythm is short, short, long, short, long, turned into a long-short lilt in the 12/8 of `m_3_1`. It opens all four World 3 tracks and comes back on other chords inside them. In `m_3_4` it starts at the bottom of the lead's range and each return starts higher, until bars 25 and 26 play it at double length.
+- World 4 shares one motif: FIRST LIGHT's opening leap up a fourth, then a fall back down by step (A D C B flat A in D minor), in FIRST LIGHT's rhythm of short, long, short, short, long. It opens all four World 4 tracks. In `m_4_4` it turns round at last and climbs as FIRST LIGHT itself (A D D E F sharp D), and `m_ending` resolves that into D major.
 
-The tempos are all 3600 divided by a whole number, which is why some look odd (112.5, 124.1, 128.6, 133.3, 138.5, 156.5, 163.6). That keeps every note on the generator's 240-a-second clock, so every pass of a loop is identical.
+The tempos are all 3600 divided by a whole number, which is why some look odd (112.5, 124.1, 128.6, 133.3, 138.5, 156.5, 163.6, 171.4). That keeps every note on the generator's 240-a-second clock, so every pass of a loop is identical.
 
 The loops are written the same way as `village_theme`, as note text in the generator. Chord parts use a small shorthand that follows the chords (`R` root, `3` third, `5` fifth, `8` octave, and `2`, `4` and `9` for World 3's open chords), and drums are one letter per sixteenth note (see `KIT` in the generator).
 
@@ -228,9 +234,37 @@ Card 4 cuts `intro_noise` dead when the line is cut, 7.25 s into the cue. Every 
 
 The last bar of `intro_home` is the last bar of `village_theme`: an A chord with the bass walking up A, E, A, C sharp. So when `village_theme` starts at the hand-off, its first D chord resolves it. The call in `intro_home` goes out on the first beat of bar 5 and the answer comes on its third beat, as the chord turns to A. If nobody skips, that is 3.2 s and 4.7 s into card 10.
 
+## The Howl
+
+| Sound | Length | When it plays |
+|---|---|---|
+| `howl_wake` | 2.60 s | The Gate cutscene, far below, as the Howl stirs awake, before its speech types out. A low rumble swells while two low pulses climb slowly from D to F, beating faster and faster against each other like feedback. Broken syllables of swallowed voices crackle through it. Then it sinks back to a slow, low throb on D. It's in D minor, like the Noise's music. |
+| `voice_howl` | 0.08 s | The Howl's talking blip, one every two letters of its garbled speech, like the villagers' voices. The lowest and roughest voice: a raspy pulse sagging round D2 and wobbling, a faint copy an octave up that grinds against it, and low hiss. |
+| `gate_wake` | 2.00 s | The Gate cutscene, as the first Gate wakes and its light races down the line into the Spark. A rising electric hum blooms into a D major chord, then a quick run of pulses zips up to a ringing high D. The run starts with FIRST LIGHT's opening notes (A D D E F sharp). |
+
+## World 4 and the ending
+
+Dead Air is dark and quiet, so its sounds are low and sparse. The Howl lives in D minor, as in `howl_wake`. The ring closing is in D major, like every hopeful sound in the set.
+
+| Sound | Length | When it plays |
+|---|---|---|
+| `turret_charge` | 0.30 s | A relay turret's eye brightens. Start it when the turret's 0.3 s charge starts. It ends as the shot leaves. A thin blip climbing an octave and glinting, over faint rising crackle. 2 dB under the other effects. |
+| `turret_fire` | 0.15 s | The turret fires. Plays as `turret_charge` ends. A bright snap and a buzzing zap diving two octaves. |
+| `bolt_hit` | 0.12 s | A bolt hits a wall. A small pop, three quick crackles and a tiny falling blip. 2 dB under the other effects. |
+| `echo_whine` | 0.59 s | An echo starts drifting toward the Spark. A faint, wavering whine rising a fifth, with a second voice a quarter-tone flat beating against it. 4 dB under the other effects. |
+| `echo_hide` | 0.20 s | An echo covers its face. A soft shush of hiss with a faint sigh under it. 4 dB under the other effects. |
+| `echo_knock` | 0.27 s | The Arc scatters an echo. Play it with `arc_hit`. The echo's whine splinters downward in a spray of notes while crackle scatters outward. |
+| `static_rise` | 1.50 s | A wall of static starts rising or chasing. A low rumble swells up, with two buzzing low notes a quarter-tone apart churning as they climb a fifth. Then play `static_loop`. |
+| `static_loop` | 2.00 s | The static wall is on screen. A bed of hiss and metallic crackle flickering at random over a low buzz. 3 dB under the other effects. **This one loops.** |
+| `howl_roar` | 2.00 s | The Howl roars as the chase in 4-4 begins. Both pulses roll the same low D minor chord, one slightly out of tune with the other, so it sounds like a crowd of voices rather than one. They heave up and sink back over a rumbling roar, with broken syllables in the tail. It stays low, so it growls rather than screams. |
+| `ring_close` | 2.50 s | The Spark takes its place and the ring of Sparks closes. A D major chord swells from nothing for a second, then a quick run climbs to a bell ringing on a high D, with an echo. |
+| `m_ending` | 53.33 s | The ending cutscene, for the Music bus. Warm and hopeful, D major at 90 BPM, 20 bars. It opens with FIRST LIGHT at half speed, the way the intro and `title_theme` sing it, but keeps climbing where they stopped. The middle plays FIRST LIGHT's hook at full speed, as `m_1_1` does. At bar 17 it resolves onto a held high D. The far caller's two-note call, which nobody answers in `title_theme`, is answered twice a pass. **This one loops.** |
+
+`amb_w4` is listed with the other ambience loops, and the four World 4 level loops are under "Level music".
+
 ## Looping sounds
 
-`relay_hum`, `arm_whir`, `static_crawl`, the four ambience loops (`amb_w1`, `amb_w2`, `amb_w3`, `amb_village`), `village_theme`, the fourteen level music loops, `title_theme` and the four story intro loops (`intro_line`, `intro_noise`, `intro_still`, `intro_home`) are built to loop with no click where the end meets the start. Each file carries its own loop point, and Godot's import setting here (Loop Mode: Detect From WAV) reads it, so it loops on its own once imported. This was checked in Godot 4.7.2 for the first three: each one loads as a forward loop over the whole file. The village loops, the level music, `arm_whir` and `amb_w3` use the same loop point as those, but haven't been opened in Godot yet. `title_theme`, `static_crawl` and the four story intro loops were checked the same way and load as forward loops over the whole file. The manifest marks every loop except `relay_hum` with `"loop": true` (`relay_hum` was built before that flag existed).
+`relay_hum`, `arm_whir`, `static_crawl`, `static_loop`, the five ambience loops (`amb_w1`, `amb_w2`, `amb_w3`, `amb_w4`, `amb_village`), `village_theme`, the eighteen level music loops, `m_ending`, `title_theme` and the four story intro loops (`intro_line`, `intro_noise`, `intro_still`, `intro_home`) are built to loop with no click where the end meets the start. Each file carries its own loop point, and Godot's import setting here (Loop Mode: Detect From WAV) reads it, so it loops on its own once imported. This was checked in Godot 4.7.2 for the first three: each one loads as a forward loop over the whole file. The village loops, the level music, `arm_whir`, `amb_w3`, `amb_w4`, `static_loop` and `m_ending` use the same loop point as those, but haven't been opened in Godot yet. `title_theme`, `static_crawl` and the four story intro loops were checked the same way and load as forward loops over the whole file. The manifest marks every loop except `relay_hum` with `"loop": true` (`relay_hum` was built before that flag existed).
 
 If one ever plays only once, set Loop Mode to Forward on the file's Import tab and set Loop End to the file's length in samples, listed below. Leaving Loop End at -1 makes Godot stop one sample short of the end.
 
@@ -263,10 +297,17 @@ If one ever plays only once, set Loop Mode to Forward on the file's Import tab a
 | `intro_noise` | 529200 |
 | `intro_still` | 264600 |
 | `intro_home` | 793800 |
+| `static_loop` | 88200 |
+| `amb_w4` | 705600 |
+| `m_4_1` | 2116800 |
+| `m_4_2` | 2116800 |
+| `m_4_3` | 1975680 |
+| `m_4_4` | 1881600 |
+| `m_ending` | 2352000 |
 
 In the generator, a looping sound is marked `loop=True`. It's rendered with one extra pass as a run-in, and the part after the loop point is blended into the start over 80 ms. Every note and volume pattern in it repeats a whole number of times per pass. `amb_w1` is mostly wind noise at its seam, so it uses `power_seam=True`, a blend that keeps the noise at an even level. A plain blend of two different stretches of noise dips in the middle.
 
-The two village loops, the level music, `title_theme`, `arm_whir`, `amb_w3`, `static_crawl` and the story intro loops also use `lock=True`. Without it, the notes repeat every pass but each voice's wave doesn't: a pass ends part-way through a cycle, so the next pass starts at a different point in the wave. The 80 ms blend then mixes two copies that are out of step, and the sound thins for a moment. That's easy to hear in tuned music. `lock=True` nudges each pulse and the triangle by a tiny fraction of a cent (under 0.3 cent in every loop so far, far too small to hear) so they finish every pass on a whole cycle. It also restarts the noise at every pass. Every pass then comes out the same, sample for sample, and the blend at the seam joins two identical pieces of audio. Use it for any new music loop.
+The two village loops, the level music, `title_theme`, `m_ending`, `arm_whir`, `amb_w3`, `amb_w4`, `static_crawl`, `static_loop` and the story intro loops also use `lock=True`. Without it, the notes repeat every pass but each voice's wave doesn't: a pass ends part-way through a cycle, so the next pass starts at a different point in the wave. The 80 ms blend then mixes two copies that are out of step, and the sound thins for a moment. That's easy to hear in tuned music. `lock=True` nudges each pulse and the triangle by a tiny fraction of a cent (under 0.3 cent in every loop so far, far too small to hear) so they finish every pass on a whole cycle. It also restarts the noise at every pass. Every pass then comes out the same, sample for sample, and the blend at the seam joins two identical pieces of audio. Use it for any new music loop. A long low note in a short loop can need a bigger nudge, so the low hums in `amb_w4` and `static_loop` sit on hand-picked NES pitch values that keep it under 0.3 cent too.
 
 ## Loops with an intro
 

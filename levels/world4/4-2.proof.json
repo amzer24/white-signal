@@ -1,0 +1,27 @@
+{
+ "finished": true,
+ "route_seconds": 10.6,
+ "nodes": 10744,
+ "shards": {
+  "75,7": true,
+  "108,3": true,
+  "140,5": true
+ },
+ "small_shards": {
+  "total": 18,
+  "reachable": 18,
+  "missing": []
+ },
+ "blocks": {
+  "total": 2,
+  "reachable": 2,
+  "missing": []
+ },
+ "cracks": {
+  "total": 1,
+  "reachable": 1,
+  "missing": []
+ },
+ "solve_seconds": 8.6,
+ "line": "150 tiles (2400px, 5 screens)  .  FINISHABLE  .  fastest proven route 10.6s  .  big shards reachable 3/3  .  small shards reachable 18/18  .  blocks hittable 2/2  .  cracked walls breakable 1/1  .  19 shards  .  owns: echoes"
+}

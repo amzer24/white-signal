@@ -67,7 +67,7 @@ func _run() -> void:
 	for f in [P, P + ".tmp", P + ".bad"]:
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(f))
 	await fresh("new")
-	check(game._pips_total() == 35, "35 Pips wait in the glass (%d)" % game._pips_total())
+	check(game._pips_total() == 47, "47 Pips wait in the glass (%d)" % game._pips_total())
 	check(not game.SHOP.any(func(i): return str(i.id) == "compass"), "Tally no longer sells the compass")
 
 	# free the first Pip in 1-1 by touching its glass
@@ -95,7 +95,7 @@ func _run() -> void:
 	check(not person("dot").is_empty(), "Dot is in Last Relay")
 	var first := talk_to("dot")
 	check(str(first[0]).contains("DOT") and first.any(func(l): return str(l).contains("PIP")), "her first talk is about the Pips")
-	check(str(first[first.size() - 1]).begins_with("1 OF 35"), "and ends with how many are home (%s)" % first[first.size() - 1])
+	check(str(first[first.size() - 1]).begins_with("1 OF 47"), "and ends with how many are home (%s)" % first[first.size() - 1])
 	game.load_level("2-3", Vector2i(-1, -1), false)
 	await frames(2)
 	check(person("dot").is_empty(), "Dot is no longer out in 2-3")
@@ -119,19 +119,22 @@ func _run() -> void:
 	pips_home(18)
 	talk_to("dot")
 	check(game.gifts.has("heart1") and game._start_lives() == 6, "18 Pips home: every game starts with 6 lives")
-	pips_home(35)
+	pips_home(47)
 	lines = talk_to("dot")
-	check(game.gifts.has("heart2") and game.gifts.has("all"), "all 35 home: the last gifts")
-	check(str(lines[lines.size() - 1]).begins_with("ALL 35"), "Dot thanks you for every one")
+	check(game.gifts.has("heart2") and game.gifts.has("all"), "all 47 home: the last gifts")
+	check(str(lines[lines.size() - 1]).begins_with("ALL 47"), "Dot thanks you for every one")
 
 	# New Game keeps the Pips and Dot's gifts
 	game._save_progress()
 	await fresh("new")
-	check(game._pips_home() == 35 and game.gifts.has("heart2"), "New Game keeps the Pips and the gifts")
+	check(game._pips_home() == 47 and game.gifts.has("heart2"), "New Game keeps the Pips and the gifts")
 	check(game.lives == 7, "and starts with the extra lives (%d)" % game.lives)
 
 	# Old Mast tells you about them
-	var mast: Array = game.story.mast.talk[0].lines
+	var mast: Array = []
+	for e in game.story.mast.talk:
+		if str(e.get("when", "")) == "!met_mast":
+			mast = e.lines
 	check(mast.any(func(l): return str(l).contains("PIP")), "Old Mast's first talk mentions the Pips")
 
 	print("PIPS TEST: %d failure(s)" % fails)

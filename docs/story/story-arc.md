@@ -1,6 +1,6 @@
 # White Signal: story arc
 
-Status: draft for Lee, 26 Sep 2026. Worlds 1 to 3 match what is in the game now. World 4 and the ending are proposals, marked PROPOSAL, and need Lee's approval. They answer GDD questions Q2 to Q4. The Pips (section 5) were decided on 29 Sep 2026.
+Status: 30 Sep 2026. Worlds 1 to 4 and the ending match what is in the game now. World 4 and the ending were built on 30 Sep 2026, which settles GDD questions Q2 to Q4. The Pips (section 5) were decided on 29 Sep 2026.
 
 The players are aged 10 and up. The reading targets are in section 6.
 
@@ -17,7 +17,7 @@ One line once carried every voice across the land, until a howling noise came do
 
 ## 3. Tone
 
-Quiet, lonely and hopeful, as in GDD pillar P4. Small, warm people in a big, dark world. Danger is eerie, never gory. Nobody is a villain, and every hard choice in the backstory was made to protect someone. Tally and Dot bring the jokes. Sad moments are allowed, and each world ends a little brighter than it began.
+Quiet, lonely and hopeful, as in GDD pillar P4. Small, warm people in a big, dark world. Danger is eerie, never gory. The antagonist is the Howl (section 4a). It is dangerous but not evil, and it is mended in the end, not destroyed. Every hard choice in the backstory was made to protect someone. Tally and Dot bring the jokes. Sad moments are allowed, and each world ends a little brighter than it began.
 
 ## 4. The arc
 
@@ -32,7 +32,7 @@ The call holds the story together. Wren tunes it in on her radio in the radio sh
 | After World 1 | A name that starts with S-P | A puzzle the player can solve before Wren does |
 | After World 2 | SPARK, COME HOME | The call is for the Spark |
 | After World 3 | SPARK, COME HOME. WE KEPT YOUR PLACE | There are many callers, and they know the Spark |
-| World 4 (PROPOSAL) | THE RING WON'T CLOSE WITHOUT YOU | Why they are calling, and why now |
+| After 4-2 | THE RING WON'T CLOSE WITHOUT YOU | Why they are calling, and why now |
 
 ### World 1: The Flats. Someone is calling
 
@@ -57,7 +57,7 @@ The call holds the story together. Wren tunes it in on her radio in the radio sh
 - **Mystery raised.** Who are they, why are they in Dead Air, and how do they know the Spark when it doesn't remember them?
 - **Emotional turn.** The Spark is not one of a kind, and someone has been saving it a place. But the call comes from Dead Air, where nobody goes, and the static grows thicker every night. For the first time, Old Mast is afraid for it.
 
-### World 4: Dead Air. Answer the call (PROPOSAL)
+### World 4: Dead Air. Answer the call
 
 **Setting.** The deep exchange under the network, where every cut line ends. There is no wind and no light. The noise pooled here after the cut.
 
@@ -69,16 +69,16 @@ The call holds the story together. Wren tunes it in on her radio in the radio sh
 4. Our Spark was out on the line carrying a voice that night. When the crews cut its wire, it was stranded at the cut end and fell asleep. Its place in the ring has been empty ever since. That is why it doesn't remember the others, and why they say WE KEPT YOUR PLACE.
 5. The ring has held for years with a gap in it. Now the Sparks are tired, the noise is rising, and they spent the last of their strength ringing the dead line three times.
 
-**Levels.** These follow the plan in `docs/research/traps-enemies-2026-09-25.md`, each with a story reason.
+**Levels.** Each has a story reason. The full design is in `docs/levels/world-4.md`.
 
 | Level | Idea | Story reason |
 |---|---|---|
-| 4-1 | Relay turrets and line emitters | Old defences that still fire at any signal, because they think everything is the noise. The same mistake the World 2 relay made |
-| 4-2 | Echoes in the dark | The research doc calls this enemy a "listener". Rename it "echo" so it doesn't clash with the listener villagers. Echoes are scraps of the noise that drift after you only while you look away |
-| 4-3 | The rising static shaft | The noise climbing because the ring is weakening. The stakes, turned into a level |
-| 4-4 | The last Gate | The ring itself |
+| 4-1 | Relay turrets | Old defences that still fire at any signal, because they think everything is the noise. The same mistake the World 2 relay made |
+| 4-2 | Echoes in the dark | Scraps of the Howl that drift after you only while you look away. (The research doc called them "listeners", renamed so they don't clash with the listener villagers) |
+| 4-3 | The rising static | The Howl climbing because the ring is weakening. The stakes, turned into a level |
+| 4-4 | The last Gate | The Howl chases you to the ring itself |
 
-**Villager beats.** Each needs a new entry in `levels/story/npcs.json` and a `w4` flag. Example lines, already written to the style guide:
+**Villager beats.** These are in `levels/story/npcs.json`:
 
 - Brace waits at the top of Dead Air with the handle: MY CREW CUT THE WIRE YOU WERE LYING ON, SPARK. NOW I'M HERE TO HELP YOU JOIN IT BACK TOGETHER.
 - Wren's radio, after 4-2: THE RING WON'T CLOSE WITHOUT YOU, SPARK. PLEASE HURRY, BECAUSE WE CAN'T HOLD THE NOISE MUCH LONGER.
@@ -86,11 +86,11 @@ The call holds the story together. Wren tunes it in on her radio in the radio sh
 
 **Emotional turn.** The Spark has to go into the dark alone, and finds it isn't alone after all. Brace's handle, Wren's radio and Mast's lantern come with it, and the other Sparks are waiting.
 
-### The ending (PROPOSAL)
+### The ending
 
 1. At the bottom of Dead Air, the Spark finds the ring. A circle of small Sparks sits around the cracked heart of the line, holding the noise down. One place is empty.
 2. The Spark takes its place. The ring closes and the last Gate lights.
-3. Light runs up every cut wire at once and the static burns off. Across the land, stations light up one at a time. This is intro card 4 played backwards.
+3. Light runs up every cut wire at once. The Howl comes apart into every voice it swallowed, and they run home along the wires. Across the land, stations light up one at a time. This is intro card 4 played backwards.
 4. At Last Relay, Brace pulls the handle the other way and joins the line again. Wren's radio fills with voices from every station.
 5. The line rings three times, and Old Mast picks up. This time the Sparks are calling, with our Spark among them: LAST RELAY, THIS IS THE LINE CALLING. EVERY STATION IS ANSWERING, AND WE'RE ALL COMING HOME.
 6. A closed ring holds by itself, so the Sparks can travel the line again. The Spark comes back up to Last Relay, which is now busy with visitors. Wren answers her own question: SO THAT'S WHERE HOME IS, FOR SOMETHING LIKE YOU. IT'S EVERYWHERE THE LINE GOES.
@@ -101,7 +101,7 @@ After the credits, the player is back in Last Relay and free to rescue any Pips 
 
 **A sadder alternative.** The Spark stays in the ring to hold it, and Last Relay hears it on the radio every night. I don't recommend it as the main ending for this age group.
 
-### One caller or many? (PROPOSAL, GDD Q2)
+### One caller or many? (decided, GDD Q2)
 
 Many. The callers are the Sparks of the line, speaking together, which is why the call says WE. There is no single "other spark". Once this is approved, that phrase should come out of `docs/levels/world-1.md` and the research doc.
 
@@ -110,18 +110,41 @@ Why many:
 - It makes the stakes bigger than one friend.
 - It fits the theme. The Spark belongs to a group it didn't know it had.
 
+## 4a. The Howl and the cutscenes (decided 30 Sep 2026)
+
+**What it is.** The howling noise from the intro, given a name. The crews called it the Howl because it swallowed every voice it touched. It is the feedback loop from section 4 ("What really happened"): every voice on the line, echoed back on itself until it became one roaring thing. After the cut it pooled in Dead Air, and the ring of Sparks has held it down ever since.
+
+**Why it is against the Spark.** The Howl is hungry for signal, and a closed ring would end it. When the first Gate lights, it hears that a Spark is awake on the line, the one Spark that could close the ring. From then on it listens, grows louder world by world, and in World 4 it rises to meet the Spark.
+
+**Its voice.** Garbled text: real words arriving as noise, never sitting still, typed with a rough low blip (`voice_howl`). It is eerie, not scary. It speaks in scraps of other people's voices ("EVERY . VOICE . IS . MINE").
+
+**How it ends.** When the Spark takes its place in the ring, the Howl comes apart into all the voices it swallowed, and they run home up every wire. Mended, not fought.
+
+**Where it appears now.** Cutscene C1, the World 2 and World 3 clear cards ("FAR BELOW, THE HOWL IS LISTENING", "THE HOWL IS RISING"), Old Mast after World 1 and World 3, and Brace, who names it after C1.
+
+**Cutscenes.** They use `scripts/story/cutscene.gd`: shots with a picture, two typed lines, music and sounds, in the intro's style. Tap to move on, hold to skip. Each plays once per game, and seen ones can be replayed from EXTRAS.
+
+| # | When | What happens | Status |
+|---|---|---|---|
+| C1 | End of World 1 | The first Gate wakes and light runs back down the line. Its light leaps into the Spark as the Arc. Far below, the Howl wakes: "EVERY . VOICE . IS . MINE . AND . I . HEAR . YOU . LITTLE . SPARK". The Spark looks out, and something far off looks back | Built |
+| C2 | After World 2, in the radio shack | Wren's radio finally speaks: SPARK, COME HOME | Planned |
+| C3 | End of 2-4 | The relay goes quiet and Hum sleeps. Static pulses under the floor | Planned |
+| C4 | End of 3-4 | From the top of the Spire the Spark sees the whole land, and the Howl rising from below | Planned |
+| C5 | Start of World 4 | The line runs down into Dead Air. The Howl speaks ("YOU . CAME . ALL . THIS . WAY"), and under it the call is close | Built |
+| C6 | The ending | The ring closes, the Howl comes apart into voices, the stations light up again (the intro played backwards), the line rings at Last Relay, the Pips answer, and the credits roll | Built |
+
 ## 5. The Pips (decided 29 Sep 2026, GDD Q1)
 
 **Who they are.** Pips are tiny sparks of signal, small cousins of the Spark. Before the noise, every voice on the line was carried by a Pip. When the crews cut the line, the Pips were caught in the glass insulators on the poles, and they have been calling out from the glass ever since.
 
 **Where the story shows them.**
-- The intro: card 2 names them ("LITTLE PIPS OF SIGNAL CARRIED EVERY VOICE") and shows them running along the wire. Card 5 shows them caught in the glass of the dead poles ("AND THE PIPS WERE CAUGHT IN THE GLASS"). Card 10 sets the goal: "FREE THE PIPS AND LIGHT THE GATES".
+- The intro: card 2 names them ("PIPS OF SIGNAL CARRIED EVERY VOICE") and shows them running along the wire. Card 5 shows them caught in the glass of the dead poles ("AND THE PIPS WERE CAUGHT IN THE GLASS"). Card 10 sets the goal: "FREE THE PIPS AND LIGHT THE GATES".
 - Old Mast's first talk ends by pointing the Spark to them and to Dot.
 - Dot connected every call at Last Relay's switchboard. The Pips were her voices. She keeps every Pip the Spark frees, and they gather around her switchboard.
 
 **How it plays.** Each Pip sits where a big shard used to be, so every one is already proven reachable. A trapped Pip calls when the Spark is near. Touching the glass breaks it and the Pip flies home. Dot gives a gift at 5, 10, 18 and 27 Pips, and at all 35 (see `docs/levels/village.md`).
 
-**For the ending (PROPOSAL).** When the Spark reaches the caller, the Pips it brought home answer the call with it. With all 35 home, the answer is the whole switchboard at once: the line full of voices again, which is what card 2 said was lost.
+**For the ending.** When the Spark reaches the caller, the Pips it brought home answer the call with it. With all 47 home, the answer is the whole switchboard at once: the line full of voices again, which is what card 2 said was lost.
 
 ## 6. Style guide for game text
 
@@ -178,7 +201,7 @@ Check any new text with `python tools/writing/readability.py`. It measures the r
 | The Arc | The power the Spark throws, earned at the first Gate |
 | Channels | The two halves of a split line. Only one is live at a time |
 | Dead Air | The deep exchange where every cut line ends |
-| The ring | PROPOSAL. The circle of Sparks holding the noise down |
+| The ring | The circle of Sparks holding the Howl down |
 
 ### Voices
 

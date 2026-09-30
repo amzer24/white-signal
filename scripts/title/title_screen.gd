@@ -199,8 +199,17 @@ func _rows() -> Array:
 		"new_confirm":
 			return [["BACK", "KEEP YOUR SAVE", "back"], ["START OVER", "YOU LOSE YOUR PLACE, LIVES AND SHARDS . YOU KEEP YOUR PIPS AND BEST TIMES", "new_go"]]
 		"extras":
-			return [["WATCH THE INTRO", "HOW THE STORY BEGINS . ABOUT A MINUTE", "intro"], ["HOW TO PLAY", "THE CONTROLS", "controls"], ["CREDITS", "WHO MADE WHAT", "credits"],
-				["BACK", "", "back"]]
+			var extras: Array = [["WATCH THE INTRO", "HOW THE STORY BEGINS . ABOUT A MINUTE", "intro"]]
+			var seen: Array = progress.get("flags", [])
+			if seen.has("seen_gate1"):
+				extras.append(["THE FIRST GATE", "THE END OF WORLD 1, AND WHAT WOKE UP", "gate1"])
+			if seen.has("seen_descent"):
+				extras.append(["INTO DEAD AIR", "THE WAY DOWN TO WORLD 4", "descent"])
+			if seen.has("seen_ending"):
+				extras.append(["THE ENDING", "THE RING, AND EVERYONE COMING HOME", "ending"])
+			extras.append_array([["HOW TO PLAY", "THE CONTROLS", "controls"], ["CREDITS", "WHO MADE WHAT", "credits"],
+				["BACK", "", "back"]])
+			return extras
 		"controls", "credits":
 			return [["BACK", "", "back"]]
 	return []
@@ -392,6 +401,13 @@ func _confirm() -> void:
 			_play("menu_confirm")
 			Intro.replay = true
 			get_tree().change_scene_to_file("res://scenes/intro.tscn")
+		"gate1", "descent", "ending":
+			_play("menu_confirm")
+			var cut = load("res://scripts/story/cutscene.gd")
+			cut.play = id
+			cut.replay = true
+			cut.pips = [0, 0]   # a replay leaves out the Pips shot
+			get_tree().change_scene_to_file("res://scenes/cutscene.tscn")
 		"quit":
 			_play("menu_back")
 			get_tree().quit()

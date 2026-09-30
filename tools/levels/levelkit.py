@@ -60,6 +60,9 @@ LEGEND = {
     'u': 'updraft (lifts the Spark)',
     'A': 'sweep arm hub (solid; a bar of static turns around it) arm#k len= speed= start=',
     '%': 'cracked wall (solid; the Arc breaks it, so what is behind it is a secret, never the main route)',
+    # World 4
+    't': 'relay turret (solid; fires a bolt along its row on a clock) t#k dir= period= phase= speed=',
+    'e': 'echo (drifts toward the Spark while it looks away, stops when it looks) e#k speed= wake=',
     # look and feel only (the proofs ignore it)
     'J': 'lamp post (lights up when you pass; pushes back the dark)',
     # the village (look and talk only; nothing here is solid)
@@ -72,7 +75,7 @@ LEGEND = {
     'g': 'signpost',
 }
 
-SOLID = set('#=?CUBLZpFYQEA%')
+SOLID = set('#=?CUBLZpFYQEA%t')
 CHANNEL = {'1': 0, '2': 1}
 BUMPABLE = set('?CUhiBYQ')   # blocks that knock out an enemy standing on them
 ONE_WAY = set('-')
@@ -291,6 +294,39 @@ class Objects:
             self.arms.append({'i': i, 'cx': c * TILE + 8, 'cy': r * TILE + 8, **o})
         g = str(L.meta.get('gust', '')).split(',')
         self.gust = (float(g[0]), float(g[1])) if len(g) == 2 else None
+        # World 4: turrets, echoes and a wall of static
+        self.turrets = []
+        for i, (c, r) in enumerate(L.find('t'), 1):
+            o = opts(L, f't#{i}', {'dir': -1.0, 'period': 2.5, 'phase': 0.0, 'speed': 110.0})
+            d = 1 if o['dir'] > 0 else -1
+            x0 = (c + 1) * TILE + 4 if d > 0 else c * TILE - 4
+            cc = c + d
+            while 0 <= cc < L.width and L.at(cc, r) not in SOLID and abs(cc - c) <= 40:
+                cc += d
+            wall = cc * TILE if d > 0 else (cc + 1) * TILE   # the face the bolt stops at
+            reach = max(0.0, (wall - x0) * d - 4)
+            n = int(math.floor(o['period'] * 60 + 0.5))
+            self.turrets.append({'i': i, 'c': c, 'r': r, 'x0': float(x0), 'y': r * TILE + 8.0, 'd': float(d),
+                                 'n': n, 'off': int(math.floor(o['phase'] * n + 0.5)) % n, 'speed': o['speed'],
+                                 'life': int(math.ceil(reach / (o['speed'] * DT))), **o})
+        self.echoes = []
+        for i, (c, r) in enumerate(L.find('e'), 1):
+            o = opts(L, f'e#{i}', {'speed': 30.0, 'wake': 150.0})
+            self.echoes.append({'i': i, 'x': c * TILE + 8.0, 'y': r * TILE + 8.0, **o})
+        self.static = parse_static(L)
+
+    def bolts(self, t):
+        """Centres of every bolt in flight: turret k fires on frames where
+        (frame + off) % n == 0, from frame 0 on, and each bolt flies at `speed`
+        until it reaches the first solid tile in its row."""
+        out = []
+        for tu in self.turrets:
+            n, off = tu['n'], tu['off']
+            f = (t + off) // n * n - off   # the latest firing at or before t
+            while f >= 0 and t - f < tu['life']:
+                out.append((tu['x0'] + tu['d'] * tu['speed'] * (t - f) * DT, tu['y'], tu['i']))
+                f -= n
+        return out
 
     def arm_dots(self, a, t):
         """Centres of a sweep arm's static balls: one every 8 px out from the hub."""
@@ -340,6 +376,40 @@ def fall_frames(dist):
 
 
 FLYER_DEFAULTS = {'range': 6.0, 'amp': 12.0, 'period': 2.0}
+
+
+def parse_static(level):
+    """World 4 header `static: up|right,speed,delay[,stop]`: a wall of static
+    that rises from the bottom of the level (up) or chases from the left edge
+    (right) at `speed` px/s once `delay` seconds have passed. It stops at row
+    or column `stop`. After a respawn at the midway beacon it starts again a
+    short way behind the beacon (static_base)."""
+    p = [s.strip() for s in str(level.meta.get('static', '')).split(',')]
+    if len(p) < 3 or p[0] not in ('up', 'right'):
+        return None
+    out = {'dir': p[0], 'speed': float(p[1]), 'delay': float(p[2])}
+    if p[0] == 'up':
+        out['stop'] = int(p[3]) * TILE if len(p) > 3 else -TILE * 4
+    else:
+        out['stop'] = int(p[3]) * TILE if len(p) > 3 else (level.width + 4) * TILE
+    return out
+
+
+def static_base(level, st, from_midway=False):
+    """Where the wall starts: below the level, left of it, or (after a
+    respawn at the midway) five tiles below or ten tiles behind the beacon."""
+    m = level.find('M')
+    if st['dir'] == 'up':
+        return float((m[0][1] + 6) * TILE) if from_midway and m else float(level.rows * TILE + 8)
+    return float((m[0][0] - 10) * TILE) if from_midway and m else -48.0
+
+
+def static_front(st, base, t):
+    """The wall's leading edge at frame t: a y for up, an x for right."""
+    moved = st['speed'] * max(0.0, t * DT - st['delay'])
+    if st['dir'] == 'up':
+        return max(float(st['stop']), base - moved)
+    return min(float(st['stop']), base + moved)
 
 
 def walker_path(level, w, frames=60 * 700):

@@ -18,7 +18,7 @@ A classic Mario-style pixel platformer for ages 10 and up. Short levels, lives, 
 | World 1: The Flats (4 levels, bonus room, training yard) | Built and proven |
 | World 2: The Switchyard (4 levels, relay boss) | Built and proven |
 | World 3: The Aerials (4 levels, the Spire) | Built and proven |
-| World 4: Dead Air and the ending | Planned |
+| World 4: Dead Air (4 levels) and the ending | Built and proven |
 
 The full design is in [docs/GDD.md](docs/GDD.md).
 
@@ -63,6 +63,8 @@ godot --headless --path . --script res://scripts/world1/w1_arc_test.gd
 godot --headless --path . --script res://scripts/title/title_test.gd
 godot --headless --path . --script res://scripts/intro/intro_test.gd
 godot --headless --path . --script res://scripts/world1/w1_pips_test.gd
+godot --headless --path . --script res://scripts/story/cutscene_test.gd
+godot --headless --path . --script res://scripts/story/world4_test.gd
 ```
 
 Tests use their own save files under `test-user/`, never the player's save.
@@ -74,7 +76,7 @@ Tests use their own save files under `test-user/`, never the player's save.
 | Design | `docs/GDD.md`, `docs/levels/`, `docs/story/` |
 | Levels and dialogue | `levels/`, `levels/story/npcs.json` |
 | Game rules | `scripts/world1/w1_sim.gd`, mirrored by `tools/levels/sim.py` |
-| Game, title and intro | `scripts/world1/w1_game.gd`, `scripts/title/`, `scripts/intro/` |
+| Game, title, intro and cutscenes | `scripts/world1/w1_game.gd`, `scripts/title/`, `scripts/intro/`, `scripts/story/` |
 | Art (generated in code) | `assets/world1/src/make_sheets.py` |
 | Music and sound (generated in code) | `tools/audio/sfx8.py`, `assets/audio/sfx8/` |
 

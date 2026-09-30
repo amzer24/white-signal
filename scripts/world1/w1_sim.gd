@@ -103,10 +103,17 @@ var arc_press := false      # attack pressed this frame (the game sets this befo
 var arc_t := 0.0            # time left on the Arc's hit box
 var arc_cd := 0.0
 var arc_face := 1
+var echo_pos: Array = []    # World 4: [x, y] for each echo (plain floats, as in sim.py)
+var echo_moving: Array = [] # true while that echo drifts, for its sounds
+var echo_killed := {}       # echo index -> frame the Arc scattered it (play only)
+var static_base := 0.0      # where the wall of static starts this life
 
 
 func _init(level: RefCounted) -> void:
 	L = level
+	for e in L.echoes:
+		echo_pos.append([float(e.x), float(e.y)])
+		echo_moving.append(false)
 
 
 func place(cell: Vector2i) -> void:
@@ -120,6 +127,8 @@ func place(cell: Vector2i) -> void:
 	kick_t = 0.0
 	spring_t = 0.0
 	invuln = 0.5
+	if not L.static_wall.is_empty():
+		static_base = L.static_base(lit)   # after a respawn at the beacon it starts close behind
 
 
 func ev(kind: String, data := {}) -> void:
@@ -565,12 +574,46 @@ func _arc() -> void:
 		if box.intersects(Rect2(wp.x - 7, wp.y - 18, 14, 18)):
 			killed[n] = t
 			ev("arc_hit", {"x": wp.x, "y": wp.y - 9, "kind": str(L.walkers[n].kind)})
+	for n in L.echoes.size():
+		var ep: Array = echo_pos[n]
+		if not echo_killed.has(n) and box.intersects(Rect2(float(ep[0]) - 6.0, float(ep[1]) - 6.0, 12.0, 12.0)):
+			echo_killed[n] = t
+			ev("echo_knock", {"x": ep[0], "y": ep[1]})
 	for c in range(int(floor(box.position.x / T)), int(floor(box.end.x / T)) + 1):
 		for r in range(int(floor(box.position.y / T)), int(floor(box.end.y / T)) + 1):
 			var cell := Vector2i(c, r)
 			if L.at(c, r) == "%" and tiles.get(cell, "") != "broken":
 				tiles[cell] = "broken"
 				ev("wall_break", {"x": c * T + 8.0, "y": r * T + 8.0})
+
+
+## An echo near the Spark drifts toward it while the Spark faces away, and
+## stops the moment the Spark faces it. Echoes pass through walls (sim.py move_echoes).
+func _move_echoes() -> void:
+	for n in L.echoes.size():
+		if echo_killed.has(n):
+			continue
+		var e: Dictionary = L.echoes[n]
+		var ep: Array = echo_pos[n]
+		var ex: float = ep[0]
+		var ey: float = ep[1]
+		var dx: float = x - ex
+		var dy: float = y - ey
+		var near := absf(dx) < float(e.wake) and absf(dy) < float(e.wake) * 0.75
+		var seen := face * dx < 0.0
+		var moving := false
+		if near and not seen:
+			var dist := sqrt(dx * dx + dy * dy)
+			if dist > 1.0:
+				ex += dx / dist * float(e.speed) * DT
+				ey += dy / dist * float(e.speed) * DT
+				moving = true
+		if moving and not echo_moving[n]:
+			ev("echo_move", {"x": ex, "y": ey})
+		elif not moving and echo_moving[n] and seen:
+			ev("echo_hide", {"x": ex, "y": ey})
+		echo_moving[n] = moving
+		echo_pos[n] = [ex, ey]
 
 
 func arc_box() -> Rect2:
@@ -583,10 +626,12 @@ func _hit(x0: float, y0: float, x1: float, y1: float) -> bool:
 
 
 func hurt(cause: String) -> bool:
-	## Returns true if the Spark died. CHARGE absorbs one hit (not a fall).
-	if invuln > 0.0 and cause != "fell":
+	## Returns true if the Spark died. CHARGE absorbs one hit (not a fall, and
+	## not the wall of static, which swallows you whole).
+	var whole := cause == "fell" or cause == "static"
+	if invuln > 0.0 and not whole:
 		return false
-	if charged and cause != "fell":
+	if charged and not whole:
 		charged = false
 		invuln = 1.2
 		vy = -220.0
@@ -733,6 +778,24 @@ func _after_move(down: bool) -> void:
 					if hurt("sweep arm"):
 						return
 					break
+	# World 4: turret bolts, echoes and the wall of static (sim.py after_move)
+	for bo in L.bolts(t):
+		if _hit(float(bo[0]) - 6.0, float(bo[1]) - 2.0, float(bo[0]) + 6.0, float(bo[1]) + 2.0):
+			if hurt("bolt"):
+				return
+	if not L.echoes.is_empty():
+		_move_echoes()
+		for n in L.echoes.size():
+			var ep: Array = echo_pos[n]
+			if not echo_killed.has(n) and _hit(float(ep[0]) - 5.0, float(ep[1]) - 5.0, float(ep[0]) + 5.0, float(ep[1]) + 5.0):
+				if hurt("echo"):
+					return
+	if not L.static_wall.is_empty():
+		var front: float = L.static_front(static_base, t)
+		var rising := str(L.static_wall.dir) == "up"
+		if (rising and py1 > front + 2.0) or (not rising and px0 < front - 2.0):
+			if hurt("static"):
+				return
 	# springs
 	for sp in L.springs:
 		var top: float = sp.y + 4.0

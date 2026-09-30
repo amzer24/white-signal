@@ -3165,7 +3165,8 @@
    "w1",
    "w2",
    "w3",
-   "break"
+   "break",
+   "w4"
   ],
   "anims": {
    "w1": {
@@ -3215,6 +3216,18 @@
     ],
     "loop": false,
     "note": "the Arc breaks it: flare, split, burst, dust. Same for every world. Spawn 4 brick_debris chunks on frame 1 if you want pieces flying clear of the tile"
+   },
+   "w4": {
+    "row": 4,
+    "frames": 4,
+    "dur": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "loop": true,
+    "note": "World 4 ground_w4: left, fill, right, column. After break, so the older rows keep their places"
    }
   }
  },
@@ -3601,6 +3614,93 @@
    }
   }
  },
+ "howl": {
+  "file": "howl.png",
+  "fw": 96,
+  "fh": 64,
+  "about": "The Howl, the antagonist: the noise that once filled the line, every voice it swallowed fed back on itself, grown vast underground. The same striped static as intro_static, heaped up in billows and rising from below. Eye centres are frame (36, 29) and (59, 29) in every frame. The heap runs off the bottom edge and fades to black there, so draw it with its bottom row on or below the floor or a dark band. It faces the viewer, so it needs no mirrored copy.",
+  "order": [
+   "sleep",
+   "wake",
+   "idle",
+   "speak"
+  ],
+  "anims": {
+   "sleep": {
+    "row": 0,
+    "frames": 4,
+    "dur": [
+     0.14,
+     0.14,
+     0.14,
+     0.14
+    ],
+    "loop": true,
+    "note": "asleep, dim and settled 2 px low: the static churns, the edges flicker, the eyes are GRAY slits"
+   },
+   "wake": {
+    "row": 1,
+    "frames": 6,
+    "dur": [
+     0.1,
+     0.1,
+     0.1,
+     0.1,
+     0.1,
+     0.1
+    ],
+    "loop": false,
+    "note": "the slits light WHITE and open, the heap rises and flares outward (widest on 3), then settles. Frame 5 is idle 0"
+   },
+   "idle": {
+    "row": 2,
+    "frames": 4,
+    "dur": [
+     0.12,
+     0.12,
+     0.12,
+     0.12
+    ],
+    "loop": true,
+    "note": "awake: two WHITE eyes glowing out of the dark face, the static churning, mouth closed"
+   },
+   "speak": {
+    "row": 3,
+    "frames": 4,
+    "dur": [
+     0.08,
+     0.08,
+     0.08,
+     0.08
+    ],
+    "loop": true,
+    "note": "idle with a jagged black gap for a mouth, WHITE and GRAY teeth of noise on its lips, opening and closing, centred on frame (47.5, 43)"
+   }
+  }
+ },
+ "howl_far": {
+  "file": "howl_far.png",
+  "fw": 32,
+  "fh": 24,
+  "about": "The Howl far off, watching from the dark, for cutscenes. Its bottom rows fade to black, so it can sit on a dark horizon or in a pit.",
+  "order": [
+   "watch"
+  ],
+  "anims": {
+   "watch": {
+    "row": 0,
+    "frames": 4,
+    "dur": [
+     0.2,
+     0.2,
+     0.2,
+     0.2
+    ],
+    "loop": true,
+    "note": "a smudge of static peeking up out of the dark, the eyes two WHITE pixel pairs at frame x 12-13 and 19-20 on row 16. The eyes dip to GRAY on frame 2"
+   }
+  }
+ },
  "title_hero": {
   "file": "title_hero.png",
   "fw": 64,
@@ -3733,6 +3833,369 @@
     ],
     "loop": true,
     "note": "the plateau carried on to the right: a 32x128 tile at the frame's top-left (the rest is empty). Draw it from the piece's right edge every 32 px until past the view's right edge. It joins the piece and itself seamlessly"
+   }
+  }
+ },
+ "ground_w4": {
+  "file": "ground_w4.png",
+  "fw": 16,
+  "fh": 16,
+  "about": "Dead Air ground `#`: a riveted tread-plate floor on top with a cable tray slung under it, a second tray below that, then rack panels with rows of dead indicator lamps. Same layout as `ground`. Variants: floor grating, a dead floor lamp, a cut cable drooping out of its tray, a pulled rack panel.",
+  "order": [
+   "top",
+   "mid",
+   "deep",
+   "bottom",
+   "alt"
+  ],
+  "anims": {
+   "top": {
+    "row": 0,
+    "frames": 4,
+    "dur": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "loop": true,
+    "note": "top-left, top, top-right, one-wide column top"
+   },
+   "mid": {
+    "row": 1,
+    "frames": 4,
+    "dur": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "loop": true,
+    "note": "second row down: left, fill, right, column"
+   },
+   "deep": {
+    "row": 2,
+    "frames": 4,
+    "dur": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "loop": true,
+    "note": "third row and below"
+   },
+   "bottom": {
+    "row": 3,
+    "frames": 4,
+    "dur": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "loop": true,
+    "note": "underside for ceilings and floating ground. The last one is a single tile"
+   },
+   "alt": {
+    "row": 4,
+    "frames": 4,
+    "dur": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "loop": true,
+    "note": "drop-in swaps for variety, pick by hash of world tile x,y"
+   }
+  }
+ },
+ "block_w4": {
+  "file": "block_w4.png",
+  "fw": 16,
+  "fh": 16,
+  "about": "Dead Air block `=`: relay rack panels, each with a small grille and a dead lamp. Same layout as `block`. Use the live pip (the one lit lamp) rarely.",
+  "order": [
+   "lip",
+   "stacked"
+  ],
+  "anims": {
+   "lip": {
+    "row": 0,
+    "frames": 4,
+    "dur": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "loop": true,
+    "note": "top of a stack: plain, vent, live pip, stencil"
+   },
+   "stacked": {
+    "row": 1,
+    "frames": 4,
+    "dur": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "loop": true,
+    "note": "a block with another block above it"
+   }
+  }
+ },
+ "backdrop_w4": {
+  "file": "backdrop_w4.png",
+  "fw": 96,
+  "fh": 128,
+  "about": "Dead Air far shapes, like `backdrop_w3`: far layer, parallax 0.2x, 70% opacity, every bottom on one horizon line. Lay the pieces edge to edge, one every 96 px, with no gaps: every piece carries the same overhead cable tray (row 24) and the same floor line (row 116) at its edges, so they join in any order. DARK with a few GRAY glints, so it sits far back. Never put the same piece twice in a row.",
+  "order": [
+   "pieces"
+  ],
+  "anims": {
+   "pieces": {
+    "row": 0,
+    "frames": 4,
+    "dur": [
+     0,
+     0,
+     0,
+     0
+    ],
+    "loop": true,
+    "note": "0 banks of switching racks, 1 drooping bundles of cut cable, 2 a dead switchboard wall with empty stools, 3 a stair of cable trays"
+   }
+  }
+ },
+ "turret": {
+  "file": "turret.png",
+  "fw": 16,
+  "fh": 16,
+  "about": "Relay turret: a steel box bolted to the floor that fires a bolt of signal out of the round eye on its left face. Top-left on the tile top-left, the mount plate on the bottom three rows. Eye centre at frame pixel (3, 8), and the bolt leaves from (0, 8). Mirrored, those are (12, 8) and (15, 8).",
+  "order": [
+   "idle",
+   "tell",
+   "fire"
+  ],
+  "anims": {
+   "idle": {
+    "row": 0,
+    "frames": 2,
+    "dur": [
+     0.3,
+     0.3
+    ],
+    "loop": true,
+    "note": "faces left, flip for right. The eye is dim, with a faint flicker"
+   },
+   "tell": {
+    "row": 1,
+    "frames": 3,
+    "dur": [
+     0.1,
+     0.1,
+     0.1
+    ],
+    "loop": false,
+    "note": "0.3 s before each shot: the eye brightens to WHITE and the socket rim catches the glow"
+   },
+   "fire": {
+    "row": 2,
+    "frames": 2,
+    "dur": [
+     0.08,
+     0.08
+    ],
+    "loop": false,
+    "note": "a jagged flash at the muzzle and the box kicks 1 px back. Spawn the bolt on frame 0 at frame pixel (0, 8). The mount does not move"
+   }
+  }
+ },
+ "bolt": {
+  "file": "bolt.png",
+  "fw": 16,
+  "fh": 8,
+  "about": "The turret's bolt: a short jagged streak of signal, a bright head 3 px tall and a thin broken tail, so it never reads as a white blob or as the Spark. The head's centre is frame pixel (1, 3): draw at top-left = head - (1, 3), and keep the head on the turret's muzzle row when it spawns. A fair hitbox is frame x 0 to 6, y 2 to 4.",
+  "order": [
+   "fly",
+   "pop"
+  ],
+  "anims": {
+   "fly": {
+    "row": 0,
+    "frames": 4,
+    "dur": [
+     0.05,
+     0.05,
+     0.05,
+     0.05
+    ],
+    "loop": true,
+    "note": "travelling left, flip for right. The head stays put, the broken tail flickers"
+   },
+   "pop": {
+    "row": 1,
+    "frames": 3,
+    "dur": [
+     0.05,
+     0.05,
+     0.05
+    ],
+    "loop": false,
+    "note": "it hits a wall on its left and bursts into dots. Play it where the head stopped"
+   }
+  }
+ },
+ "echo": {
+  "file": "echo.png",
+  "fw": 16,
+  "fh": 16,
+  "about": "Echo: a ghost made of static, pale and ragged, with a round face. Like a Boo, it creeps up while the player looks away and hides its face when looked at. Round and GRAY with a WHITE sheen, two eyes and an O mouth, no legs and no antenna, so it never reads as the Spark or a walker. The body sits in frame x 2 to 13, y 1 to 12, the tail trails to (15, 14).",
+  "order": [
+   "drift",
+   "hide",
+   "knocked"
+  ],
+  "anims": {
+   "drift": {
+    "row": 0,
+    "frames": 4,
+    "dur": [
+     0.12,
+     0.12,
+     0.12,
+     0.12
+    ],
+    "loop": true,
+    "note": "faces left, flip it to face the player. Face out, open O mouth, tail wisps trailing. It drifts toward the player while the player looks away"
+   },
+   "hide": {
+    "row": 1,
+    "frames": 4,
+    "dur": [
+     0.15,
+     0.15,
+     0.15,
+     0.15
+    ],
+    "loop": true,
+    "note": "the player is looking at it: both wispy hands over its face, the body shivers 1 px"
+   },
+   "knocked": {
+    "row": 2,
+    "frames": 5,
+    "dur": [
+     0.07,
+     0.07,
+     0.07,
+     0.07,
+     0.07
+    ],
+    "loop": false,
+    "note": "hit by the Arc: it tears into slices, then scatters into specks of static and is gone"
+   }
+  }
+ },
+ "static_wall": {
+  "file": "static_wall.png",
+  "fw": 16,
+  "fh": 16,
+  "about": "Wall of living static that rises up a shaft or chases from the left. Play all three rows on the same clock so the edges line up with the body. Rows 13 to 15 of edge_up match body exactly, and so do columns 0 to 4 of edge_right. The top 4 rows of edge_up and the last column of edge_right stay clear.",
+  "order": [
+   "body",
+   "edge_up",
+   "edge_right"
+  ],
+  "anims": {
+   "body": {
+    "row": 0,
+    "frames": 4,
+    "dur": [
+     0.08,
+     0.08,
+     0.08,
+     0.08
+    ],
+    "loop": true,
+    "note": "dense crawling static. Tiles seamlessly both ways: fill the wall with it"
+   },
+   "edge_up": {
+    "row": 1,
+    "frames": 4,
+    "dur": [
+     0.08,
+     0.08,
+     0.08,
+     0.08
+    ],
+    "loop": true,
+    "note": "the ragged crest on top of a rising wall. Its lower rows match body, clear above the crest"
+   },
+   "edge_right": {
+    "row": 2,
+    "frames": 4,
+    "dur": [
+     0.08,
+     0.08,
+     0.08,
+     0.08
+    ],
+    "loop": true,
+    "note": "the ragged front of a wall moving right. Its left columns match body, clear to the right"
+   }
+  }
+ },
+ "ring": {
+  "file": "ring.png",
+  "fw": 96,
+  "fh": 64,
+  "about": "The heart of the line, the goal of the last level: a cracked glass core like a big insulator on its pin, seven small Sparks on a circle round it and one empty place on the left where the player joins. Its base plate is on the bottom row, so draw it with top-left = (centre x - 48, floor y - 64). Core centre (48, 29), the Sparks on a circle of radius 19 round it. The empty place is centred on (29, 29): hide the player's Spark there when close starts. It faces the viewer, so it needs no mirrored copy.",
+  "order": [
+   "wait",
+   "close",
+   "lit"
+  ],
+  "anims": {
+   "wait": {
+    "row": 0,
+    "frames": 4,
+    "dur": [
+     0.2,
+     0.2,
+     0.2,
+     0.2
+    ],
+    "loop": true,
+    "note": "seven weak Sparks flicker round the cracked core, static seeping from the crack. The empty place is centred on frame pixel (29, 29)"
+   },
+   "close": {
+    "row": 1,
+    "frames": 6,
+    "dur": [
+     0.12,
+     0.12,
+     0.12,
+     0.12,
+     0.12,
+     0.12
+    ],
+    "loop": false,
+    "note": "a Spark fills the empty place, a line of light runs round the circle, the crack flares and seals, everything brightens. Then play lit"
+   },
+   "lit": {
+    "row": 2,
+    "frames": 4,
+    "dur": [
+     0.1,
+     0.1,
+     0.1,
+     0.1
+    ],
+    "loop": true,
+    "note": "whole and bright, short rays pulsing out"
    }
   }
  }

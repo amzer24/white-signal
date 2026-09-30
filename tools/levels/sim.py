@@ -7,7 +7,7 @@ from dataclasses import dataclass, replace
 
 import physics as P
 from physics import Body, TILE, DT, HALF_W, HALF_H
-from levelkit import ROWS, SOLID, ONE_WAY, CHANNEL, BUMPABLE, Objects
+from levelkit import ROWS, SOLID, ONE_WAY, CHANNEL, BUMPABLE, Objects, static_base, static_front
 
 EPS = 0.001
 RING_LIFT = 300.0   # a lift ring refills dash and pops you about 3 tiles upward
@@ -31,6 +31,7 @@ class Run:
     fuses: frozenset = frozenset()    # blown fuse cells
     relay_down: int = -1     # frame the relay went down
     pending: frozenset = frozenset()  # channel blocks the Spark is inside; solid once it leaves
+    echoes: tuple = ()       # World 4: where each echo is, (x, y)
     dead: str = ''
     won: bool = False
 
@@ -57,6 +58,7 @@ class World:
         self.lever_cells = level.find('K')
         self.warden = level.find('W')[:1]
         self.bumped = []
+        self.static_base = static_base(level, self.o.static) if self.o.static else 0.0
 
     # --- solidity ------------------------------------------------------
     def loose_state(self, cell, t):
@@ -362,6 +364,22 @@ class World:
                 for dx, dy in o.arm_dots(a, t):
                     if hit(dx - 3, dy - 3, dx + 3, dy + 3):
                         return replace(run, dead='sweep arm', **self._fix(changes))
+        # World 4: turret bolts, echoes and the wall of static
+        for bx, by, _ in o.bolts(t):
+            if hit(bx - 6, by - 2, bx + 6, by + 2):
+                return replace(run, dead='bolt', **self._fix(changes))
+        if o.echoes:
+            moved = self.move_echoes(run.echoes, b)
+            if moved != run.echoes:
+                changes['echoes'] = moved
+            for ex, ey in moved:
+                if hit(ex - 5, ey - 5, ex + 5, ey + 5):
+                    return replace(run, dead='echo', **self._fix(changes))
+        st = o.static
+        if st:
+            front = static_front(st, self.static_base, t)
+            if (st['dir'] == 'up' and py1 > front + 2) or (st['dir'] == 'right' and px0 < front - 2):
+                return replace(run, dead='static', **self._fix(changes))
         # springs
         for sx, sy in o.springs:
             top = sy + 4
@@ -418,6 +436,20 @@ class World:
         if b.y > L.rows * TILE + 24:
             return replace(run, dead='fell', **self._fix(changes))
         return replace(run, body=b, **self._fix(changes))
+
+    def move_echoes(self, echoes, b):
+        """An echo near the Spark drifts toward it while the Spark faces away,
+        and stops the moment the Spark faces it. Echoes pass through walls."""
+        out = []
+        for (ex, ey), e in zip(echoes, self.o.echoes):
+            dx, dy = b.x - ex, b.y - ey
+            if abs(dx) < e['wake'] and abs(dy) < e['wake'] * 0.75 and not b.face * dx < 0:
+                dist = math.sqrt(dx * dx + dy * dy)
+                if dist > 1.0:
+                    ex += dx / dist * e['speed'] * DT
+                    ey += dy / dist * e['speed'] * DT
+            out.append((ex, ey))
+        return tuple(out)
 
     def walker_xy(self, n, t):
         w, path = self.o.walkers[n], self.o.walker_paths[n]
@@ -506,7 +538,8 @@ def solve(level, start=None, max_nodes=250_000, weight=2.5, target=None, run0=No
     w = World(level)
     if run0 is None:
         sc, sr = start or level.find('P')[0]
-        run0 = Run(Body(sc * TILE + 8, (sr + 1) * TILE - HALF_H - 0.5))
+        run0 = Run(Body(sc * TILE + 8, (sr + 1) * TILE - HALF_H - 0.5),
+                   echoes=tuple((e['x'], e['y']) for e in w.o.echoes))
     run = run0
     if until_col is not None:
         target = (until_col, 0)
@@ -514,6 +547,7 @@ def solve(level, start=None, max_nodes=250_000, weight=2.5, target=None, run0=No
     periods = [int(round(o['period'] * 4)) for o in w.o.movers + w.o.presses + w.o.vents
                + ([w.o.relay] if w.o.relay else [])]
     periods += [int(round(360.0 / abs(a['speed']) * 4)) for a in w.o.arms if a['speed']]
+    periods += [int(round(tu['period'] * 4)) for tu in w.o.turrets]
     if w.o.gust:
         periods.append(int(round(w.o.gust[0] * 4)))
     cycle = math.lcm(*periods) if periods else 1   # in quarter seconds

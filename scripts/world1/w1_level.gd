@@ -5,7 +5,7 @@ extends RefCounted
 
 const ROWS := 17              # one screen; a level may be any multiple of this tall
 const T := 16.0
-const SOLID := "#=?CUBLZpFYQEA%"
+const SOLID := "#=?CUBLZpFYQEA%t"
 const ONE_WAY := "-"
 const CHANNEL := {"1": 0, "2": 1}   # World 2 channel blocks and the channel they belong to
 const BUMPABLE := "?CUhiBYQ"         # blocks that knock out an enemy standing on them
@@ -41,6 +41,9 @@ var pipes: Array = []
 var npcs: Array = []          # {i, c, r, id}
 var arms: Array = []          # World 3 sweep arms: {i, cx, cy, len, speed, start}
 var gust := Vector2(-1, -1)   # World 3 `gust: period,on` header, or (-1, -1) for steady wind
+var turrets: Array = []       # World 4 relay turrets: {i, c, r, x0, y, d, n, off, speed, life}
+var echoes: Array = []        # World 4 echoes: {i, x, y, speed, wake}
+var static_wall := {}         # World 4 `static:` header: {dir, speed, delay, stop}, or empty
 var doors: Array = []         # {i, c, r, to, house, to_c, to_r}
 var fuses: Array = []         # World 2 fuse cells
 var relay := {}               # World 2 boss: {c, r, period} or empty
@@ -70,6 +73,38 @@ func arm_dots(a: Dictionary, at_t: int) -> Array:
 	for k in range(1, int(a.len) + 1):
 		out.append(Vector2(float(a.cx) + cos(ang) * 8.0 * k, float(a.cy) + sin(ang) * 8.0 * k))
 	return out
+
+
+## Centres of every bolt in flight, as [x, y, turret index]: a turret fires on
+## frames where (frame + off) % n == 0, from frame 0 on, and each bolt flies
+## until it reaches the first solid tile in its row (levelkit bolts).
+func bolts(at_t: int) -> Array:
+	var out: Array = []
+	for tu in turrets:
+		var n: int = tu.n
+		var off: int = tu.off
+		var f: int = (at_t + off) / n * n - off
+		while f >= 0 and at_t - f < int(tu.life):
+			out.append([float(tu.x0) + float(tu.d) * float(tu.speed) * (at_t - f) * (1.0 / 60.0), float(tu.y), int(tu.i)])
+			f -= n
+	return out
+
+
+## The wall of static's leading edge at frame t: a y when it rises, an x when
+## it chases (levelkit static_front).
+func static_front(base: float, at_t: int) -> float:
+	var moved: float = float(static_wall.speed) * maxf(0.0, at_t * (1.0 / 60.0) - float(static_wall.delay))
+	if str(static_wall.dir) == "up":
+		return maxf(float(static_wall.stop), base - moved)
+	return minf(float(static_wall.stop), base + moved)
+
+
+## Where the wall starts: below or left of the level, or after a respawn at
+## the midway beacon, five tiles below or ten tiles behind it (levelkit static_base).
+func static_base(from_midway: bool) -> float:
+	if str(static_wall.dir) == "up":
+		return float((midway.y + 6) * T) if from_midway and midway.x >= 0 else float(rows * T + 8.0)
+	return float((midway.x - 10) * T) if from_midway and midway.x >= 0 else -48.0
 
 
 ## Wind tiles blow all the time, or with a `gust: period,on` header only for
@@ -305,6 +340,36 @@ func _build() -> void:
 	var gparts := str(meta.get("gust", "")).split(",")
 	if gparts.size() == 2:
 		gust = Vector2(float(gparts[0]), float(gparts[1]))
+	# World 4: turrets, echoes and a wall of static
+	i = 1
+	for p in find("t"):
+		var o := opt("t#%d" % i, {"dir": -1.0, "period": 2.5, "phase": 0.0, "speed": 110.0})
+		var d := 1 if float(o.dir) > 0.0 else -1
+		var x0: float = (p.x + 1) * T + 4.0 if d > 0 else p.x * T - 4.0
+		var cc: int = p.x + d
+		while cc >= 0 and cc < width and not SOLID.contains(at(cc, p.y)) and absi(cc - p.x) <= 40:
+			cc += d
+		var wall: float = cc * T if d > 0 else (cc + 1) * T   # the face the bolt stops at
+		var reach := maxf(0.0, (wall - x0) * d - 4.0)
+		var n := int(floor(float(o.period) * 60.0 + 0.5))
+		o.merge({"i": i, "c": p.x, "r": p.y, "x0": x0, "y": p.y * T + 8.0, "d": float(d), "n": n,
+			"off": posmod(int(floor(float(o.phase) * n + 0.5)), n), "life": int(ceil(reach / (float(o.speed) * (1.0 / 60.0))))}, true)
+		turrets.append(o)
+		i += 1
+	i = 1
+	for p in find("e"):
+		var o := opt("e#%d" % i, {"speed": 30.0, "wake": 150.0})
+		o.merge({"i": i, "x": p.x * T + 8.0, "y": p.y * T + 8.0}, true)
+		echoes.append(o)
+		i += 1
+	var sp := str(meta.get("static", "")).split(",")
+	if sp.size() >= 3 and sp[0].strip_edges() in ["up", "right"]:
+		var up := sp[0].strip_edges() == "up"
+		static_wall = {"dir": sp[0].strip_edges(), "speed": float(sp[1]), "delay": float(sp[2])}
+		if sp.size() > 3:
+			static_wall["stop"] = int(sp[3]) * T
+		else:
+			static_wall["stop"] = -T * 4 if up else (width + 4) * T
 	# the village: people and doors (look and talk only, nothing solid)
 	i = 1
 	for p in find("N"):
